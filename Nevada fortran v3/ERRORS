@@ -1,0 +1,160 @@
+00 *FATAL* compiler error
+01 Syntax error, 2 operators in a row
+02 unexpected continuation (column 6 not blank or 0)
+03 input buffer overflow (increase B= compiler option)
+04 invalid character for FORTRAN statement
+05 unmatched parenthesis
+06 statement label > 99999
+07 invalid character encountered in statement label
+08 invalid HEX digit encountered in constant
+09 expected constant or variable not found
+0A 8 bit overflow in constant
+0B unidentifable statement
+0C statement not implemented
+0D quote missing
+0E SUBROUTINE/FUNCTION/BLOCK DATA not first statement in routine
+0F columns 1-5 of continuation statement are not blank
+10 cannot initialize BLANK COMMON
+11 RETURN is not valid in main program
+12 syntax error on unit specification
+13 missing comma after ) in COMPUTED GO TO
+14 missing variable in COMPUTED GO TO
+15 invalid variable in ASSIGNED/COMPUTED GO TO
+16 invalid LITERAL, no beginning quote
+17 number of subscripts exceeds maximum of 7
+18 invalid SUBROUTINE or FUNCTION name
+19 subscript not POSITIVE INTEGER CONSTANT
+1A FUNCTION requires at least one argument
+1B syntax error
+1C invalid argument in SUBROUTINE/FUNCTION call
+1D first character of variable not alphabetic
+1E ASSIGNED/COMPUTED GOTO variable not integer
+1F label has already defined
+20 specification of array must be integer
+21 invalid variable name
+22 invalid DIMENSION specification
+23 dimension specification is invalid
+24 variable has already appeared in type statement
+25 invalid subroutine name in CALL
+26 SUBPROGRAM argument cannot be initialized
+27 improperly nested DO loops
+28 unit not integer constant or variable
+29 Array size exceeds 32K
+2A invalid use of unary operator
+2B variable DIMENSION not valid in MAIN program
+2C variable dimensioned array must be argument
+2D DO/END/LOGICAL IF cannot follow LOGICAL IF
+2E undefined label
+2F unreferenced label
+30 FUNCTION or ARRAY missing left parenthesis
+31 invalid argument of FUNCTION or ARRAY
+32 DIMENSION specification must precede first executable statement
+33 unexpected character in expression
+34 unrecognized logical opcode
+35 argument count for FUNCTION or ARRAY wrong
+36 *COMPILER ERROR* poped off bottom of operand stack
+37 expecting end of statement, not found
+38 statement too complex; increase P and/or O table
+39 invalid delimiter in ARITHMETIC IF
+3A invalid statement number in IF
+3B HEX constant > FFFF (HEX)
+3C replacement not allowed within IF
+3D multiple assignment statement not implemented
+3E subscripted-subscripts not allowed
+3F subscript stack overflow; increase P= or O=
+40 missing left ( in READ/WRITE
+41 invalid unit specified
+42 invalid FORMAT, END= or ERR= label
+43 invalid element in I/O list
+44 built-in function invalid in I/O list
+45 cannot subscript a constant
+46 variable not dimensioned
+47 invalid subscript
+48 missing comma
+49 index in IMPLIED DO must be a variable
+4A invalid starting value for IMPLIED DO
+4B invalid ending value of IMPLIED DO
+4C invalid increment of IMPLIED DO
+4D illegal use of built-in function
+4E variable cannot be dimensioned in this context
+4F invalid or multiple END= or ERR=
+50 invalid constant
+51 exponent overflow in constant
+52 invalid exponent
+53 character after . invalid
+54 integer overflow
+55 integer underflow (too small)
+56 missing = in DO
+57 string constant not allowed
+58 invalid variable in DATA list
+59 DATA symbol not used in program, line
+5A invalid constant in DATA list
+5B error in DATA list specification
+5C FUNCTION invalid in DATA list
+5D no filename specified on COPY
+5E runtime format not array name
+5F DUMP label invalid or more than 10 characters
+60 more than 1 IMPLICIT is not allowed
+61 IMPLICIT not first statement in MAIN, 2nd statement in SUBPROGRAM
+62 data type not REAL, INTEGER or LOGICAL
+63 illegal IMPLICIT specification
+64 improper character sequence in IMPLICIT
+65 variable already DIMENSIONED
+66 Q option must be specified for ERRSET/ERRCLR
+67 Hex constant of zero (0) invalid in I/O stmnt
+68 Argument cannot also be in COMMON
+69 Illegal COMMON block name
+6A Variable already in COMMON
+6B Array specification must precede COMMON
+6C Executable statement invalid in BLOCK DATA
+6D Hex constant of 27H (') invalid in FORMAT
+6E Invalid number following STOP or PAUSE
+6F invalid TRACE statement (operand not ON/OFF)
+70 invalid IOSTAT= variable
+71 missing , in ENCODE/DECODE
+72 invalid label in ASSIGNED GOTO
+73 invalid variable in ASSIGNED GOTO
+75 label not allowed on this statement
+75 multiple RETURN not valid in FUNCTION
+76 UNUSED
+77 no matching IF-THEN for ELSE or ENDIF
+78 invalid ELSE or ENDIF
+79 missing ENDIF
+7A initialization of non-COMMON variable
+7B SUBROUTINE or FUNCTION name truncated to first 5 characters
+7C UNUSED
+7D UNUSED
+7E UNUSED
+7F UNUSED
+80 *FATAL* no program to compile
+81 *FATAL* missing $OPTIONS statement
+82 *FATAL* missing = in $OPTIONS statement
+83 *FATAL* invalid digit in number in $OPTIONS
+84 *FATAL* value exceeds 255 in $OPTIONS
+85 *FATAL* COMMON table overflow, increase C=
+86 *FATAL* unknown option (letter before =)
+87 *FATAL* missing END statement
+88 *FATAL* LABEL TABLE overflow, increase L=
+89 *FATAL* SYMBOL TABLE overflow, increase S=
+8A *FATAL* ARRAY STACK overflow, increase A=
+8B *FATAL* DO LOOP STACK overflow, increase D=
+8C *FATAL* stack overflow (compiler error)
+8D *FATAL* stack overflow (compiler error)
+8E *FATAL* internal tables exceed user memory
+8F *FATAL* MEMORY ERROR
+90 *FATAL* OPEN error on COPY file
+91 *FATAL* too many routines to compile (> 62)
+92 *FATAL* no more room to store DATA statements
+93 *FATAL* IF-THEN stack overflow, increase I=
+94 *FATAL* Nested "COPY" statements not permitted
+95 *FATAL* Disk write error (disk probably full)
+96 *FATAL* Cannot close file (disk probably full)
+97 *FATAL* Input file not found
+98 *FATAL* Invalid drive specifier
+99 *FATAL* No filename found on COPY statement
+9A *FATAL* File specified on COPY not found
+9B *FATAL* NOT USED
+9C *FATAL* File "ASSM.COM" not found on default drive
+ment
+9A *FATAL* File specified on COPY not found
+9B *FATAL* NOT U
