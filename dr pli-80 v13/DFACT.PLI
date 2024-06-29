@@ -1,0 +1,22 @@
+f:
+	proc options(main);
+	dcl
+		i fixed;
+		do i = 0 repeat(i+1);
+		put skip list('Factorial(',i,')=',fact(i));
+		end;
+	stop;
+
+	fact:
+		proc (i)
+			returns(fixed dec(15,0)) recursive;
+		dcl
+			i fixed;
+		dcl
+			f fixed dec(15,0);
+			if i = 0 then
+				return (1);
+			return (decimal(i,15) * fact(i-1));
+		end fact;
+	end f;
+
