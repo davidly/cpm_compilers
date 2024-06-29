@@ -27,7 +27,7 @@ To run the compilers on Windows, use the m.bat script in each folder, e.g.:
   * m e
   * m ttt
 
-On Linux or MacOS copy m.bat to m.sh, change % to $, use dos2unix to remove CR/LF, and chmod to enable execution. If you do this, feel free to submit a pull request :)
+On Linux or MacOS copy m.bat to m.sh, change % to $, use dos2unix to remove CR/LF, and chmod to enable execution. If you do this, feel free to submit a pull request. Also be sure to put ntvcm in your path.
 
 If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them.
 
