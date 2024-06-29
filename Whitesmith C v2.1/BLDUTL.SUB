@@ -1,0 +1,6 @@
+lnk -u_main -eb__memory -tb0x100 -htr -o a80.com crtx.o asmlib.80 libc.80
+lnk -eb__memory -tb0x100 -htr -o lby.com crtx.o lib.o libc.80
+lnk -eb__memory -tb0x100 -htr -o lrd.com crtx.o lord.o libc.80
+lnk -eb__memory -tb0x100 -htr -o hex.com crtx.o hex.o libc.80
+lnk -eb__memory -tb0x100 -htr -o rel.com crtx.o rel.o libc.80
+

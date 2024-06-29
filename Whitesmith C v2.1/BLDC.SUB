@@ -1,0 +1,8 @@
+lnk -u_main -eb__memory -tb0x100 -htr -o cpp.com crtx.o p0lib.80 libc.80
+lnk -u_main -eb__memory -tb0x100 -htr -o cp1.com crtx.o p1lib.80 libc.80
+lnk -u_main -eb__memory -tb0x100 -htr -o cp2.com crtx.o p2lib.80 libc.80
+lnk -u_main -eb__memory -tb0x100 -htr -o rel.com crtx.o rel.o libc.80
+lnk -u_main -eb__memory -tb0x100 -htr -o lord.com crtx.o lord.o libc.80
+lnk -u_main -eb__memory -tb0x100 -htr -o lib.com crtx.o lib.o libc.80
+lnk -u_main -eb__memory -tb0x100 -htr -o a80.com crtx.o asmlib.80 libc.80
+

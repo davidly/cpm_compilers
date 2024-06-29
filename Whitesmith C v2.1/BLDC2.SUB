@@ -1,0 +1,6 @@
+pip a:=o:*.sub
+pip a:=o:*.h
+pip a:=o:lnk.com
+pip a:=o:crtx.o
+lnk -u_main -eb__memory -tb0x100 -htr -o b:cp2.com crtx.o o:p2lib.80 o:libc.80
+
