@@ -1,0 +1,468 @@
+			C Compiler Documentation
+ 
+INTRODUCTION 
+ 
+	This compiler is the small C compiler written by Ron
+Cain and published in Dr. Dobb's #45 (May '80). The compiler
+was modified to include floating point by James R. Van Zandt.
+The floating point routines themselves were written by Niel
+Colvin.  The companion assembler ZMAC and linker ZLINK were
+written by Bruce Mallett.
+ 
+	This compiler accepts a subset of standard C. It
+requires a Z-80 processor. It reads C source code and produces
+Zilog- mnemonic assembly language output, with syntax matching
+the assembler ZMAC supplied with it.  ZMAC produces a
+relocatable file with the extension .OBJ. One or more such
+relocatable files can be linkage edited by the companion
+program ZLINK. The compiler (with source in C), the assembler,
+and the linker (with sources in assembly language) are hereby
+placed in the public domain.
+ 
+	There are several sample source code files on this
+disk. For more about the C programming language, see the above
+issue of Dr. Dobb's or "The C Programming Language" by B. W.
+Kernighan and D. M. Ritchie, Englewood Cliffs, N.J.:
+Prentice-Hall, 1978.
+ 
+ 
+DATA TYPES
+ 
+The data types are...
+ 
+char c		character 
+char *c		pointer to character 
+char c[3];	character array 
+int i;		16 bit integer 
+int *i;		pointer to integer 
+int i();	function returning integer 
+int i[4];	integer array 
+double d;	48 bit floating point 
+double *d;	pointer to double 
+double d();	function returning double 
+double d[5];	array of doubles 
+ 
+Storage classes, structures, multidimensional arrays, unions,
+and more complex types like "int **i" are not included.
+ 
+ 
+PRIMARIES
+ 
+	array[expression] 
+	function(arg1,arg2,...,argn) 
+	constant 
+		decimal integer 
+		decimal floating point (1.0, 2., .3, 340.2e-8)
+		quoted string    ("sample string") 
+		primed character ('a'  or  'Z') 
+	local variable 
+	global variable 
+ 
+Each variable must be declared before it is used.
+ 
+  
+UNARY INTEGER OPERATORS
+ 
+	-	minus 
+	*	indirection 
+	&	address of 
+	++	increment, either prefix or suffix 
+	--	decrement, either prefix or suffix 
+ 
+ 
+BINARY INTEGER OPERATORS
+ 
+	+	addition 
+	-	subtraction 
+	*	multiplication 
+	/	division 
+	%	mod, remainder from division 
+	|	inclusive or 
+	^	exclusive or 
+	&	logical and 
+	==	equal 
+	!=	not equal 
+	<	less than 
+	<=	less than or equal 
+	>	greater than 
+	>=	greater than or equal 
+	<<	left shift 
+	>>	arithmetic right shift 
+	=	assignment 
+ 
+ 
+UNARY DOUBLE OPERATORS
+ 
+	-	minus 
+ 
+ 
+BINARY DOUBLE OPERATORS
+ 
+	+	add 
+	-	subtract 
+	*	multiply 
+	/	divide 
+	=	assignment 
+ 
+Assignment operators are not included. 
+ 
+Conversion between floating point and integer is automatic for
+assignment and for the expression returned by a function.
+Conversion from integer to floating point is automatic for the
+arguments of any of the floating point operators. Otherwise,
+the routines "float(jj)" and "ifix(yy)" (as in FORTRAN) may be
+used.  The arguments of integer-only operators are checked to
+be sure they are integers.  There is no type checking for the
+actual parameters of function calls.
+ 
+ 
+PROGRAM CONTROL
+ 
+	if(expression) statement; 
+	if(expression) statement; else statement; 
+	while(expression) statement; 
+	break; 
+	continue; 
+	return;
+	return expression; 
+	;     			/* null statement */
+	{statement;statement;   ...   statement;}
+				 /* compound statement */ 
+ 
+not included: for, do while, switch, case, default, goto
+ 
+ 
+COMMAND LINES
+ 
+When the compiler is run, it reads one or more C source files
+and produces one assembly language file. The assembly language
+files are separately assembled by ZMAC, then are combined into
+a single executable file by ZLINK. The format of the compiler
+command line is:
+ 
+	cc [options] file [file file...]
+ 
+Each option is a minus sign followed by a letter:
+ 
+	-C	to include the C source code as comments in
+		the compiler-generated assembly code.
+ 
+	-E	pause after an error is encountered.
+ 
+	-G	don't reserve space for any global variables.
+ 
+	-M	none of these files contains main().
+ 
+	-P	produce profile of function calls, and enable
+		walkback trace on calls to err().
+ 
+Use the -G option if all global variables are being declared in
+one compilation, but will be used by programs being compiled
+and assembled separately. (This is a rudimentary form of
+"extern".) If functions return doubles, they must be declared
+before use in each compilation. Otherwise, functions are
+automatically imported and exported. Names of functions and
+global variables i.e., those declared outside function
+definitions) are always global as far as the linker are
+concerned, and may not overlap.
+ 
+The -M option keeps the compiler from producing its standard
+header (initializing the stack pointer, for example). The
+header does not include an ORG 100H directive, since ZLINK
+automatically starts programs at 100H. As a result, forgetting
+the -M option will lengthen your program by a few bytes but
+cause no other harm. 
+ 
+The profile printout will include only the functions in the
+first file the linker sees. That's the one that should be
+compiled with the -P option. If there is a call to err() in
+IOLIB, a "walkback trace" is printed, which lists all the
+functions that have been called but which have not yet returned
+(recursive calls lead to multiple listings). The walkback trace
+will include all functions compiled with the -P option, whether
+or not they were in the first .OBJ file.
+ 
+Options and files are separated by spaces, and can be mentioned
+in any order (even intermixed). Only the file name (optionally
+preceded by a disk name) should be given. The compiler
+automatically adds the extension ".C". The output file is given
+the same name (and is put onto the same disk) as the first
+input file, but with the extension ".ASM".
+ 
+Each assembly language file is assembled as follows:
+ 
+	zmac alpha=alpha
+ 
+If extensions are not specified, as here, ZMAC uses ".ASM" for
+its input file and ".OBJ" for its output file.
+ 
+The object files are linked as follows:
+ 
+	zlink alpha,alpha=alpha,beta,iolib,float,printf
+ 
+The first name is for the output file. By default, it is given
+the extension ".COM". The second name is for the map file
+(default extension ".MAP) which gives the values of all the
+global symbols. ZLINK will always tell you how many global
+symbols were undefined, but won't tell you what the undefined
+symbols were unless you ask for a map file. All the names to
+the right of the '=' are input files, with the default
+extension ".OBJ". The first input file must have been compiled
+WITHOUT the -M option. Ordinarily, it will be the one with
+main(). The other files can be mentioned in any order.
+ 
+ 
+EMBEDDED COMPILER COMMANDS
+ 
+	#define name string
+ 
+"name" is replaced by "string" hereafter. 
+ 
+	#include filename 
+ 
+compiler gets source code from another file (can't be nested) 
+ 
+	#asm 
+	... 
+	... 
+	#endasm 
+ 
+code between these is passed directly to the assembler.  
+ 
+ 
+LIBRARY FILES 
+ 
+Seven library files are included: 
+ 
+IOLIB.C		Basic input/output and integer math routines
+IOLIB.ASM	(required by ALL programs). 
+IOLIB.H 	/ 
+ 
+FLOAT.C		Floating point math routines. 
+FLOAT.OBJ 	 / 
+FLOAT.H		/ 
+ 
+TRANSCEN.OBJ	Trancendental routines. 
+TRANSCEN.H	/ 
+ 
+PRINTF1.C	Output routine printf(), integer only. 
+PRINTF1.OBJ      / 
+PRINTF1.H 	/ 
+ 
+PRINTF2.C	Output routine printf(), 
+PRINTF2.OBJ 	integer & floating point 
+PRINTF2.H	/ 
+ 
+PROFILE.ASM	Prints profile (number of calls to each
+PROFILE.OBJ	function) after program finishes, and enables
+PROFILE.H	walkback trace in case of error (calls to 
+		err(), in IOLIB).
+ 
+ARGS.C		I/O redirection and command line parsing.
+ARGS.OBJ	 / 
+ARGS.H		/ 
+ 
+These are related as follows: 
+ 
+		IOLIB
+	       / | \  \
+	PRINTF1	 |   \  ARGS
+              PROFILE  \
+                      FLOAT
+                     /     \
+              PRINTF2       TRANSCEN
+ 
+That is, PRINTF2 requires both FLOAT and IOLIB. PRINTF1 or
+PROFILE require only IOLIB. TRANSCEN requires both FLOAT and
+IOLIB. 
+ 
+In each case, the .C file was compiled and assembled to give
+the corresponding .OBJ file, and the .H file declares (for the
+assembler, and if necessary for the compiler as well) the
+exported symbols.
+ 
+Each library to be used must be mentioned twice: once to the
+compiler (either in an #include statement in the source code or
+in a reply to the "input file" question), and again to the
+linker (either in the command line or in a reply to the linker
+prompt). For example, if floating point operations are needed,
+the source file should contain:
+ 
+	#include iolib.h 
+	#include float.h 
+	double x; 
+	...			(rest of source code) 
+ 
+Compilation, assembly, and linking would consist of:
+ 
+	A>cc alpha
+	A>zmac alpha=alpha 
+	A>zlink alpha=alpha,iolib,float 
+ 
+For details on these libraries, see IOLIB.DOC, FLOAT.DOC,
+TRANSCEN.DOC, PRINTF.DOC, PROFILE.DOC, and ARGS.DOC.
+ 
+ 
+SAMPLE COMPILATION
+ 
+	C>cc test
+	
+	* * *  Small-C  V1.2  * * *
+	
+	       By Ron Cain  and  James Van Zandt
+	
+	     29 July 1984
+	
+	
+	TEST.C				<file names echoed>
+	
+	#include iolib.h		<included files echoed>
+	#end include
+	#include float.h
+	#end include
+	#include printf2.h
+	#end include
+	#include args.h
+	#end include
+	#include transcen.h
+	#end include
+	====== main()			<function names echoed>
+	====== out()
+	====== alpha()
+	====== beta()
+	====== gamma()
+	====== putnum()
+	====== outf()
+	
+	There were 0 errors in compilation.
+	
+	C>zmac test=test
+	SSD RELOCATING   (AND EVENTUALLY MACRO)  Z80 ASSEMBLER
+VER 1.07
+	
+	    0  ERRORS
+	C>zlink
+test,test=test,a:args,iolib,float,printf2,a:transcen
+	SSD LINKAGE EDITOR VERSION 1.4
+	      0 UNDEFINED SYMBOL(S).
+	C> 
+ 
+ 
+SAMPLE COMPILER COMPILATION 
+ 
+	C>cc c80v 
+	C>zmac c80v3=c80v		<pick a different name>
+	C>zlink c80v3,c80v3=c80v3,iolib,float 	      <link it>
+  
+The assembly files total about 190K. The object files total
+about 65K, and the temporary file produced by the linker is
+about 80K.  Compilation requires about 43K of RAM, divided as
+follows: 34K code & data, 8K heap (mostly symbol table), and 1K
+stack.
+ 
+ 
+PERFORMANCE
+ 
+The program test.c on this disk (with 142 lines and 3200 bytes)
+was compiled in 47.8 sec on a 4 MHz Z-80, for a compilation
+speed of approximately 3 lines/sec, or 67 bytes/sec. Of this
+time, approximately 7 seconds was spent reading in the 43136
+bytes of compiler code.
+ 
+The following floating point benchmark (from Dr. Dobb's
+Journal, Mar 84) finished in 489 seconds on a 4 MHz Z-80, with
+the result 2500.00469:
+ 
+	#include iolib.h
+	#include float.h
+	#include transcen.h
+	#include printf2.h
+	int i;
+	double a;
+	main()
+	{	a=1.; i=1;
+		printf("starting\n");
+		while(i++<2500)
+			{a=tan(atan(exp(ln(sqrt(a*a)))))+1.;}
+		printf("Result is %20.12f ",a);
+	}
+ 
+ 
+INTERNAL DOCUMENTATION 
+ 
+This is a recursive descent, one pass compiler producing
+assembly language.  The two major changes that have been made
+to speed it up relative to Ron Cain's original compiler are a
+hash coded symbol table and 1K disk buffers.
+ 
+Global symbols defined in a C program are prefixed by 'Q' so
+they do not conflict with any global symbols in libraries.
+ 
+A compiled program has the following layout...
+ 
+	100H to _end-1		program & data
+	_end to *heaptop	heap
+	*heaptop to *SP-1	unused
+	*SP to *(0006)		stack
+ 
+The symbol _end is defined by ZLINK at link time, and points to
+the first byte above program and data.  The variable heaptop
+(initialized to _end) always points to the first byte above the
+heap.  The stack pointer register SP is initialized to the
+first location above user memory (pointed to by the word at
+0006). The variable names _end and heaptop are visible only to
+assembly language programs, since they do not begin with Qs.
+ 
+Assembly language programs can be called by C programs.  The C
+program will evaluate each of its arguments (left to right),
+push it onto the stack, then call the named program. Therefore,
+the assembly language program should expect that the top word
+on the stack is the return address, the next word is the last
+argument, etc. If the function is to return an integer or
+character value, it should be left in the HL register. Double
+values should be left in the 6 byte area starting at FA.
+ 
+ 
+WARNINGS 
+ 
+In addition to the limitations mentioned above, the user should
+be aware of the following... 
+ 
+In declaring a function returning a double, you have to use two
+lines... 
+ 
+	double frodo(); 
+	frodo(x,y,z) int x; double y,z; 
+ 
+You can't combine them, as in standard C... 
+ 
+	double frodo(x,y,z) ...		/* not accepted */ 
+ 
+It addition, the declaration "double frodo();" must appear
+before any use of the function, or the compiler will assume
+while generating the calling code that the function returns an
+integer. 
+ 
+The floating point routines in the FLOAT library (though none
+of the code produced by the compiler) use several of the
+undocumented Z-80 op codes, so they may not work on some
+processors. FLOAT also uses the alternate register set. 
+ 
+The floating point routines do not meet the proposed IEEE
+standard. 
+ 
+ 
+POTENTIAL IMPROVEMENTS 
+ 
+Adding the features noted above as "not included". 
+ 
+The compiler could probably be made faster by tokenizing the
+input stream, so parsing would not involve string comparisons.
+It could be made smaller by moving the error messages to a disk
+file, to be consulted at need.  Implementing storage class
+specifiers could make compiled programs (and the compiler
+itself) smaller and faster, since variables local to a function
+that is not called recursively could be declared "static".
+Static variables can be accessed much more readily than "auto"
+variables (those on the stack).
+
