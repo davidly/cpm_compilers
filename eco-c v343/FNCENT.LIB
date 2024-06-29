@@ -1,0 +1,16 @@
+FNCENT	MACRO	X
+	IF	X EQ 0
+	ADD	HL,SP
+	PUSH	HL
+	ELSE
+	ADD	HL,SP
+	POP	BC
+	EX	DE,HL
+	LD	HL,-X
+	ADD	HL,SP
+	LD	SP,HL
+	PUSH	BC
+	PUSH	DE
+	ENDIF
+	ENDM
+
