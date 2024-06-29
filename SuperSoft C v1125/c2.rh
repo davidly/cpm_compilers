@@ -1,0 +1,711 @@
+; Copyrighted (c) by SuperSoft, Inc., 1982
+;	Last edit 4/7/82
+
+;RUN TIME LIBRARY (WITH MOST COMMENTS REMOVED)
+DIV0	EQU	0		; 0 supresses divide by 0 message
+M80     EQU     1
+	IF	M80
+ENTRY	COM$LINE
+ENTRY	COM$LEN
+ENTRY	CCNEG
+ENTRY	CCSTAR
+ENTRY	EXIT
+ENTRY	CCAND
+ENTRY	CCASL
+ENTRY	CCASR
+ENTRY	CCUDIV
+ENTRY	CCDIV
+ENTRY	CCEQ
+ENTRY	CCLT
+ENTRY	CCGT
+ENTRY	CCGE
+ENTRY	CCLE
+ENTRY	CCMULT
+ENTRY	CCNE
+ENTRY	BRK
+ENTRY	CCCOM
+ENTRY	CCOR
+ENTRY	CCGINT
+ENTRY	CCPINT
+;ENTRY	CCSXT
+ENTRY	CCSUB
+ENTRY	CCULT
+ENTRY	CCUGT
+ENTRY	CCUGE
+ENTRY	CCULE
+ENTRY	CCXOR
+ENTRY	SETEXIT
+ENTRY	RESET
+ENTRY	STREQ
+ENTRY	BDOS
+ENTRY	CCONSTAT
+ENTRY	CCONIN
+ENTRY	CCONOUT
+ENTRY	CCLDIR
+ENTRY	CCLDDR
+EXT	XMAIN
+ENTRY	CCALL
+ENTRY	CCALLA
+ENTRY	CCEDATA
+ENTRY	XSTART
+ENTRY	XFCB1
+ENTRY	XFCB2
+ENTRY	XEND
+	ENDIF
+CCBDOS		EQU	5
+;
+;	WHICH CPU?
+CCSTAR: LXI	B,0
+	MVI	A,2
+	INR	A
+	JPE	CIS8080
+	INR	B
+CIS8080:MOV	A,B
+	STA	cccpu
+	LXI	D,CCIDSTR
+	MVI	C,9
+	CALL	CCBDOS
+	LHLD	6
+	SPHL
+	CALL	XMAIN
+	RST	0
+
+EXIT	EQU	0	; EXIT() -- FOR C
+
+CCIDSTR: DB	'SuperSoft C Copyright 1982'
+	DB	0DH,0AH,'Run Time Package V1.3',0DH,0AH,'$'
+
+;
+; ****** READ IN USER CODE HERE *******
+;
+
+CC0ERR:	POP	D
+	PUSH	B
+	MVI	C,9
+	CALL	CCBDOS
+	LXI	H,0
+	POP	B
+	RET
+
+CCAND:	MOV	A,H
+	ANA	D
+	MOV	H,A
+	MOV	A,L
+	ANA	E
+	MOV	L,A
+	RET
+
+CCASL:	PUSH	B
+	MOV	A,L
+	ANI	15
+	JZ	CCARXIT
+	MOV	B,A
+	XCHG
+CCALLP:	DAD	H
+	DCR	B
+	JNZ	CCALLP
+CCALXIT: POP	B
+	RET
+
+CCASR:	PUSH	B
+	MOV	A,L
+	ANI	15
+	JZ	CCARXIT
+	MOV	B,A
+
+CCARLP:	ORA	A
+	MOV	A,D
+	RAR
+	MOV	D,A
+	MOV	A,E
+	RAR
+	MOV	E,A
+	DCR	B
+	JNZ	CCARLP
+
+CCARXIT: XCHG
+	POP	B
+	RET
+
+CCUDIV:	PUSH	B		; de = hl / de;
+	MOV	A,H
+	ORA	L
+	JZ	CCDIV0
+
+CCDVX:	PUSH	H
+	LXI	H,0
+	XTHL
+	JMP	CCDVY
+
+CCDIV:	PUSH	B		; de = hl / de;
+	MOV	A,H
+	ORA	L
+	JZ	CCDIV0
+
+CCDV2:	CALL	CCDMSE
+	PUSH	PSW
+
+CCDVY:	CALL	CCNEG
+	MOV	B,H
+	MOV	C,L
+
+	LXI	H,0
+	MVI	A,17
+	PUSH	PSW
+CCDVL1:	DAD	B
+	JC	CCDVL2
+	MOV	A,L
+	SUB	C
+	MOV	L,A
+	MOV	A,H
+	SBB	B
+	MOV	H,A
+	XRA	A
+CCDVL2:	RAL
+	ANI	1
+
+	XCHG
+	DAD	H
+	PUSH	PSW
+	ADD	L
+	MOV	L,A
+	XCHG
+	POP	PSW
+	RAR
+	ANI	80H
+	ADD	H
+	MOV	H,A
+	POP	PSW
+	DCR	A
+	JZ	CCDVEND
+	PUSH	PSW
+
+	DAD	H
+	RAL
+	ANI	1
+	ADD	L
+	MOV	L,A
+	JMP	CCDVL1
+
+CCDVEND: MOV	A,H
+	ANI	7FH
+	MOV	H,A
+	XCHG
+
+	POP	PSW
+	POP	B
+	RP
+	CALL	CCNEG
+	XCHG
+	CALL	CCNEG
+	XCHG
+	RET
+
+CCDMSE:	MOV	A,D
+	XRA	H
+	PUSH	PSW
+	MOV	A,H
+	ANI	80H
+	CNZ	CCNEG
+	MOV	A,D
+	ANI	80H
+	JZ	CCDMS1
+	XCHG
+	CALL	CCNEG
+	XCHG
+CCDMS1:	POP	PSW
+	RET
+
+CCDIV0	EQU	$
+	IF DIV0
+		LXI	D,DIV0MSG
+		MVI	C,9		; Print string
+		CALL	CCBDOS
+	ENDIF
+	LXI	D,0			; X / 0 == 0
+	POP	B
+	RET
+DIV0MSG:DB	'Division by 0 !',13,10,7,'$'
+
+CCEQ:	ORA	A
+	MOV	A,L
+	SUB	E
+	MOV	L,A
+	MOV	A,H
+	SBB	D
+	MOV	H,A
+	ORA	L
+	INX	H
+	RZ
+	LXI	H,0
+	RET
+
+CCLT:	XCHG
+CCGT:	XRA	A
+	MOV	A,L
+	SUB	E
+	MOV	A,H
+	SBB	D
+	LXI	H,0
+	RP
+	INX	H
+	RET
+
+CCGE:	XCHG
+CCLE:	XRA	A
+	MOV	A,L
+	SUB	E
+	MOV	A,H
+	SBB	D
+	LXI	H,1
+	RP
+	DCX	H
+	RET
+
+CCEXCH:	XCHG
+	JMP	CCM3
+
+CCMULT:	PUSH	B
+	XRA	A
+	CMP	H
+	JZ	CCEXCH
+	CMP	L
+	JZ	CCEXCH
+
+CCM3:	MOV	B,H
+	MOV	C,L
+	MOV	A,E
+	PUSH	D
+	CALL	CCBMULT
+	XTHL
+	MOV	A,H
+	CALL	CCBMULT
+	MOV	H,L
+	MVI	L,0
+	POP	B
+	DAD	B
+	POP	B
+	RET
+
+CCBMULT:LXI	H,0
+	MVI	E,7
+	ADD	A
+	JC	CCM6
+	RZ
+
+CCM2:	JNC	CCM4
+CCM6:	DAD	B
+
+CCM4:	DAD	H
+	ADC	A
+	DCR	E
+	JNZ	CCM2
+	RNC
+	DAD	B
+	RET
+
+CCNEG:	MOV	A,H
+	CMA
+	MOV	H,A
+	MOV	A,L
+	CMA
+	MOV	L,A
+	INX	H
+	RET
+
+CCNE:	MOV	A,L
+	SUB	E
+	MOV	L,A
+	MOV	A,H
+	SBB	D
+	MOV	H,A
+	ORA	L
+	RZ
+	LXI	H,1
+	RET
+
+; check for program or stack overlap
+BRK:	POP	D
+	POP	H
+	PUSH	D
+	PUSH	H
+
+	CALL	CCNEG
+	DAD	SP
+	JNC	C1ERR
+
+	POP	H
+	PUSH	H
+	LXI	D,EDATA
+	CALL	CCSUB+1	; hl=hl-de
+	JC	C1ERR
+;	JZ	C1ERR
+
+	POP	H
+	SHLD	CCEDATA
+	POP	D
+	PUSH	D
+	PUSH	D
+	LXI	H,0
+	RET
+
+C1ERR:	POP	D
+	POP	D
+	PUSH	D
+	PUSH	D
+
+CERROR: LXI	H,-1
+	RET
+
+CCCOM:	MOV	A,L
+	CMA
+	MOV	L,A
+	MOV	A,H
+	CMA
+	MOV	H,A
+	RET
+
+CCOR:	MOV	A,H
+	ORA	D
+	MOV	H,A
+	MOV	A,L
+	ORA	E
+	MOV	L,A
+	RET
+
+CCGINT:	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	RET
+
+CCPINT:	XCHG
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	XCHG
+	RET
+
+;CCSXT:	MOV	L,A
+;	RAL
+;	MVI	A,0
+;	SBB	A
+;	MOV	H,A
+;	RET
+
+;	HL = DE - HL
+
+CCSUB:	XCHG
+	MOV	A,L
+	SUB	E
+	MOV	L,A
+	MOV	A,H
+	SBB	D
+	MOV	H,A
+	RET
+
+CCULT:	XCHG
+CCUGT:	MOV	A,L
+	SUB	E
+	MOV	A,H
+	SBB	D
+	LXI	H,1
+	RC
+	DCX	H
+	RET
+
+CCUGE:	XCHG
+CCULE:	MOV	A,L
+	SUB	E
+	MOV	A,H
+	SBB	D
+	LXI	H,0
+	RC
+	INX	H
+	RET
+
+CCXOR:	MOV	A,H
+	XRA	D
+	MOV	H,A
+	MOV	A,L
+	XRA	E
+	MOV	L,A
+	RET
+
+SETEXIT: LXI	H,2
+	DAD	SP
+	SHLD	CCEXITSP
+	POP	H
+	SHLD	CCEXITSP+2
+	PUSH	H
+	LXI	H,0
+	RET
+
+RESET:	POP	D
+	POP	D
+	LHLD	CCEXITSP	; could check for exitsp > current SP
+	SPHL
+	LHLD	CCEXITSP+2
+	PUSH	H
+	XCHG
+	RET
+
+STREQ:	PUSH	H
+	MOV	H,B
+	MOV	L,C
+	SHLD	XXKLG	; bad kludge
+	POP	H
+	POP	B
+	POP	D
+	XTHL
+	PUSH	B
+	PUSH	B
+	LXI	B,0
+	JMP	CCLP
+
+CCMORE:	INX	B
+	INX	H
+	INX	D
+
+CCLP:	LDAX	D
+	ORA	A
+	JZ	CCOUT
+	CMP	M
+	JZ	CCMORE
+	LXI	B,0
+
+CCOUT:	PUSH	B
+	LHLD	XXKLG
+	MOV	B,H
+	MOV	C,L
+	POP	H
+	RET
+
+BDOS:	MOV	H,B	; save b
+	MOV	L,C
+	POP	B	; pop return address
+	POP	D	; pop new d value
+	XTHL		; tos contains old b; h contains new b
+	PUSH	B	; push return address
+	MOV	B,H	; put b value where it belongs
+	MOV	C,L
+
+	CALL	CCBDOS
+	POP	H
+	POP	B
+
+	PUSH	H	; restore stack for C
+	PUSH	H
+	PUSH	H
+	MOV	L,A
+	MVI	H,0	; should be a sign extend...
+	RET
+
+
+CCONSTAT:
+	PUSH	B	; save reg variable
+	MVI	C,11	; bdos function number
+	CALL	CCBDOS	; execute function
+	MVI	H,0	; set up retun value
+	MOV	L,A
+	POP	B	; restore register variable
+	RET		
+CCONIN:
+	PUSH	B	; save reg variable
+	MVI	C,1	; bdos function number
+	CALL	CCBDOS	; execute function
+	MVI	H,0	; set up retun value
+	MOV	L,A
+	POP	B	; restore register variable
+	RET		
+
+CCONOUT:
+	POP	H	; pop return addr
+	POP	D	; pop parameter
+	PUSH	D	; restore parameter
+	PUSH	H	; and return address
+	PUSH	B	; save register variable
+	MVI	C,2	; bdos function number
+	CALL	CCBDOS	; execute function
+	POP	B	; restore register variable
+	RET		
+ 
+;call()
+;{
+;#asm	
+CCALL:
+	PUSH	B
+	CALL	CCALLER
+	POP	B
+;#endasm
+;}
+	RET
+
+;ccalla()
+;{
+;#asm
+CCALLA:	PUSH	B
+	CALL	CCALLER
+	POP	B
+	MOV	L,A
+	MVI	H,0
+;#endasm
+;}
+	RET
+
+CCALLER:
+	LXI	H,15	; get address to call
+	DAD	SP
+	MOV	B,M
+	DCX	H
+	MOV	C,M
+	DCX	H
+	PUSH	B	; and put on stack so we can ret to it.
+	MOV	D,M	; move hl parm to de
+	DCX	H
+	MOV	E,M
+	DCX	H
+	PUSH	D	; and push it
+	MOV	A,M	; load a
+	DCX	H
+	DCX	H	; blow off flags
+	MOV	B,M	; load bc
+	DCX	H
+	MOV	C,M
+	DCX	H
+	MOV	D,M	; load de
+	DCX	H
+	MOV	E,M
+	POP	H	; pop hl off stack
+	RET		; jp *sp++
+;#endasm
+;}
+
+
+;	This is exec's driver return. To execute it should be movmem()'ed
+;	to 0x0080. It should NEVER be executed at this location as it has
+;	been assembled as if at 0x0080.
+
+;ENTRY		XSTART
+;ENTRY		XFCB1
+;ENTRY		XFCB2
+;ENTRY		XEND
+
+XTPA		EQU	0100H
+XAREA		EQU	0080H
+
+XSTART:
+	LHLD	6		; initialize stack to (bdos+1)
+	SPHL
+	LXI	H,0		; Push address of boot
+	PUSH	D	
+	LXI	D,XTPA		; initial load address
+XLOOP:
+	PUSH	D		; preserve load address
+	MVI	C,26		; setdma to load address
+	CALL	5
+	LXI	D,XFCB1-XSTART+XAREA
+	MVI	C,20		; seq read data to load address
+	CALL	5
+	POP	D		; restore load address
+	ORA	A		; test eof
+	JNZ	XEOF-XSTART+XAREA	; load complete.
+	LXI	H,080H		; next load
+	DAD	D		; address
+	XCHG			; to DE.
+	JMP	XLOOP-XSTART+XAREA
+
+XEOF:
+	LXI	D,XTPA			; entry point of loaded program
+	PUSH	D			; where bdos will return
+	LXI	D,XAREA
+	MVI	C,26			; set dma to overwrite this code
+	CALL	5	
+	LXI	D,XFCB2-XSTART+XAREA	; fcb of $$$.$$$
+	MVI	C,20			; seq read
+	JMP	5			; overlay this code and return to tpa
+XFCB1:
+	DS	33			; These should not be here. 
+XFCB2:
+	DS	33
+XEND:
+
+CCLDIR:
+; Callable via ccldir(dest,source,count)
+; CCLDIR mimics LDIR instruction for 8080, executes LDIR on Z80. 
+; However count of zero performs nop.
+; Caution, register variable trashed.
+
+	POP	H	; Return address
+	POP	B	; Count
+	POP	D	; Source
+	XTHL		; Dest->hl, return address to TOS
+	XCHG		; srce->HL,dest->DE,count->BC 
+	LDA	CCCPU	; Check CPU type
+	ORA	A
+	JNZ	CCLDIZ
+
+CCLDI8:				; 8080 CPU
+	MOV	A,B
+	ORA	C
+	JZ	CCLDIX
+	MOV	A,M
+	INX	H
+	STAX	D
+	INX	D
+	DCX	B
+	JMP	CCLDI8
+CCLDIZ:				; Z80 CPU
+	MOV	A,B
+	ORA	C
+	JZ	CCLDIX
+	DB	0EDH,0B0H	; Z80 ldir instruction
+CCLDIX:	XTHL			; Ret addr -> HL
+	PUSH	H		; Adjust SP 
+	PUSH	H
+	PCHL			; Ret
+
+CCLDDR:
+; Callable via cclddr(dest,source,count)
+; CCLDDR mimics LDDR instruction for 8080, executes LDDR on Z80. 
+; However count of zero performs nop.
+; Caution, register variable trashed.
+
+	POP	H	; Return address
+	POP	B	; Count
+	POP	D	; Source
+	XTHL		; Dest->hl, return address to TOS
+	XCHG		; srce->HL,dest->DE,count->BC 
+	LDA	CCCPU	; Check CPU type
+	ORA	A
+;		JNZ	CCLDDZ
+CCLDD8:				; 8080 CPU
+	MOV	A,B
+	ORA	C
+	JZ	CCLDDX
+	MOV	A,M
+	DCX	H
+	STAX	D
+	DCX	D
+	DCX	B
+	JMP	CCLDD8
+CCLDDZ:				; Z80 CPU
+	MOV	A,B
+	ORA	C
+	JZ	CCLDDX
+	DB	0EDH,0B8H	; Z80 lddr instruction
+CCLDDX:
+	XTHL		; Return address -> HL
+	PUSH	H	; Adjust SP
+	PUSH	H
+	PCHL		; Ret
+
+COM$LINE:			; Returns address of command line.
+	LXI	H,81H
+	RET
+
+COM$LEN:			; Returns length of command line
+	LHLD	80H
+	MVI	H,0
+	RET
+

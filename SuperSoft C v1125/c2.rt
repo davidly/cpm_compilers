@@ -1,0 +1,26 @@
+; Copyrighted (c) by SuperSoft, Inc., 1982
+
+CCEXITSP: DW	0,0
+CCEDATA: DW	EDATA
+
+;	ORG	($+1) AND 0FFFEH
+;CALLOCS:	DW	(ALLOCS+2) OR 1
+;		DW	ALLOCS OR 1
+;CALLOCP:	DW	ALLOCS+2
+;CALLOCT:	DW	ALLOCS+2
+
+CCCPU:		DS	1	; 1 if Z80, 0 if 8080
+XXKLG:	DS	2
+
+;	ORG	($+1) AND 0FFFEH
+	IF	M80
+ENTRY	EDATA
+	ENDIF
+EDATA	EQU	$
+	END	CCSTAR	; Pad a little bit for effect -- Don't ask...
+	END	CCSTAR	; Pad a little bit for effect -- Don't ask...
+	END	CCSTAR	; Pad a little bit for effect -- Don't ask...
+	END	CCSTAR	; Pad a little bit for effect -- Don't ask...
+	END	CCSTAR	; Pad a little bit for effect -- Don't ask...
+	END	CCSTAR	; Pad a little bit for effect -- Don't ask...
+MOV	A,HŠ	SBB	DŠ	LXI	H,0Š	RPŠ	INX	HŠ	RETŠŠCCGE:	XCHGŠCCLE:	XRA	AŠ	MOV	A,LŠ	SUB	EŠ	MOV	A,HŠ

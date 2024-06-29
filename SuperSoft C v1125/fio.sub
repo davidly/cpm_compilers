@@ -1,0 +1,5 @@
+CC $1:$2.C
+C2 $1:$2.COD
+M80 $1:$2,=$1:$2.ASM
+L80 $1:$2,FORMATIO,CRUNT2,FUNC,STDIO,ALLOC,C2RT,$1:$2/N/E:CCSTAR
+
