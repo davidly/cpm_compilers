@@ -1,0 +1,48 @@
+		TITLE	puts (ref file, ref array [] of char) - 26 May 87 - MT
+		SUBTTL	'Output a string'
+;
+		INCLUDE	SYMBOLS
+		VERSION	'PUTS 3.1 - 30 Jul 91'
+;
+;-- Outputs  a string using a file.  This routine iterates over the  string
+;   printing each character in turn
+;
+;-- This program is free software: you can redistribute it and/or modify it
+;   under  the terms of the GNU General Public License as published by  the
+;   Free Software Foundation, either version 3 of the License, or (at  your
+;   option) any later version.
+;
+;   This  program  is distributed in the hope that it will be  useful,  but
+;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+;   General Public License for more details.
+;
+;** 30 Jul 91 -	Modified to use call by value - MT
+;
+;--- Find the upper bound of the array.
+;
+PUTS::		PROCEDURE
+		LD	A,(DE)			; Load maximum string length in to BC.
+		LD	C,A
+		INC	DE
+		LD	A,(DE)	
+		LD	B,A
+;
+;-- While there are more characters.
+;
+I$Put_Next:	LD	A,C
+		OR	B
+		RET	Z			; Exit if there are no more characters to print - relies on result
+		INC	DE			; of test leaving zero in A to return success code. 
+		LD	A,(DE)
+		OR	A			; Check for a string terminator.
+		RET	Z
+		PUSH	DE			; Save pointer to current position in string.
+		LD	E,A			; Ignore MSB of value since it isn't used.
+		CALL	PUTC##			; Print character in LSB of DE.
+		POP	DE
+		RET	NZ			; Pass error code back unchanged.
+		DEC	BC			; One less to do...
+		JR	I$Put_Next
+;
+		END

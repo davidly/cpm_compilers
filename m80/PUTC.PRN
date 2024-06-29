@@ -1,0 +1,231 @@
+putc (ref file, char) - 4 Dec 91 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1
+
+
+                                                TITLE   putc (ref file, char) - 4 Dec 91 - MT
+                                                SUBTTL  'Output a character to a logical or physical file'
+                                ;
+                         C                      INCLUDE SYMBOLS
+                         C      ;		TITLE   SYMBOLS - 23 Mar 89 - MT
+                         C      ;		SUBTTL	'Symbol definitions'
+                         C      ;
+                         C      ;		VERSION	'SYMBOLS 3.20 - 06 Feb 21'
+                         C      .LIST
+                          +                     VERSION 'PUTC 4.0 - 26 Jul 92'
+                                ;
+                                ;-- Writes a character to an output file using a 166 byte file buffer.
+                                ;
+                                ;   +-+--------+---+-----------+-+-+--------------------------------------+
+                                ;   | |        |   |           | | |                                      |
+                                ;   +-+--------+---+-----------+-+-+--------------------------------------+
+                                ;                               | |
+                                ;   |--- File Control Block ---|| ||----------- DMA Buffer ---------------|
+                                ;           (36 bytes)          | |             (128 bytes)
+                                ;                              /   \
+                                ;                        Status     Buffer pointer
+                                ;                        (1 byte)   (1 byte)
+                                ;
+                                ;   Supports XON/XOFF flow control and <CTRL/C>/<CTRL/Y> interupt  handling
+                                ;   on the console device.
+                                ;
+                                ;   Dispite this routine's length this version is considerably shorter than
+                                ;   the previous version since it now uses writef() to perform physical IO.
+                                ;
+                                ;   Note - Because  of the use of BIOS routines for logical IO  redirection
+                                ;   using the IO byte is NOT possible.
+                                ;
+                                ;-- This program is free software: you can redistribute it and/or modify it
+                                ;   under  the terms of the GNU General Public License as published by  the
+                                ;   Free Software Foundation, either version 3 of the License, or (at  your
+                                ;   option) any later version.
+                                ;
+                                ;   This  program  is distributed in the hope that it will be  useful,  but
+                                ;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+                                ;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+                                ;   General Public License for more details.
+                                ;
+                                ;   19 May 87   1.0   - Initial version with limited functionality (Console
+                                ;                       output only) - MT
+                                ;   25 May 87   1.1   - Disk output added - MT
+                                ;   15 Jan 91   2.0   - Revised to handle I/O streams - MT
+                                ;   20 Jan 91         - Added full checking on access mode - MT
+                                ;    6 Feb 91         - Updated using code devloped for PUTI - MT
+                                ;    9 Feb 91         - Modified to allow the contents of A to be printed - MT
+                                ;   10 Apr 91   2.1   - Changed to use direct BIOS calls for i/O operations
+                                ;                       to logical devices - MT
+                                ;   30 Jul 91   3.0   - Re-written to use call by value- MT
+                                ;   23 Aug 91         - Fixed  bug when flushing the contents of the buffer
+                                ;                       to disk - MT
+                                ;   31 Oct 91   3.1   - Access mode now held in least signifigent 4 bits of
+                                ;                       status byte - MT
+putc (ref file, char) - 4 Dec 91 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-1
+'Output a character to a logical or physical file'
+
+                                ;    5 Nov 91         - Modified to allow extended drive/user filenames - MT
+                                ;   26 Jul 92   4.0   - Modified to use writef() for physical IO - MT
+                                ;   11 Jun 23         - Added verson numbers to history and renumbered - MT
+                                ;
+                                ;I$Logical_IO   DEFL    TRUE                    ; Include logical device handlers
+                                ;I$Physical_IO  DEFL    TRUE                    ; and disk IO.
+                                ;
+                                ;-- Output  character in DE to the output file pointed to by  HL.  Checking
+                                ;   for logical devices and returning an error code if unsuccessful. (Don't bother about ASCII nulls).
+                                ;
+  000031'                 +     PUTC::          PROCEDURE
+                                ;
+                                ;-- Check that the file has been opened.
+                                ;
+  000044' 176                                   LD      A,(HL)                  ; Get the device code.
+  000045' 267                                   OR      A                       ; If the device code has not been set then
+  000046' 076 013                               LD      A,ERR$Not_Opened        ; the file has not been opened.
+  000050' 310                                   RET     Z
+                                ;
+                                ;-- Was the file opened for write or append (not yet implemented).
+                                ;
+  000051' 345                                   PUSH    HL                      ; Save the buffer pointer.
+  000052' 001 000044                            LD      BC,36                   ; Get the file access mode from the
+  000055' 011                                   ADD     HL,BC                   ; buffer.
+  000056' 076 017                               LD      A,00001111B
+  000060' 246                                   AND     (HL)                    ; Get access code masking out user number.
+  000061' 341                                   POP     HL
+                                ;               CP      'A' AND 00001111B       ; At some point I'll add the ability to append data to a file.
+                                ;               JR      Z,F$Mode_OK
+  000062' 376 007                               CP      'W' AND 00001111B       ; An explicit check is required at this stage even though the access
+  000064' 076 003                               LD      A,ERR$Bad_Mode          ; mode is validated when the file is opened, since some devices are
+  000066' 300                                   RET     NZ                      ; R/W.
+                                ;
+                                ;-- Check which device are we outputing to ?
+                                ;
+  000067' 176                   F$Mode_OK:      LD      A,(HL)                  ; Get device code and select approprite output routine.
+  000070' 376 023                               CP      SYS$Printer
+  000072' 312 000122'                           JP      Z,I$LST_Device          ; Output to printer.
+  000075' 376 024                               CP      SYS$Punch
+  000077' 312 000131'                           JP      Z,I$PUN_Device          ; Output to punch !
+  000102' 376 021                               CP      SYS$Console
+  000104' 050 005                               JR      Z,I$CON_Device          ; Output to console.
+  000106' 332 000140'                           JP      C,I$Write_Record
+                                ;
+                                ;-- Output character to approprite logical device.
+                                ;
+  000111' 257                   I$NUL_Device:   XOR     A                       ; If not an actual device then NUL: is assumed
+  000112' 311                                   RET                             ; - do nothing.
+                                ;
+                                ;-- Output to console.
+                                ;
+  000113' 016 014               I$CON_Device:   LD      C,BIOS$CON_Output       ; Character is already in the E register !
+  000115' 315 000000*                           CALL    BIOS##
+  000120' 030 367                               JR      I$NUL_Device
+                                ;
+                                ;-- Output character to LST: device.
+putc (ref file, char) - 4 Dec 91 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-2
+'Output a character to a logical or physical file'
+
+                                ;
+  000122' 016 017               I$LST_Device:   LD      C,BIOS$LST_Output
+  000124' 315 000000*                           CALL    BIOS##
+  000127' 030 360                               JR      I$NUL_Device
+                                ;
+                                ;-- Output character to PUN: device...
+                                ;
+  000131' 016 022               I$PUN_Device:   LD      C,BIOS$PUN_output
+  000133' 315 000000*                           CALL    BIOS##
+  000136' 030 351                               JR      I$NUL_Device
+                                ;
+                                ;-- Output to physical file.
+                                ;
+  000140' 325                   I$Write_Record: PUSH    DE                      ; Save the character on the stack and copy
+  000141' 124                                   LD      D,H                     ; address of FCB in to DE.
+  000142' 135                                   LD      E,L
+  000143' 001 000045                            LD      BC,37                   ; How many characters are there in
+  000146' 011                                   ADD     HL,BC                   ; the buffer ?
+  000147' 176                                   LD      A,(HL)
+  000150' 376 200                               CP      128                     ; If the buffer is'nt full then put the
+  000152' 040 015                               JR      NZ,I$Put_Buf            ; next character into the buffer.
+                                ;
+                                ;-- Flush buffer to disk, without corrupting character in DE.
+                                ;
+  000154' 345                                   PUSH    HL                      ; Save pointer to buffer pointer.
+  000155' 043                                   INC     HL                      ; Find DMA address and exchange parameters for call to writef().
+  000156' 353                                   EX      DE,HL
+  000157' 315 000000*                           CALL    WRITEF##
+  000162' 341                                   POP     HL                      ; Restore pointer to buffer pointer
+  000163' 050 004                               JR      Z,I$Put_Buf             ; and append next character to buffer if OK.
+  000165' 076 014                               LD      A,ERR$Write_Fail
+  000167' 321                                   POP     DE
+  000170' 311                                   RET                             ; Panic ! - disk write error.
+                                ;
+                                ;-- Put character into buffer.
+                                ;
+  000171' 064                   I$Put_Buf:      INC     (HL)                    ; Increment buffer pointer by one...
+  000172' 176                                   LD      A,(HL)                  ; What is the character pointer anyway ?
+  000173' 117                                   LD      C,A                     ; Offset of one to increment HL to point
+  000174' 006 000                               LD      B,0                     ; to buffer is already accounted for...
+  000176' 011                                   ADD     HL,BC                   ; HL points to new character position.
+  000177' 321                                   POP     DE                      ; restore character from stack and
+  000200' 163                                   LD      (HL),E                  ; put it in to the buffer.
+  000201' 257                                   XOR     A
+  000202' 311                                   RET
+                                ;
+                                                END
+putc (ref file, char) - 4 Dec 91 - MT	MACRO-80 3.44	09-Dec-81	PAGE	S
+'Output a character to a logical or physical file'
+
+Macros:
+COPYRIGHT       FUNCTION        PROCEDURE       PROGRAM         USING           
+VERSION         
+
+Symbols:
+000044'	..0000          000006 	ASC$ACK         000052 	ASC$AST         
+000007 	ASC$BEL         000003 	ASC$BRK         000010 	ASC$BS          
+000030 	ASC$CAN         000015 	ASC$CR          000021 	ASC$DC1         
+000022 	ASC$DC2         000023 	ASC$DC3         000024 	ASC$DC4         
+000177 	ASC$DEL         000020 	ASC$DLE         000005 	ASC$ENQ         
+000032 	ASC$EOF         000031 	ASC$EOM         000004 	ASC$EOT         
+000075 	ASC$EQU         000033 	ASC$ESC         000027 	ASC$ETB         
+000014 	ASC$FF          000034 	ASC$FS          000035 	ASC$GS          
+000012 	ASC$LF          000055 	ASC$MINUS       000025 	ASC$NAK         
+000055 	ASC$NEGATIVE    000071 	ASC$NINE        000000 	ASC$NUL         
+000053 	ASC$PLUS        000040 	ASC$POSITIVE    000056 	ASC$PT          
+000036 	ASC$RS          000054 	ASC$SEP         000017 	ASC$SI          
+000057 	ASC$SLH         000016 	ASC$SO          000001 	ASC$SOH         
+000040 	ASC$SP          000002 	ASC$STX         000026 	ASC$SYN         
+000011 	ASC$TAB         000037 	ASC$US          000013 	ASC$VT          
+000060 	ASC$ZERO        000020 	BDOS$CLOSE_FILE 000001 	BDOS$CON_INPUT  
+000002 	BDOS$CON_OUTPUT 000013 	BDOS$CON_STATUS 000006 	BDOS$DIRECT_IO  
+000023 	BDOS$ERASE_FILE 000021 	BDOS$FIND_FILE  000022 	BDOS$FIND_NEXT  
+000037 	BDOS$GET_DPB    000031 	BDOS$GET_DRIVE  000007 	BDOS$GET_IOBYTE 
+000033 	BDOS$GET_VECTOR 000005 	BDOS$LST_OUTPUT 000026 	BDOS$MAKE_FILE  
+000017 	BDOS$OPEN_FILE  000011 	BDOS$PRINT_STR  000004 	BDOS$PUN_OUTPUT 
+000003 	BDOS$RDR_INPUT  000041 	BDOS$READ_RND   000024 	BDOS$READ_SEQ   
+000012 	BDOS$READ_STR   000027 	BDOS$REN_FILE   000000 	BDOS$RESET      
+000015 	BDOS$RESET_DISK 000016 	BDOS$SELECT     000032 	BDOS$SET_DMA    
+000010 	BDOS$SET_IOBYTE 000040 	BDOS$SET_USR_NO 000014 	BDOS$VER_NO     
+000042 	BDOS$WRITE_RND  000025 	BDOS$WRITE_SEQ  000134*	BIOS            
+000000 	BIOS$BOOT       000011 	BIOS$CON_INPUT  000014 	BIOS$CON_OUTPUT 
+000006 	BIOS$CON_STAT   000030 	BIOS$HOME       000017 	BIOS$LST_OUTPUT 
+000055 	BIOS$LST_STAT   000022 	BIOS$PUN_OUTPUT 000025 	BIOS$RDR_INPUT  
+000047 	BIOS$READ       000033 	BIOS$SELECT     000044 	BIOS$SET_DMA    
+000041 	BIOS$SET_SECTOR 000036 	BIOS$SET_TRACK  000003 	BIOS$WARMBOOT   
+000052 	BIOS$WRITE      000000 	CPM$BASE        000000 	CPM$BOOT        
+000200 	CPM$BUFF        000134 	CPM$FB1         000154 	CPM$FB2         
+000200 	CPM$TAIL        000022 	ERR$BAD_COMMAND 000002 	ERR$BAD_DEVICE  
+000001 	ERR$BAD_FILE    000003 	ERR$BAD_MODE    000004 	ERR$BAD_USER    
+000010 	ERR$CANT_CLOSE  000007 	ERR$CANT_CREATE 000005 	ERR$CANT_INIT   
+000006 	ERR$CANT_OPEN   000014 	ERR$DISK_FULL   000011 	ERR$FILE_EXISTS 
+000013 	ERR$NOT_OPENED  000012 	ERR$NO_FILE     000021 	ERR$NO_MEMORY   
+000016 	ERR$READ_EOF    000015 	ERR$READ_FAIL   000020 	ERR$READ_ONLY   
+000000 	ERR$SUCCESS     000023 	ERR$UNDEFINED   000014 	ERR$WRITE_FAIL  
+000017 	ERR$WRITE_ONLY  000067'	F$MODE_OK       000000 	FALSE           
+000113'	I$CON_DEVICE    000122'	I$LST_DEVICE    000111'	I$NUL_DEVICE    
+000131'	I$PUN_DEVICE    000171'	I$PUT_BUF       000140'	I$WRITE_RECORD  
+000000 	NULL            000031I'	PUTC            000027 	SYS$COMMAND     
+000021 	SYS$CONSOLE     000026 	SYS$EOF         000022 	SYS$NULL        
+000023 	SYS$PRINTER     000024 	SYS$PUNCH       000025 	SYS$READER      
+177777 	TRUE            000160*	WRITEF          
+
+
+
+No Fatal error(s)
+
+
+RITE_ONLY  000067'	F$MODE_OK       000000 	FALSE           
+000113'	I$CON_DEVICE    000122'	I$LST_DEVICE    000111'	I

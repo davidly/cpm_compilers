@@ -1,0 +1,106 @@
+		TITLE	writef (ref file,ref record) - 26 Nov 91 - MT
+		SUBTTL	'Write a record to a physical file'
+;
+		INCLUDE SYMBOLS
+		VERSION	'WRITEF rev 3.1 -  6 Apr 92'
+;
+;-- Writes a 128 byte record from a buffer to a physical  device.  Attempts
+;   to  write to a logical device or file opened for reading will result in
+;   an  error.  This procedure assumes that a file header block exists  and
+;   that the file has been opened for writing.
+;
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;   | |        |   |           | | |                                      |
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;				| |
+;   |--- File Control Block ---|| ||----------- DMA Buffer ---------------|
+;	    (36 bytes)		| |		(128 bytes)
+;			       /   \
+;			 Status     Buffer pointer
+;			 (1 byte)   (1 byte)
+;
+;
+;   This  routine can write a record directly from any location in  memory,
+;   it is not necessary to use the default DMA buffer.
+;
+;**  6 Apr 92 -	Modified to use the usr number held in mode byte - MT
+;
+;-- Check that the output file has been correctly opened for writing to disk.
+;
+WRITEF::	PROCEDURE			; All registers preserved.
+		LD	A,(HL)			; Get device code.
+		OR	A			; If the device code has not been set then the file has not been opened.
+		LD	A,ERR$Not_Opened
+		RET	Z
+		LD	A,(HL)			; Get device code.
+		CP	SYS$Console		; Check that we are writing to a physical device, block write to a logical
+		LD	A,ERR$Bad_Device	; device is not possible.
+		RET	NC
+		PUSH	HL			; Save the pointer to the FCB.
+		LD	BC,36			; Get the file access mode from the
+		ADD	HL,BC			; buffer.
+		LD	A,(HL)
+		AND	00001111B		; Check that the file was opened for writing.
+		CP	'W' AND 00001111B
+		LD	A,ERR$Bad_Mode
+		POP	HL			; Restore pointer to FCB.
+		RET	NZ
+;
+;-- Set up the DMA address and reset the buffer pointer.
+;
+I$Write_Record:	PUSH	HL			; Save DMA address and the address of the FCB 
+		PUSH 	DE			; on the stack.
+		POP	DE
+		LD	C,BDOS$Set_DMA		; DE already points to the record so use it for DMA.
+		CALL	BDOS##			; Set DMA address (no errors to worry about here).
+		POP	DE			; What was the the address FCB ?
+		LD	HL,37			; Calculate address of buffer pointer
+		ADD	HL,DE			; and reset it.
+		XOR	A
+		LD	(HL),A
+;
+;-- Save current usr number on the stack.
+;
+		PUSH	DE			; Save the address of the FCB.
+		LD	C,BDOS$Set_Usr_No	; Use set usr number function to get the current usr number
+		LD	E,0FFH			; by putting 0FFH in E.
+		CALL	BDOS##
+		LD	L,A			; Put usr number into HL.
+		EX	(SP),HL			; Save it on the stack and get the pointer to the FCB in HL.
+		EX	DE,HL			; Restore pointer to FCB.
+;
+;-- Set up usr number of output file.
+;
+		PUSH	DE			; Save address of FCB.
+		LD	HL,36			; Offset to status byte.
+		ADD	HL,DE
+		XOR	A
+		RLD	
+		LD	E,A			; Get usr number of output file.
+		RLD
+		RLD
+		LD	C,BDOS$Set_Usr_No	; Set up new usr number.
+		CALL	BDOS##
+		POP	DE			; Restore address of FCB in DE for BDOS write function.
+;
+;-- Write record to disk.
+;
+		LD	C,BDOS$Write_Seq	; Perform a sequential write to transfer the next
+		CALL	BDOS##			; record into the DMA buffer previously defined.
+		OR	A			; Set flags.
+;
+;-- Reset usr number to current value.
+;
+		POP	DE			; Restore current user number from the stack
+		PUSH	AF			; and save the error code.
+		LD	C,BDOS$Set_Usr_No	; Reset the usr number.
+		CALL	BDOS##
+		POP	AF			; Restore the error code.
+;
+;-- Check for write errors.
+;
+		RET	Z			; No problem.
+		LD	A,ERR$Write_Fail	; Set up correct error code for a write error - Disk Full !
+		RET
+;
+		END

@@ -1,0 +1,46 @@
+		TITLE	BDOS - 27 Jan 91 - MT
+		SUBTTL	'BDOS and BIOS calls'
+;
+		INCLUDE	SYMBOLS
+;
+;-- Implements a tidy means of accessing BDOS and BIOS routines directly. 
+;
+;   The  base address of the BIOS jump table is easily found as the MSB  of
+;   the address specified in the JMP instruction at 0000H.  Making the BIOS
+;   function codes the same as the offsets of the jump addresses simplifies
+;   the task of finding the address of the BIOS entry point.
+;
+;-- This program is free software: you can redistribute it and/or modify it
+;   under  the terms of the GNU General Public License as published by  the
+;   Free Software Foundation, either version 3 of the License, or (at  your
+;   option) any later version.
+;
+;   This  program  is distributed in the hope that it will be  useful,  but
+;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+;   General Public License for more details.
+;
+;   You should have received a copy of the GNU General Public License along
+;   with this program.  If not, see <http://www.gnu.org/licenses/>.
+;
+;-- Calculate BIOS entry point from BIOS function number. 
+;
+;   To maintain compatibility with BDOS calls the calling convention is  as
+;   follows:
+;
+;	C  = BIOS Function.		A = Return status or character.
+;	E  = Byte arguments.
+;	DE = Word argumants.
+;
+;** 10 Apr 91 -	Modified to use the jump address at CPM$Base + 1 (0001H) to
+;		find BIOS offset - MT
+;
+BIOS::		LD	HL,(CPM$Base + 1)	; Get address of warmstart routine and use hi byte as BIOS address.
+		LD	L,C			; Put code (actually the offset into the jump table) in to LSB of address, and the BIOS 
+		LD	C,E			; offset into the MSB. Put or word byte arguments into BC where the BIOS expects them.
+		LD	B,D
+		JP	(HL)			; Jump to BIOS function...
+;
+BDOS::		JP	0005H
+;
+		END

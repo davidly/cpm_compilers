@@ -1,0 +1,154 @@
+                TITLE   putc (ref file, char) - 4 Dec 91 - MT
+                SUBTTL  'Output a character to a logical or physical file'
+;
+                INCLUDE SYMBOLS
+                VERSION 'PUTC 4.0 - 26 Jul 92'
+;
+;-- Writes a character to an output file using a 166 byte file buffer.
+;
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;   | |        |   |           | | |                                      |
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;                               | |
+;   |--- File Control Block ---|| ||----------- DMA Buffer ---------------|
+;           (36 bytes)          | |             (128 bytes)
+;                              /   \
+;                        Status     Buffer pointer
+;                        (1 byte)   (1 byte)
+;
+;   Supports XON/XOFF flow control and <CTRL/C>/<CTRL/Y> interupt  handling
+;   on the console device.
+;
+;   Dispite this routine's length this version is considerably shorter than
+;   the previous version since it now uses writef() to perform physical IO.
+;
+;   Note - Because  of the use of BIOS routines for logical IO  redirection
+;   using the IO byte is NOT possible.
+;
+;-- This program is free software: you can redistribute it and/or modify it
+;   under  the terms of the GNU General Public License as published by  the
+;   Free Software Foundation, either version 3 of the License, or (at  your
+;   option) any later version.
+;
+;   This  program  is distributed in the hope that it will be  useful,  but
+;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+;   General Public License for more details.
+;
+;   19 May 87   1.0   - Initial version with limited functionality (Console
+;                       output only) - MT
+;   25 May 87   1.1   - Disk output added - MT
+;   15 Jan 91   2.0   - Revised to handle I/O streams - MT
+;   20 Jan 91         - Added full checking on access mode - MT
+;    6 Feb 91         - Updated using code devloped for PUTI - MT
+;    9 Feb 91         - Modified to allow the contents of A to be printed - MT
+;   10 Apr 91   2.1   - Changed to use direct BIOS calls for i/O operations
+;                       to logical devices - MT
+;   30 Jul 91   3.0   - Re-written to use call by value- MT
+;   23 Aug 91         - Fixed  bug when flushing the contents of the buffer
+;                       to disk - MT
+;   31 Oct 91   3.1   - Access mode now held in least signifigent 4 bits of
+;                       status byte - MT
+;    5 Nov 91         - Modified to allow extended drive/user filenames - MT
+;   26 Jul 92   4.0   - Modified to use writef() for physical IO - MT
+;   11 Jun 23         - Added verson numbers to history and renumbered - MT
+;
+;I$Logical_IO   DEFL    TRUE                    ; Include logical device handlers
+;I$Physical_IO  DEFL    TRUE                    ; and disk IO.
+;
+;-- Output  character in DE to the output file pointed to by  HL.  Checking
+;   for logical devices and returning an error code if unsuccessful. (Don't bother about ASCII nulls).
+;
+PUTC::          PROCEDURE
+;
+;-- Check that the file has been opened.
+;
+                LD      A,(HL)                  ; Get the device code.
+                OR      A                       ; If the device code has not been set then
+                LD      A,ERR$Not_Opened        ; the file has not been opened.
+                RET     Z
+;
+;-- Was the file opened for write or append (not yet implemented).
+;
+                PUSH    HL                      ; Save the buffer pointer.
+                LD      BC,36                   ; Get the file access mode from the
+                ADD     HL,BC                   ; buffer.
+                LD      A,00001111B
+                AND     (HL)                    ; Get access code masking out user number.
+                POP     HL
+;               CP      'A' AND 00001111B       ; At some point I'll add the ability to append data to a file.
+;               JR      Z,F$Mode_OK
+                CP      'W' AND 00001111B       ; An explicit check is required at this stage even though the access
+                LD      A,ERR$Bad_Mode          ; mode is validated when the file is opened, since some devices are
+                RET     NZ                      ; R/W.
+;
+;-- Check which device are we outputing to ?
+;
+F$Mode_OK:      LD      A,(HL)                  ; Get device code and select approprite output routine.
+                CP      SYS$Printer
+                JP      Z,I$LST_Device          ; Output to printer.
+                CP      SYS$Punch
+                JP      Z,I$PUN_Device          ; Output to punch !
+                CP      SYS$Console
+                JR      Z,I$CON_Device          ; Output to console.
+                JP      C,I$Write_Record
+;
+;-- Output character to approprite logical device.
+;
+I$NUL_Device:   XOR     A                       ; If not an actual device then NUL: is assumed
+                RET                             ; - do nothing.
+;
+;-- Output to console.
+;
+I$CON_Device:   LD      C,BIOS$CON_Output       ; Character is already in the E register !
+                CALL    BIOS##
+                JR      I$NUL_Device
+;
+;-- Output character to LST: device.
+;
+I$LST_Device:   LD      C,BIOS$LST_Output
+                CALL    BIOS##
+                JR      I$NUL_Device
+;
+;-- Output character to PUN: device...
+;
+I$PUN_Device:   LD      C,BIOS$PUN_output
+                CALL    BIOS##
+                JR      I$NUL_Device
+;
+;-- Output to physical file.
+;
+I$Write_Record: PUSH    DE                      ; Save the character on the stack and copy
+                LD      D,H                     ; address of FCB in to DE.
+                LD      E,L
+                LD      BC,37                   ; How many characters are there in
+                ADD     HL,BC                   ; the buffer ?
+                LD      A,(HL)
+                CP      128                     ; If the buffer is'nt full then put the
+                JR      NZ,I$Put_Buf            ; next character into the buffer.
+;
+;-- Flush buffer to disk, without corrupting character in DE.
+;
+                PUSH    HL                      ; Save pointer to buffer pointer.
+                INC     HL                      ; Find DMA address and exchange parameters for call to writef().
+                EX      DE,HL
+                CALL    WRITEF##
+                POP     HL                      ; Restore pointer to buffer pointer
+                JR      Z,I$Put_Buf             ; and append next character to buffer if OK.
+                LD      A,ERR$Write_Fail
+                POP     DE
+                RET                             ; Panic ! - disk write error.
+;
+;-- Put character into buffer.
+;
+I$Put_Buf:      INC     (HL)                    ; Increment buffer pointer by one...
+                LD      A,(HL)                  ; What is the character pointer anyway ?
+                LD      C,A                     ; Offset of one to increment HL to point
+                LD      B,0                     ; to buffer is already accounted for...
+                ADD     HL,BC                   ; HL points to new character position.
+                POP     DE                      ; restore character from stack and
+                LD      (HL),E                  ; put it in to the buffer.
+                XOR     A
+                RET
+;
+                END

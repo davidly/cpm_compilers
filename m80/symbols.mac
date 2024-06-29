@@ -1,0 +1,581 @@
+;		TITLE   SYMBOLS - 23 Mar 89 - MT
+;		SUBTTL	'Symbol definitions'
+;
+;		VERSION	'SYMBOLS 3.20 - 06 Feb 21'
+.XLIST
+.SALL
+.Z80
+;
+;-- This  file contains all the 'standard' constants and macro  definitions
+;   used  to make writing assember a little bit easier.  This includes  the
+;   common ASCII codes, BDOS and BIOS function codes, CPM constants and any
+;   macros.  
+;
+;-- This program is free software: you can redistribute it and/or modify it
+;   under  the terms of the GNU General Public License as published by  the
+;   Free Software Foundation, either version 3 of the License, or (at  your
+;   option) any later version.
+;
+;   This  program  is distributed in the hope that it will be  useful,  but
+;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+;   General Public License for more details.
+;
+;   You should have received a copy of the GNU General Public License along
+;   with this program.  If not, see <http://www.gnu.org/licenses/>.
+;
+;** 23 Mar 89 -	Rewritten to use external library routines - MT
+;
+;** 31 Sep 89 -	ASC$BRK added - MT
+;
+;** 12 Nov 90 -	Added device codes for locical device codes added (allowing
+;		fully buffered I/O) - MT
+;
+;** 27 Jan 91 -	BDOS function codes removed - MT
+;
+;** 28 Jan 91 -	BDOS and additional BIOS function codes restored after they
+;               were removed - MT
+;
+;** 28 Jan 91 -	All ASCII and system symbol names changed - MT
+;
+;** 29 Jan 91 -	Added error code definations - MT
+;
+;**  4 Mar 91 -	Modified error codes and added some more - MT
+;
+;**  4 Mar 91 - Renamed ASCII symbol names (again) - MT
+;
+;** 31 Oct 91 -	Added error code for an invalid user number - MT
+;
+;**  7 Aug 92 -	Added error code for an invalid command - MT
+;
+;** 27 Dec 20 -	Updated the formatting - MT
+;
+;** 27 Dec 20 - Buffers are now defined globally - MT
+;
+;** 23 Jan 21 - Added  a  global label for the error handler so it  can  be
+;               called from a program - MT
+;
+;** 23 Jan 21 -	Moved module macro to an alternate symbol file - MT
+;
+;** 24 Jan 21 -	Only tests for a command line once saving the result on the
+;               stack (more efficent than trying to use an explicit boolean
+;               value) - MT
+;
+;** 24 Jan 21 -	Fixed error handling, if a program returns an error then an
+;		error message will be printed and the user will be prompted
+;		to reenter the command line parameters - MT
+;
+;** 24 Jan 21 -	Command  line  parsing is no only enabled if  the  litteral 
+;		'Use_Parser' is defined - MT
+;
+;**  6 Feb 21 - Does not reserves space for the command file unless command
+;		line parsing is enabled - MT
+;
+;**  6 Feb 21 - Added copyright macro - MT
+;
+;-- ASCII control characters.
+;
+Asc$NUL         EQU     000H			; <Ctrl/@> - Null.
+Asc$SOH         EQU     001H			; <Ctrl/A>
+Asc$STX         EQU     002H			; <Ctrl/B>
+Asc$BRK         EQU     003H			; <Ctrl/C> - CP/M break in character.
+Asc$EOT         EQU     004H			; <Ctrl/D>
+Asc$ENQ         EQU     005H			; <Ctrl/E>
+Asc$ACK         EQU     006H			; <Ctrl/F>
+Asc$BEL         EQU     007H			; <Ctrl/G> - ASCII bell etc...
+Asc$BS          EQU     008H			; <Ctrl/H> - Backspace.
+Asc$TAB         EQU     009H			; <Ctrl/I> - Tab.
+Asc$LF          EQU     00AH			; <Ctrl/J> - Linefeed.
+Asc$VT          EQU     00BH			; <Ctrl/K> - Vertical tab.
+Asc$FF          EQU     00CH			; <Ctrl/L> - Formfeed.
+Asc$CR          EQU     00DH			; <Ctrl/M> - Carridge return.
+Asc$SO          EQU     00EH			; <Ctrl/N>
+Asc$SI          EQU     00FH			; <Ctrl/O>
+Asc$DLE         EQU     010H			; <Ctrl/P>
+Asc$DC1         EQU     011H			; <Ctrl/Q> - XON.
+Asc$DC2         EQU     012H			; <Ctrl/R>
+Asc$DC3         EQU     013H			; <Ctrl/S> - XOFF.
+Asc$DC4         EQU     014H			; <Ctrl/T>
+Asc$NAK         EQU     015H			; <Ctrl/U>
+Asc$SYN         EQU     016H			; <Ctrl/V>
+Asc$ETB         EQU     017H			; <Ctrl/W>
+Asc$CAN         EQU     018H			; <Ctrl/X>
+Asc$EOM         EQU     019H			; <Ctrl/Y>
+Asc$EOF         EQU     01AH			; <Ctrl/Z>
+Asc$ESC         EQU     01BH			; <Ctrl/[>
+Asc$FS          EQU     01CH			; <Ctrl/\> - File seperator.
+Asc$GS          EQU     01DH			; <Ctrl/]> - Group seperator.
+Asc$RS          EQU     01EH			; <Ctrl/^> - Record seperator.
+Asc$US          EQU     01FH			; <Ctrl/-> - Unit seperator.
+;
+Asc$SP          EQU     020H			; Space.
+Asc$DEL         EQU     07FH			; Delete.
+Asc$AST         EQU     02AH			; Asterisk.
+Asc$SLH         EQU     02FH			; Slash.
+Asc$PT          EQU     02EH			; Full stop.
+Asc$SEP         EQU     02CH			; Seperator (comma).
+Asc$ZERO        EQU     030H
+Asc$NINE        EQU     039H
+Asc$EQU         EQU     03DH
+Asc$PLUS        EQU     02BH
+Asc$MINUS       EQU     02DH
+;
+;-- Decimal sign characters, use set to change them.
+;
+Asc$POSITIVE    DEFL    Asc$SP			; Suppress plus signs.
+Asc$NEGATIVE    DEFL    Asc$MINUS		; Define minus sign.
+;
+;-- Logical device codes.
+;
+;   NOTE -  DO NOT CHANGE ORDER, insert additional devices within groups.
+;
+SYS$Console     EQU     017			; Input/Output devices - Do not change order, insert additional devices
+SYS$Null        EQU     018			; within groups.
+;
+SYS$Printer     EQU     019			; Output devices.
+SYS$Punch       EQU     020
+;
+SYS$Reader      EQU     021			; Input devices
+SYS$EOF         EQU     022
+SYS$Command     EQU     023
+;
+;-- Error codes.
+;
+ERR$Success     EQU     000			; Success - do not change. Is this really an error ?
+ERR$Bad_File    EQU     001			; Invalid diak file.
+ERR$Bad_Device  EQU     002			; Invalid logical device.
+ERR$Bad_Mode    EQU     003			; Invalid mode.
+ERR$Bad_User    EQU     004			; Invalid user number.
+ERR$Cant_Init   EQU     005			; Cant initlize file.
+ERR$Cant_Open   EQU     006			; Can't open file.
+ERR$Cant_Create EQU     007			; Can't create file.
+ERR$Cant_Close  EQU     008			; Can't close file.
+ERR$File_Exists EQU     009			; File exists...
+ERR$No_File     EQU     010			; File not found.
+ERR$Not_Opened  EQU     011			; File not initilized
+ERR$Write_Fail  EQU     012			; Disk full.
+ERR$Disk_Full   EQU     ERR$Write_Fail		; Disk full.
+ERR$Read_Fail   EQU     013			; Read past physical EOF.
+ERR$Read_EOF    EQU     014			; Read past logical EOF (AscEOF).
+ERR$Write_Only  EQU     015			; Device is write only.
+ERR$Read_Only   EQU     016			; Device is read only.
+ERR$No_Memory   EQU     017			; Out of memory !
+ERR$Bad_Command EQU     018			; Invalid command.
+ERR$Undefined   EQU     019			; Undefined error - just in case any of the others doesn't fit.
+;
+;-- Set up logical constants.
+;
+FALSE           EQU     0  			; Define TRUE and FALSE.
+TRUE            EQU     NOT FALSE
+Null            EQU     0  			; Set value of null pointer.
+;
+;-- Important CP/M system constants.
+;
+CPM$Base        EQU     0000H			; Base of CP/M OS.
+CPM$Buff        EQU     0080H			; Start of CP/M file buffer 80..FFH.
+CPM$Tail        EQU     0080H			; Command tail.
+CPM$FB1         EQU     005CH			; Default FCB, file operand 1.
+CPM$FB2         EQU     006CH			; file operand 2.
+CPM$Boot        EQU     0000H			; BIOS reboot.
+;
+;-- BIOS and BDOS function codes.
+;
+;   Provides a tidy means of accessing both BDOS and BIOS routines directly
+;   from  the users program. As such it is system dependant since the  page
+;   will  vary from system to system. It may be easily found as the MSB  of
+;   the address specified in the JMP instruction at 0000H. 
+;
+BDOS$Reset      EQU     000H			; System reset (Warmboot).
+BDOS$CON_Input  EQU     001H			; Input byte from CON:.
+BDOS$CON_Output EQU     002H			; Type one byte at CON:.
+BDOS$RDR_Input  EQU     003H			; Input one byte from RDR:.
+BDOS$PUN_Output EQU     004H			; Output one byte to PUN:.
+BDOS$LST_Output EQU     005H			; Output one byte to LST:.
+BDOS$Direct_IO  EQU     006H			; Direct console I/O.
+BDOS$Get_IOByte EQU     007H			; Get IOBYTE.
+BDOS$Set_IOByte EQU     008H			; Set IOBYTE.
+BDOS$Print_Str  EQU     009H			; Print a string to CON:.
+BDOS$Read_Str   EQU     00AH			; Bufferted read from CON:.
+BDOS$CON_Status EQU     00BH			; Get console status.
+BDOS$Ver_No     EQU     00CH			; Return version number.
+BDOS$Reset_Disk EQU     00DH			; Reset disks and login to A:.
+BDOS$Select     EQU     00EH			; Select default drive.
+BDOS$Open_File  EQU     00FH			; Open a disk file.
+BDOS$Close_File EQU     010H			; Close output file.
+BDOS$Find_File  EQU     011H			; Initial directory search.
+BDOS$Find_Next  EQU     012H			; Sucessive directory searches.
+BDOS$Erase_File EQU     013H			; Erase a file.
+BDOS$Read_Seq   EQU     014H			; Read disk sequential.
+BDOS$Write_Seq  EQU     015H			; Write disk sequential.
+BDOS$Make_File  EQU     016H			; Make a directory entry.
+BDOS$Ren_File   EQU     017H			; Rename a file.
+BDOS$Get_Drive  EQU     019H			; Get default drive number.
+BDOS$Set_DMA    EQU     01AH			; Set file buffer address.
+BDOS$Get_Vector EQU     01BH			; Get address of allocation vector.
+BDOS$Get_DPB    EQU     01FH			; Get address of Disk Parameter Block.
+BDOS$Set_Usr_No EQU     020H			; Get/Set default user number.
+BDOS$Read_Rnd   EQU     021H			; Read disk random.
+BDOS$Write_Rnd  EQU     022H			; Write disk random.
+;
+;-- Symbol definations for BIOS service request numbers.
+;
+BIOS$Boot       EQU     000H			; Cold bootstrap.
+BIOS$Warmboot   EQU     003H			; Warm bootstrap (restart).
+BIOS$CON_Stat   EQU     006H			; Console input status.
+BIOS$CON_Input  EQU     009H			; Console input.
+BIOS$CON_Output EQU     00CH			; Console output.
+BIOS$LST_Output EQU     00FH			; List output.
+BIOS$PUN_Output EQU     012H			; Punch output.
+BIOS$RDR_Input  EQU     015H			; Reader input.
+BIOS$Home       EQU     018H			; Home disk heads (set to track 0).
+BIOS$Select     EQU     01BH			; Select disk (no error trap).
+BIOS$Set_Track  EQU     01EH			; Set track number.
+BIOS$Set_Sector EQU     021H			; Set sector number.
+BIOS$Set_DMA    EQU     024H			; Set DMA address.
+BIOS$Read       EQU     027H			; Read sector.
+BIOS$Write      EQU     02AH			; Write sector.
+BIOS$LST_Stat   EQU     02DH			; List output status.
+;
+;-- Macro to embed the version number in the code.
+;
+VERSION		MACRO	_Version
+		DEFB    '%%',_Version,'%%',Asc$NUL
+		ENDM
+;
+;-- Macro to embed a copy right message in the code.
+;
+COPYRIGHT	MACRO	_Copyright
+		DEFB    '%%Copyright (c)',_Copyright,'%%',Asc$NUL
+		ENDM
+;
+;-- Procedure  macro saves the registers on the stack before executing  the 
+;   subroutine, restores them on exit and ensures that the flags are set.
+;
+PROCEDURE	MACRO
+		LOCAL   $Body
+		PUSH    HL
+		PUSH    DE
+		PUSH    BC
+		CALL    $Body
+		OR      A
+		POP     BC
+		POP     DE
+		POP     HL
+		RET
+$Body:
+		ENDM
+;
+;-- Function macro to allows a subroutine to return a value in HL.
+;
+FUNCTION	MACRO
+		LOCAL   $Body
+		PUSH    DE
+		PUSH    BC
+		CALL    $Body
+		OR      A
+		POP     BC
+		POP     DE
+		RET
+$Body:
+		ENDM		
+;
+;-- Program  macro defines the buffers for any file streams, and opens  the
+;   standard input and output files if used as well a file to read from the
+;   command line if required.  It will also attempt to close any open files
+;   when the progran finshes.
+;
+;   If the command line is used and no arguments are given then the program
+;   will prompt the user to provide them when it runs.  If no arguments are
+;   provided or an error occours then the user will be prompted to  reenter
+;   the arguments again when the program is finished.
+;
+;   Double  semi-colons are used to prevent the comments being included  in
+;   the macro expansion which saves memory when the program is assembled. 
+;
+;*** 20 Jan 93 - Added comamnd line interface - MT
+;
+;*** 21 Jan 93 - Error handler now uses a table of error messages - MT
+;
+PROGRAM         MACRO   File_1,File_2,File_3,File_4,File_5,File_6,File_7,File_8
+;;
+		LOCAL   $Start,$Main,$Stack,$Repeat,$Loop,$Close_Next,$Close_Files,$Done,$Error,$Next,$Skip
+		LOCAL   $CON,$CMD,$File_Buffers,$Open_Output,$Open_Input,$Err_Messages
+;;
+		JP      $Start
+;;
+$File_Buffers:  IFNB    <File_1>		;; Reserve space for any necessary file buffers.
+File_1::        DEFS    166,0
+		IFIDN   <File_1>,<Input>
+$Open_Input     DEFL    TRUE
+		ENDIF
+		IFIDN   <File_1>,<Output>
+$Open_Output    DEFL    TRUE
+		ENDIF
+		ENDIF
+		IFNB    <File_2>
+File_2::        DEFS    166,0
+		IFIDN   <File_2>,<Intput>
+$Open_Input     DEFL    TRUE
+		ENDIF
+		IFIDN   <File_2>,<Output>
+$Open_Output    DEFL    TRUE
+		ENDIF
+		ENDIF
+		IFNB    <File_3>
+File_3::        DEFS    166,0
+		IFIDN   <File_3>,<Input>
+$Open_Input     DEFL    TRUE
+		ENDIF
+		IFIDN   <File_3>,<Output>
+$Open_Output    DEFL    TRUE
+		ENDIF
+		ENDIF
+		IFNB    <File_4>
+File_4::        DEFS    166,0
+		IFIDN   <File_4>,<Intput>
+$Open_Input     DEFL    TRUE
+		ENDIF
+		IFIDN   <File_4>,<Output>
+$Open_Output    DEFL    TRUE
+		ENDIF
+		ENDIF
+		IFNB    <File_5>
+File_5::        DEFS    166,0
+		IFIDN   <File_5>,<Input>
+$Open_Input     DEFL    TRUE
+		ENDIF
+		IFIDN   <File_5>,<Output>
+$Open_Output    DEFL    TRUE
+		ENDIF
+		ENDIF
+		IFNB    <File_6>
+File_6::        DEFS    166,0
+		IFIDN   <File_6>,<Intput>
+$Open_Input     DEFL    TRUE
+		ENDIF
+		IFIDN   <File_6>,<Output>
+$Open_Output    DEFL    TRUE
+		ENDIF
+		ENDIF
+		IFNB    <File_7>
+File_7::        DEFS    166,0
+		IFIDN   <File_7>,<Input>
+$Open_Input     DEFL    TRUE
+		ENDIF
+		IFIDN   <File_7>,<Output>
+$Open_Output    DEFL    TRUE
+		ENDIF
+		ENDIF
+		IFNB    <File_8>
+File_8::        DEFS    166,0
+		IFIDN   <File_8>,<Intput>
+$Open_Input     DEFL    TRUE
+		ENDIF
+		IFIDN   <File_8>,<Output>
+$Open_Output    DEFL    TRUE
+		ENDIF
+		ENDIF
+;;
+;;- Define a buffer for the command and error streams, since these are used
+;;  for almost every program they are included by default.  If not required
+;;  the command line input stream can be omitted if not required.
+;;
+$Command:					;; Place holder
+		IFDEF	Use_Parser
+Command:	DEFS    166,0			;; The command file MUST be positioned last (after all the optional files) at it is
+$CMD:           DEFB    04,00,'CMD:'
+		ENDIF
+;;
+$CON:           DEFB    04,00,'CON:'
+;;
+$Start:         PUSH    HL			;; Save the contents of all the registers.
+		PUSH    DE
+		PUSH    BC
+		PUSH    AF
+;;
+;;- Checks for the presence of a comamnd line, and set up the command file,
+;;  in  throry  it  should be possible to redirect this  to  read  multiple
+;;  command lines from a file (proabably by using the @ symbol in the  same
+;;  way as DEC10 and DEC20 systems) but this is not implemented.
+;;
+		IFDEF	Use_Parser
+		LD      A,(CPM$Tail)		;; Did the user specify any parameters? 
+		OR      A
+                LD      A,TRUE			;; Set the repeat flag to indecate that there were some command line parameters.
+		JR	Z,$Repeat
+                XOR	A			;; Clear the repeat flag to indecate that there were no command line parameters.
+$Repeat:        OR	A			;; Set flags.
+		PUSH    AF			;; Save the state on the stack for later...
+;;
+;;- Open command line.
+;;
+		LD      HL,Command		;; Open command file - prompting the user for input if there wasn't a command tail.
+		LD      DE,$CMD
+		CALL    INITF##
+		LD      DE,'R'
+		CALL    OPENF##
+		ENDIF
+;;
+;;- If used open the standard input and output streams automaticly.
+;;
+$Loop:
+		IFDEF 	$Open_Output
+		LD      HL,Output		;; Since this is a logical device it is assumed that no errors can occour.
+		LD      DE,$CON
+		CALL    INITF##
+		LD      DE,'W'
+		CALL    OPENF##
+		ENDIF
+;;
+		IFDEF 	$Open_Input
+		LD      HL,Input
+		LD      DE,$CON
+		CALL    INITF##
+		LD      DE,'R'
+		CALL    OPENF##
+		ENDIF
+;;
+;;- Call the main body of the program and check for any errors.
+;;
+		CALL    $Main
+		OR      A			;; Set flags, and check the returned status value
+		CALL    NZ,$Error		;; to see if an error occoured.
+;;
+;;- Close all files, just to make sure.  However this is easier said than
+;;  done, so error handling has been omitted to simplify the problem, since
+;;  the  program should have already attempted to close any open files  and
+;;  should not rely upon this code.
+;;
+		LD      B,A			;; Save the status byte.
+		LD      HL,$File_Buffers
+		LD      DE,166
+$Close_Files:   LD      A,H			;; Check that there is at least one mode file to close?
+		CP      HIGH $Command
+		JR      NZ,$Close_Next
+		LD      A,L
+		CP      LOW $Command
+		JR      Z,$Done
+$Close_Next:    LD      A,(HL)			;; Don't attempt to close files already closed - this could cause some interesting
+		OR      A			;; effects when closing disk files.
+		CALL    NZ,CLOSEF##		;; *** No error handler !!!
+		ADD     HL,DE
+		JR      $Close_Files
+;;
+;;- Exit  handler. Only exits to CP/M if the repeat flag is FALSE  and  the
+;;  command line is exausted!
+;;
+$Done:		XOR	A			;; Clear the accumulator
+		IFDEF	Use_Parser
+		OR	B			;; Get the error code 
+		JR      NZ,$Repeat		;; Prompt for the next file if an error occoured.
+		LD      HL,Command + 37		;; Look directly into the command file buffer to find the last character 
+		LD      D,0			;; read - this is strictly cheating and will only work with logical devices.
+		LD      E,(HL)
+		ADD     HL,DE
+		INC     HL
+		LD      A,(HL)
+		CP      Asc$EOF
+		JP      NZ,$Loop
+		POP     AF			;; Repeat the whole process again ?
+		OR	A
+		JR      NZ,$Repeat
+;;
+;;- Close  the error and command files. Could not be done earlier  in  case
+;;  they were needed...
+;;
+		LD      HL,Command
+		CALL    CLOSEF##
+		ENDIF
+;;
+;;- That's all folks - leave things the way they were before we started...
+;;
+		POP     AF
+		POP     BC
+		POP     DE
+		POP     HL
+		RET				;; Quicker than a Warmstart.
+;;
+;;- The error handler uses a table translate the error code returned by the
+;;  program into an error message and prints it using a direct BDOS call.
+;;
+;;  If necessary to save memory error messages at the end of the list could
+;;  be  deleted.  New  error messages can be added to the list but  if  the
+;;  order  of  the error messages is changed then  the  corisponding  error
+;;  codes will need to be modified to match.
+;;
+;;  The undefined error message must always be the last entry in the table.
+;;
+Error::
+$Error:         PUSH    AF			;; Save the status byte - is is needed later by the main program...
+		LD      B,A
+		LD      DE,$Err_Messages	;; Set up a pointer to the first message, messages are organized as a linked list.
+$Next:          DJNZ    $+10			;; If we havn't found the message yet then go to the next one...
+		INC     DE			;; Skip the link byte to find the start of the string.
+		LD      C,BDOS$Print_Str
+		CALL    BDOS##
+		POP     AF
+		RET
+		LD      A,(DE)			;; Get the address of the next message in HL.
+		OR      A
+		JR      Z,$Next + 2		;; No matching error message found.
+		LD      H,0
+		LD      L,A
+		ADD     HL,DE
+		EX      DE,HL
+		JR      $Next
+;;
+;;- Fatal error messages.
+;;
+$Err_Messages:  DEFB    19,'?Invalid filename','$'
+		DEFB    25,'?Invalid logical device','$'
+		DEFB    27,'?Invalid file access mode','$'
+		DEFB    22,'?Invalid user number','$'
+		DEFB    21,'?File not initlized','$'
+		DEFB    18,'?Can',39,'t open file','$'
+		DEFB    20,'?Can',39,'t create file','$'
+		DEFB    19,'?Can',39,'t close file','$'
+		DEFB    14,'?File exists','$'
+		DEFB    17,'?File not found','$'
+		DEFB    18,'?File not opened','$'
+		DEFB    14,'?Disk full!',Asc$BEL,'$'
+		DEFB    16,'?Read past EOF','$'
+		DEFB    15,'?EOF detected','$'
+		DEFB    21,'?File is write only','$'
+		DEFB    20,'?File is read only','$'
+		DEFB    17,'?Out of memory!','$'
+		DEFB    16,'?Command error','$'
+		DEFB    00,'?Undefined error!',Asc$BEL,'$'
+;
+$Main:
+		ENDM
+;
+;-- Macro to set up library linking.
+;
+USING           MACRO   Lib_1,Lib_2,Lib_3,Lib_4,Lib_5,Lib_6,Lib_7,Lib_8
+		IFNB    <Lib_1>
+.REQUEST        Lib_1
+		ENDIF
+		IFNB    <Lib_2>
+.REQUEST        Lib_2
+		ENDIF
+		IFNB    <Lib_3>
+.REQUEST        Lib_3
+		ENDIF
+		IFNB    <Lib_4>
+.REQUEST        Lib_4
+		ENDIF
+		IFNB    <Lib_5>
+.REQUEST        Lib_5
+		ENDIF
+		IFNB    <Lib_6>
+.REQUEST        Lib_6
+		ENDIF
+		IFNB    <Lib_7>
+.REQUEST        Lib_7
+		ENDIF
+		IFNB    <Lib_8>
+.REQUEST        Lib_8
+		ENDIF
+		ENDM
+;
+.LIST

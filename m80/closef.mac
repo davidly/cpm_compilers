@@ -1,0 +1,188 @@
+		TITLE	closef (ref file) - 7 May 87 - MT
+		SUBTTL	'Close a locical or physical file'
+;
+		INCLUDE SYMBOLS
+		VERSION	'CLOSEF 3.9 - 30 Jan 21'
+;
+;-- If the file has been opened to a logical device then all that is needed
+;   is to reset device code, if it is a disk files that has been opened for
+;   reading or writing then file is closed by calling the BDOS (to maintain
+;   compatibility  with MP/M systems where it is required to close any file
+;   to unlock access. 
+;
+;   In addition if the file was opened for writing then this routine checks
+;   that the contents of the buffer have been written to disk, if buffer is
+;   only partly full then it is padded with CTRL-Z characters before  being
+;   written to disk and the file closed.
+;
+;   This procedure assumes that a file header block exists in the following
+;   format and it has been correctly initlized.
+;
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;   | |        |   |           | | |                                      |
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;				| |
+;   |--- File Control Block ---|| ||----------- DMA Buffer ---------------|
+;	    (36 bytes)		| |		(128 bytes)
+;			       /   \
+;			 Status     Buffer pointer
+;			 (1 byte)   (1 byte)
+;
+;   By using the status byte to store both the user number for the file and
+;   the  file access mode, this routine can access files in any USR area on
+;   the disk by moving to the USR area holding the file, closing the  file,
+;   then moving back to the default USR area.
+;
+;-- This program is free software: you can redistribute it and/or modify it
+;   under  the terms of the GNU General Public License as published by  the
+;   Free Software Foundation, either version 3 of the License, or (at  your
+;   option) any later version.
+;
+;   This  program  is distributed in the hope that it will be  useful,  but
+;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+;   General Public License for more details.
+;
+;   You should have received a copy of the GNU General Public License along
+;   with this program.  If not, see <http://www.gnu.org/licenses/>.
+;
+;** 18 May 87 -	Now correctly closes files opened for reading - MT
+;
+;** 15 Jan 91 -	Revised to handle IO streams - MT
+;
+;** 25 Jan 91 -	Checks for wildcards - MT
+;
+;**  6 Apr 91 -	Updated to use new symbols - MT
+;
+;** 25 Nov 91 -	Modified to use call by value - MT
+;
+;** 21 May 92 -	Now allows files to be in any USR area - MT
+;
+;** 27 Jul 92 -	Fixed  bug  which  corrupted pointer to  file  header  when 
+;		padding buffer with Asc$EOF's - MT
+;
+;** 30 Jan 21 -	Fixed a very old bug in the code that checked that the file
+;		had been closed properly and set the return status - MT
+;
+;** To Do:	Clear device code when closing a disk file?
+;
+;-- Check that the output file has been opened for writing to disk.
+;
+CLOSEF::	PROCEDURE			; All registers preserved.
+		LD	A,(HL)			; Get device code.
+		OR	A			; If the device code has not been set then the file has not been opened.
+		LD	A,ERR$Not_Opened
+		RET	Z			; File improperly opened !
+;
+;-- Check for logical devices.
+;
+		LD	A,(HL)			; Get device code.
+		CP	SYS$Console		; Check that we are writing to a physical device and flush the output buffer
+                JR	C,F$Disk_File		; adding <Ctrl-Z>s to the end of file if required.
+		XOR	A			; Logical devices require no further action other than to clear the device code
+		LD	(HL),A			; and return a success code (and clear device code).
+		RET
+
+;-- Check that file name is unambigous.
+;
+F$Disk_File:	LD	D,H			; Put the address of the FCB in DE.
+		LD	E,L
+		LD      B,8+3			; Number of characters to check.
+                LD      C,'?'
+F$Wild_Loop:    INC     HL
+                LD      A,(HL)			; Get next character.
+                CP      C
+		LD	A,ERR$Bad_File
+		RET     Z			; Bad file name !
+		DEC     B
+                JR      NZ,F$Wild_Loop		; Test the rest of the FCB.
+;
+;-- Save current usr number on the stack.
+;
+		PUSH	DE			; Save the address of the FCB.
+		LD	C,BDOS$Set_Usr_No	; Use set usr number function to get the current usr number
+		LD	E,0FFH			; by putting 0FFH in E.
+		CALL	BDOS##
+		LD	L,A			; Put usr number into HL.
+		EX	(SP),HL			; Save it on the stack and get the pointer to the FCB in HL.
+		EX	DE,HL			; Restore pointer to FCB.
+;
+;-- Set up usr number of output file.
+;
+		PUSH	DE			; Save address of FCB.
+		LD	HL,36			; Offset to status byte.
+		ADD	HL,DE
+		XOR	A
+		RLD	
+		LD	E,A			; Get usr number of output file.
+		RLD
+		RLD
+		LD	C,BDOS$Set_Usr_No	; Set up new usr number.
+		CALL	BDOS##
+		POP	DE			; Restore address of FCB in DE for BDOS write function.
+;
+;-- Flush record to disk and close file.
+;
+		LD	HL,36			; Get the file access mode from the status byte using the
+		ADD	HL,DE			; address of the file header held in DE.
+		LD	A,(HL)
+		AND	00001111B		; Check that the file was opened for writing, note this is done by checking that
+		CP	'R' AND 00001111B	; the file was opened for read access since closef() is valid for files opened for
+		JR	Z,F$Close_File		; both write and append. Don't worry about flushing the buffer unless writing.
+;
+;-- Fill remainder of buffer with ASC$EOFs if required.
+;
+		INC	HL			; Set up pointer to buffer pointer.
+		LD	A,(HL)			; Get the current value of the buffer pointer and increment HL to point
+		INC	HL			; to the buffer itself.
+		OR	A			; If the buffer is already empty then the file ended on a record boundry
+		JR	Z,F$Close_File		; so don't bother to write a <Ctrl-Z>, just close the file.
+		PUSH	DE			; Save address of FCB and DMA these are needed later.
+		PUSH	HL
+		LD	B,0
+		LD	C,A
+		ADD	HL,BC			; HL pointer to first character to fill.
+		LD	D,ASC$EOF
+F$Fill_Next:	LD	(HL),D
+		INC	HL
+		INC	A
+		CP	128
+		JR	NZ,F$Fill_Next
+		POP	DE			; Restore DMA address (pushed from HL).
+;
+;-- Flush buffer to disk if required.
+;
+		LD	C,BDOS$Set_DMA
+		CALL	BDOS##
+		POP	DE			; Restore pointer to FCB (pushed from DE).
+		PUSH	DE
+		LD	C,BDOS$Write_Seq
+		CALL	BDOS##
+		OR	A			; Set flags from A.
+		POP	DE
+		LD	A,ERR$Disk_Full		; Can't flush buffer to disk.
+		JR	NZ,F$Exit		; Disk Full !
+;
+;- Finally close the file.
+;
+F$Close_File:	LD	C,BDOS$Close_File	; Close file whether opened for read or write access to maintain compatibility
+		CALL	BDOS##			; with MP/M systems.
+		INC	A			; BDOS returns the file extant number of 0FFH if it could not close the file.
+		LD	A,ERR$Cant_Close	; Can't close file.
+;
+;** 30 Jan 21 -	Fixed a very old bug in the code that checked that the file 
+;		had been closed properly and set the return status - MT
+;
+		JR	Z,F$Exit		
+		XOR	A			; Success !
+;
+;-- Reset usr number to current value.
+;
+F$Exit:		POP	DE			; Restore current user number from the stack
+		PUSH	AF			; and save the error code.
+		LD	C,BDOS$Set_Usr_No	; Reset the usr number.
+		CALL	BDOS##
+		POP	AF			; Restore the error code.
+		RET
+;
+		END

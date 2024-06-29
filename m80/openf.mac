@@ -1,0 +1,293 @@
+		TITLE	openf (ref file, char) - 7 May 87 - MT
+		SUBTTL	'Open a logical ro physical file'
+;
+		INCLUDE SYMBOLS
+		VERSION	'OPENF 3.15 - 18 Aug 92'
+;
+;-- Opens files on both logical and physical devices as required taking the
+;   approprite  action to initlize the buffer if necessary.  Opening a file
+;   that exists for writing, or attempting to open a non-existant file  for 
+;   reading  will return an error, but the access mode is not checked (this
+;   is  done in putc() and getc() ).
+;
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;   | |        |   |           | | |                                      |
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;				| |
+;   |--- File Control Block ---|| ||----------- DMA Buffer ---------------|
+;	    (36 bytes)		| |		(128 bytes)
+;			       /   \
+;			 Status     Buffer pointer
+;			 (1 byte)   (1 byte)
+;
+;-- This program is free software: you can redistribute it and/or modify it
+;   under  the terms of the GNU General Public License as published by  the
+;   Free Software Foundation, either version 3 of the License, or (at  your
+;   option) any later version.
+;
+;   This  program  is distributed in the hope that it will be  useful,  but
+;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+;   General Public License for more details.
+;
+;** 15 Oct 90 -	Updated as standalone module, FCB must exist - MT
+;
+;** 15 Jan 91 -	Revised to handle IO streams - MT
+;
+;** 20 Jan 91 -	Added full checking on access mode - MT
+;
+;** 20 Jan 91 -	Now creates a new file for writing if none exists - MT
+;
+;**  6 Apr 91 -	Updated to user revised symbols and now checks that the FCB has been initlized correctly - MT
+;
+;** 16 Apr 91 -	Now sets up buffer pointers correctly for read and write operations - MT
+;
+;** 29 Apr 91 -	Added code to set up buffer if opening stream from CMD: - MT
+;
+;** 25 Jul 91 -	Modified code to impelment parameter passing using call by value - MT
+;
+;** 26 Sep 91 -	No longer checks that the access mode is valid for the device - MT
+;
+;** 30 Oct 91 -	Modified to allow USR number to be held in mode byte - MT
+;
+;** 20 May 92 -	Simplified switching of USR areas - MT
+;
+;** 21 Jul 92 -	Bug which forced file creation regardless of access mode corrected - MT
+;
+;**  6 Aug 92 -	Prompts for a command tail if none present when opening CMD: - MT
+;
+;**  6 Aug 92 -	Converts command tail to uppercase to mimic CP/M - MT
+;
+;** 18 Aug 92 -	Pads buffer with EOF characters when opening CMD: file - MT
+;
+;F$Logical_IO	DEFL	TRUE			; Include both logical and 
+;F$Physical_IO	DEFL	TRUE			; physical IO handling routines.
+;
+OPENF::		PROCEDURE
+;
+;-- Check that file has been initlized.
+;
+		LD	A,(HL)			; Get device code and check for a vaild device code.
+		OR	A			; Default null value indecates that no FCB was initlized
+		LD	A,ERR$Cant_Open		; and therefore the file can't be opened.
+		RET	Z
+;
+;-- Check the access mode.
+;
+		LD	A,E
+		AND	00001111B		; Convert to 4 bit access code.
+		CP	'R' AND 00001111B
+		JR	Z,F$Read_Mode		; Set up buffer pointer for read
+		CP	'W' AND 00001111B
+		JR	Z,F$Write_Mode		; or write as required.
+		LD	A,ERR$Bad_Mode		; Invalid access mode.
+		RET
+;
+;-- Set up file for write access mode and check that device is not read only.
+;
+F$Write_Mode:	PUSH	HL
+		LD	BC,36			; Offset to access mode byte in buffer.
+		ADD	HL,BC
+		OR	(HL)
+		LD	(HL),A			; Save file access mode.
+		INC	HL
+		XOR	A			; Set pointer to start of buffer.
+		LD	(HL),A
+		POP	HL
+		JR	F$Check_Device
+;
+;-- Set up file for read access mode and check that device is not write only.
+;
+F$Read_Mode:	PUSH	HL
+		LD	BC,36			; Offset to access mode byte in buffer.
+		ADD	HL,BC
+		OR	(HL)
+		LD	(HL),A			; Save file access mode.
+		INC	HL
+		LD	A,080H			; Set pointer to end of buffer - this will force an immediate
+		LD	(HL),A			; read operation.
+		POP	HL
+;
+;-- Set up FCB or buffer if required.
+;
+F$Check_Device:	LD	A,(HL)			; Get device code.
+		CP	SYS$Console
+		JR	C,F$Disk_Stream		; Physical device.
+		CP	SYS$Command
+		JR	Z,F$CMD_Stream		; Initlize buffer from command line.
+		XOR	A
+		RET
+;
+;-- Check that filename does not contain wildcards - passed as accecptable by initf(). 
+;
+F$Disk_Stream:	PUSH	HL			; Save pointer to FCB again.
+                LD      B,8+3			; Number of characters to check.
+                LD      C,'?'
+F$Wild_Loop:	INC     HL
+                LD      A,(HL)			; Get next character.
+                CP      C
+                JR      NZ,F$Next_Wild		; No wildcard found yet check next.
+		POP	HL			; Bad name - restore stack,
+		LD	A,ERR$Bad_File		; get the approprite error code and
+		RET				; give up...
+F$Next_Wild:	DEC     B
+                JR      NZ,F$Wild_Loop		; Any more characters to check ?
+		POP	HL			; Restore pointer to FCB.
+;
+;-- Set up the DMA address for subsiquent disk operations.
+;
+		PUSH	HL			; Save the address of the FCB and access mode
+		PUSH 	DE			; on the stack.
+                LD	DE,38			; Offset to DMA buffer - 166 byte file header is required by openf()
+                ADD	HL,DE			; Calculate new DMA address.
+                EX	DE,HL
+		LD	C,BDOS$Set_DMA		; DE already points to the record so use it for DMA.
+		CALL	BDOS##			; Set DMA address (no errors to worry about here).
+;
+;-- Save current USR number on the stack.
+;
+		LD	C,BDOS$Set_Usr_No	; Use set USR number function to get the current USR number
+		LD	E,0FFH			; by putting 0FFH in E.
+		CALL	BDOS##
+		POP	DE			; Restore access mode.
+		LD	L,A			; Put USR number into HL.
+		EX	(SP),HL			; Save it on the stack and get the pointer to the FCB in HL.
+;
+;-- Set up USR number of output file.
+;
+		PUSH	DE			; Save access mode and
+		PUSH	HL			; and pointer to FCB
+		LD	DE,36			; Offset to status byte.
+		ADD	HL,DE
+		XOR	A
+		RLD	
+		LD	E,A			; Get USR number of output file.
+		RLD
+		RLD
+		LD	C,BDOS$Set_Usr_No	; Set up new USR number.
+		CALL	BDOS##
+;
+;-- Check that access mode.
+;
+                POP     DE			; Restore pointer to FCB in DE and 
+		POP	HL			; access mode in HL.
+		LD	A,L			; Get file mode (assumed to be LSB).
+		AND	00001111B
+		CP	'W' AND 00001111B
+		JR	NZ,F$Read_File
+		CALL	F$Create_File
+                JR	F$Exit
+F$Read_File:	CALL	F$Open_File
+;
+;-- Reset USR number to current value and exit.
+;
+F$Exit:		POP	DE			; Restore current USR number from the stack
+		PUSH	AF			; and save the error code.
+		LD	C,BDOS$Set_Usr_No	; Reset the USR number.
+		CALL	BDOS##
+		POP	AF			; Restore the error code.
+		RET
+;
+;-- Read a command string from default CP/M buffer.
+;
+F$CMD_Prompt:	DEFB	Asc$CR,Asc$LF,'*','$'	; Prompt in correct format for CP/M.
+;
+F$CMD_Stream:	LD	A,(CPM$Buff)		; Check to see if there is a command line.
+		OR	A
+		JR	NZ,F$Copy_CMD		; If none specified give up, with an implicit error code...
+		PUSH	HL
+		LD	DE,F$CMD_Prompt
+		LD	C,BDOS$Print_Str
+		CALL	BDOS##
+		LD	A,127
+		LD	(CPM$Buff),A		; Define maximum command line length.
+		LD	DE,CPM$Buff
+		LD	C,BDOS$Read_Str		; Get command line tail.
+		CALL	BDOS##
+		LD	A,(CPM$Buff+1)		; Get the number of characters typed and
+		OR	A
+		JR	Z,F$No_CMD_Tail
+		INC	A			; increment it by on (to allow for additional space) before
+F$No_CMD_Tail:	LD	(CPM$Buff),A		; transfering it to the correct position to mimic the CPM comand line.
+		LD	A,Asc$SP		; Then force a space into the first character position.
+		LD	(CPM$Buff+1),A
+		LD	A,Asc$CR		; Move the cursor to the next line.
+		LD	E,A
+		LD	C,BDOS$CON_Output
+		CALL	BDOS##
+		LD	A,Asc$LF
+		LD	E,A
+		LD	C,BDOS$CON_Output
+		CALL	BDOS##
+		POP	HL
+		JR	F$CMD_Stream
+;
+;-- Set up buffer pointer and move characters into buffer.
+;
+F$Copy_CMD:	LD	C,128			; Buffer size.
+		LD	B,A			; Number of characters in command.
+		LD	DE,37			; Offset to data in buffer.
+		ADD	HL,DE			; HL points to the first character.
+		XOR	A
+		LD	(HL),A			; Initial buffer pointer is zero.
+		LD	DE,CPM$Buff+1
+F$Loop:		INC	HL			; Increment buffer pointer
+		INC	DE
+		DEC	B
+		JR	Z,F$Cont		; Move characters from the command tail
+		LD	A,(DE)			; to the file buffer converting them to
+		CP	'a'
+		JR	C,F$Upper_Case		; uppercase if required...
+		CP	'z'
+		JR	NC,F$Upper_Case
+		SUB	32
+F$Upper_Case:	LD	(HL),A
+		DEC	C			; One less character remaining in the buffer.
+		JR	F$Loop
+;
+;-- Add EOF character to buffer.
+;
+F$Cont:		LD	A,Asc$EOF		; Add and EOF character in to buffer to mark end of file.
+		LD	(HL),A			; and continue to add EOFs until the buffer is full...
+		INC	HL
+		DEC	C
+		JR	NZ,F$Cont+2
+		XOR	A			; No problem.
+		LD	(CPM$Buff),A		; Reset counter to force new input on next pass.
+		RET
+;
+;-- Open file for read access.
+;
+F$Open_File:	PUSH	DE			; Save pointer to FCB and
+		LD      C,BDOS$Find_File	; check to see if the file already exists.
+                CALL    BDOS##
+		INC	A			; Increment BDOS return code so that a simple test for zero will indecate
+		LD	A,ERR$Cant_Open		; if the file was found.
+		POP	DE
+		RET	Z			; File does not exist !
+		LD      C,BDOS$Open_File
+                CALL    BDOS##
+		INC	A			; Again, increment BDOS return code so that a simple test for zero will indecate
+		LD	A,ERR$Cant_Open		; if the file was successfuly opened.
+		RET	Z			; Can't open file !
+		XOR	A
+		RET
+;
+;-- Open the file for writing.
+;
+F$Create_File:	PUSH	DE			; Save the pointer to FCB and
+		LD	C,BDOS$Find_File	; check to see if the file aleady exists.
+		CALL	BDOS##
+		INC	A			; Increment BDOS return code so that a simple test for zero will indecate
+		LD	A,ERR$File_Exists	; if the file was found.
+		POP	DE
+		RET	NZ			; File already exists !
+		LD      C,BDOS$Make_File
+                CALL    BDOS##
+		INC	A			; Again, increment BDOS return code so that a simple test for zero will indecate
+		LD	A,ERR$Disk_Full		; if the file was successfuly created.
+		RET	Z			; Can't create file.
+		XOR	A
+		RET
+;
+		END

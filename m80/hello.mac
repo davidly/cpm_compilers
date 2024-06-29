@@ -1,0 +1,51 @@
+		TITLE	HELLO -23 Dec 20 - MT
+		SUBTTL	'Hello World'
+;
+		INCLUDE SYMBOLS
+		VERSION	'HELLO 0.1 - 23 Dec 20'
+;
+		USING	PUTS, PUTC
+		USING	INITF, OPENF, CLOSEF, WRITEF, BDOS
+;
+;-- Thirty five years may be a bit long to wait before writing a version of
+;   the  ubiquitous 'hello world' program in assembler (and I suspect  that
+;   this isn't actually my first attempt) but I wanted something that would
+;   allow me to compare my code with that produced by the Small C compiler.
+;
+;   The result?  Well even with the overheads I've added this code it still
+;   almost 32% faster...
+;
+;   This program is free software: you can redistribute it and/or modify it
+;   under  the terms of the GNU General Public License as published by  the
+;   Free Software Foundation, either version 3 of the License, or (at  your
+;   option) any later version.
+;
+;-- This  program  is distributed in the hope that it will be  useful,  but
+;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+;   General Public License for more details.
+;
+;   You should have received a copy of the GNU General Public License along
+;   with this program.  If not, see <http://www.gnu.org/licenses/>.
+;
+;** 23 Dec 20   0.1   - Initial version - MT
+;
+Hello_World:	DEFB	15,00,'Hello World !!,',Asc$CR,Asc$LF
+;
+HELLO::		PROGRAM	Output
+;
+;--- Builds  a new linked list by alternatly appending or  prepending  each
+;    elements to the list.
+;
+		LD	BC,100			; Use 16 bit counter.
+		LD	DE,Hello_World		; Pointer to linked list.
+		LD	HL,Output
+_Loop:		CALL	PUTS##			; Print 'Hello World !! '
+		DEC	BC
+		LD	A,B
+		OR	C			; Are we nearly there yet..?
+		JR	NZ,_Loop
+		RET				; Return to CP/M.
+;
+		END	HELLO
+		

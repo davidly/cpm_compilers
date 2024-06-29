@@ -1,0 +1,391 @@
+		TITLE	initf (ref file, ref array [] of char) - 19 May 87 - MT
+		SUBTTL	'Initlise a logical or physical file'
+;
+		INCLUDE	SYMBOLS
+		VERSION	'INITF 3.16 - 01 Nov 91'
+;
+;--- Parses a filename and initlizes the file header which comprises of 166
+;    bytes structured as below. The DMA buffer is used for all physical I/O
+;    operations  and is also used to implement buffered I/O  operations  on
+;    logical devices.
+;
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;   | |        |   |           | | |                                      |
+;   +-+--------+---+-----------+-+-+--------------------------------------+
+;				| |
+;   |--- File Control Block ---|| ||----------- DMA Buffer ---------------|
+;	    (36 bytes)		| |		(128 bytes)
+;			       /   \
+;			 Status     Buffer pointer
+;			 (1 byte)   (1 byte)
+;
+;   Any  logical device or filename can be used to when initializing a file
+;   including  extended  drive/user  specifications  and  wildcards. (Valid
+;   logical  devices are TTY: or CON: for the console device, LST: for  the
+;   printer  port, PUN: and LPT: for serial output, RDR: for serial  input,
+;   NUL: for the null device, and EOF: for end of file.
+;
+;   The  status byte is used to store both the user number for the file and
+;   the  file access mode, this is done by using upper four nibble to  hold
+;   the user number and the lower nibble to store the file access mode.
+;
+;   Any errors will return an error code to the calling program.
+;
+;** 20 Sep 92 - I  started writing this routine on Einstein but will  never
+;		test  the full suite on that machine as it booted  for  the
+;               last time today (Aug 81 - Sep 92) - MT
+;
+;-- This program is free software: you can redistribute it and/or modify it
+;   under  the terms of the GNU General Public License as published by  the
+;   Free Software Foundation, either version 3 of the License, or (at  your
+;   option) any later version.
+;
+;   This  program  is distributed in the hope that it will be  useful,  but
+;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+;   General Public License for more details.
+;
+;** 18 May 87 - Will now parse wildcards correctly - MT
+;
+;** 20 May 87 - Filename may be terminated with an ASCNULs - MT
+;
+;** 30 Oct 89 - Modified to include drive code of default disk in FCB - MT
+;
+;** 17 Oct 90 - Now uses common code to parse name and type field - MT
+;
+;** 12 Nov 90 - Updated to parse logical device names - MT
+;
+;** 20 Jan 91 - Improved filename validation and error checking - MT
+;
+;** 18 Jul 91 - Modified to pass parameter by value - MT
+;
+;** 23 Jul 91 - Optimized device checking algolrithim - MT
+;
+;** 23 Jul 91 - Conditional assembly options added - MT
+;
+;**  7 Sep 91 - Modified table search algorithim - MT
+;
+;** 26 Sep 91 - Fixed bug in logical device parser - MT
+;
+;** 24 Oct 91 - Filenames can now include drive specification - MT
+;
+;** 30 Oct 91 - Added extended drive/user parsing of default device - MT
+;
+;** 30 Oct 91 - Clears FCB even if initlizing a logical device - MT
+;
+;**  1 Nov 91 - Full extended drive/user parsing implemented - MT
+;
+F$Check_Devices	DEFL	TRUE			; Check for device names and
+F$Check_Files	DEFL	TRUE			; filenames.
+;
+;--- Parse logical device name.
+;
+		IF	F$Check_Devices
+INITF::		PROCEDURE
+;
+;-- Attempt to match string to an entry in the table.
+;
+;-- Check that the string length is vaild.
+;
+;   Note - This  check does not properly check the high byte of the  string
+;   length.
+;
+		EX	DE,HL			; Get string length in BC.
+		LD	C,(HL)
+		INC	HL
+		LD	B,(HL)
+		LD	A,C
+		XOR	LOW F$Name_Len		; Check that the low byte and the high byte
+		OR	B			; (which it is assumed must be zero) of the string length are correct.
+		INC	HL			; Now points to first character.
+		JR	Z,F$Length_OK
+;
+;-- Alternatively the string may be null treminated.
+;
+		PUSH	BC			; The number of characters is also required to tell us how long the filename is...
+		PUSH	HL			; Better save HL now...
+		LD	BC,F$Name_Len
+		ADD	HL,BC			; Find address of (assumed) end of string.
+		XOR	A
+		OR	(HL)			; Is this byte the expected null ?
+		POP	HL			; Restore stack before we continue.
+		IF 	F$Check_Files		; If the string could be a filename then 
+		POP	BC
+		JP	NZ,F$Parse_Disk		; we must check to see if it is...
+		ELSE				; If we are not going to check for a vaild filename
+		POP	BC
+		LD	A,ERR$No_Device		; then the length is all wrong and we have a problem
+		RET	NZ			; so quit.
+		ENDIF
+;
+;-- Check that filename matches a table entry.
+;
+F$Length_OK:	PUSH	BC			; Save number of characters in filename (again).
+		PUSH	DE			; Save pointer to FCB, if this works it will be needed again !
+		EX	DE,HL
+		LD	HL,F$Dev_Table		; Start of device name table.
+		LD	BC,F$Table_Len		; No of bytes in table.
+F$Retry:	LD	A,(DE)			; Search ths whole table for the
+		CPIR				; first byte in string.
+		JR	Z,F$Check_Name		; First byte exists in the table, check the rest...
+		IF 	F$Check_Files		; If the string could be a filename then 
+		EX	DE,HL			; we must check to see if it is. Put pointer to string
+		POP	DE			; back in HL, restore pointer to FCB and
+		POP	BC			; number of characters in filename.
+		JP	NZ,F$Parse_Disk
+		ELSE				; If we are not going to check for a vaild filename
+		POP	DE			; then since the character has not been found in the table,
+		POP	BC			; sort out the stack,
+		LD	A,ERR$No_Device		; and return some sort of error code since
+		RET				; we have an invalid device name.
+		ENDIF
+;
+;-- Check that all the rest of the bytes following the start of the  string
+;   match.
+;
+F$Check_Name:	PUSH	HL			; Save pointer to next byte in table,
+		PUSH	DE			; first character in string and,
+		PUSH	BC			; the number of bytes left to search
+		LD	B,F$Name_Len-1		; Set up counter to check every byte in string.
+F$Next_Byte:	INC	DE			; Increment the pointer 
+		LD	A,(DE)			; to get the next byte from the string.
+		XOR	(HL)			; Does it match the next character in the 
+		JR	NZ,F$Check_Failed	; table ?
+		INC	HL
+		DJNZ	F$Next_Byte		; Have we checked all the bytes in the name ?
+F$Check_Failed:	POP	BC			; Restore counter and pointers ready
+		POP	DE			; to check the rest of the table
+		POP	HL			; if required.
+		JR	NZ,F$Retry
+;
+;-- Use table entry to set up FCB.
+;
+		DEC	HL			; Set pointer to start of table entry - I hope !
+		DEC	HL
+		POP	DE			; Restore pointer to FCB.
+		POP	BC			; Ditch length of filename.
+		LD	BC,F$Name_Len+1		; Number of bytes to move to FCB from table.
+		LDIR
+		XOR	A			; Fill the rest of the FCB with AscNUL's
+		LD	B,36+1			; including the mode byte !
+		JP	F$Fill_Token		; No problems found.
+;
+;-- Table of valid device codes and names.
+;
+F$Dev_Table:	DEFB	SYS$Console,'CON:'
+		DEFB	SYS$Console,'TTY:'
+		DEFB	SYS$Null,'NUL:'
+		DEFB	SYS$Printer,'LST:'
+		DEFB	SYS$Printer,'PRN:'
+		DEFB	SYS$Punch,'PUN:'
+		DEFB	SYS$Punch,'LPT:'
+		DEFB	SYS$Reader,'RDR:'
+		DEFB	SYS$Command,'CMD:'
+		DEFB	SYS$EOF,'EOF:'
+;
+F$Name_Len	DEFL	4			; Define table logical device name length (fixed).
+F$Table_Len	DEFL	5*10			; Total table length.
+;
+		ELSE
+;
+;-- Parse filename into FCB, start by getting the length of the string.
+;
+		IF	F$Check_Files
+INITF::		PROCEDURE
+		EX	DE,HL			; Get string length in C, this assumes that the file name is less
+		LD	C,(HL)			; than 255 characters - any more than 12 and it is invalid anyway.
+		INC	HL			; ***  Note - This validation should be improved.
+		INC	HL			; Now points to first character.
+		ENDIF
+		ENDIF
+		IF	F$Check_Files
+;
+;-- Explictly  set up drive code - use of 00H will be affected by  a  drive 
+;   reset and is used to indecate that the file has not been initlized. The
+;   code assumes that a valid drive code and optional user number has  been
+;   specified  and attempt to set up the buffer accordingly.  If this fails
+;   it  selects the default drive and user number and then  starts  parsing
+;   the file name again .
+;
+F$Parse_Disk:	PUSH	HL			; Save pointers and string length.
+		PUSH	BC
+		PUSH	DE
+		DEC	C			; Need to check the number of remaining chacters.
+		INC	C
+		JP	Z,F$Parse_Token		; Get out the easy way.
+		LD	A,(HL)			; Get the supposed drive code and chack that it is
+		CP	'A'			; in the range A .. P.
+		JR	C,F$Default_Disk	; Since it is not a valid drive code assume that there
+		CP	'P'+1			; isn't one...
+		JR	NC,F$Default_Disk
+		AND	00011111B		; Convert to the required code for the FCB - easy really.
+		LD	(DE),A
+		INC	HL
+;
+;-- Parse the user name and store it in the high nibble of the access  mode
+;   byte since there is nowhere in a standard CP/M FCB for it to go.
+;
+		LD	B,0
+		LD	A,(HL)			; Get the next character from the string.
+		CP	':'			; Is it a device delimiter ?
+		JR	Z,F$No_User		; No user number specified.
+F$Parse_User:	CP	Asc$ZERO		; Do we have a valid digit ?
+		JR	C,F$Default_Disk	; If not this can't be a device specification.
+		CP	Asc$ZERO +9 +1
+		JR	NC,F$Default_Disk
+		SUB	Asc$ZERO		; Convert character from ASCII to binary.
+		PUSH	AF			; Save value and
+		LD	A,B			; multiply existing value by ten
+		RLCA
+		RLCA
+		RLCA
+		ADD	A,B
+		ADD	A,B
+		LD	B,A
+		POP	AF
+		ADD	A,B			; before adding new digit.
+		LD	B,A
+		CP	16			; If out of range then no valid user number was specified.
+		JR	NC,F$No_User
+		INC	HL
+		LD	A,(HL)
+		CP	':'
+		JR	NZ,F$Parse_User
+F$User_Done:	LD	A,B			; Put new user number in the accumulator.
+		LD	B,6			; Remove orignal pointers from the stack
+		INC	SP
+		DJNZ	$-1
+		INC	HL
+		PUSH	HL			; and save new pointers.
+		PUSH	BC
+		PUSH	DE
+		JR	F$Save_User
+F$No_User:	LD	B,6			; Restore the stack.
+		INC	SP
+		DJNZ	$-1
+		INC	HL
+		PUSH	HL
+		PUSH	BC
+		JR	F$Default_User
+;
+;-- If  no valid drive specifier could be found then get the  default  from
+;   BDOS.
+;
+F$Default_Disk:	LD	C,BDOS$Get_Drive	; Get current drive code in the accumulator.
+		CALL	BDOS##
+		POP	DE			; Restore pointer to FCB.
+		INC	A			; Increment code to give drive code as used in FCB.
+		LD	(DE),A			; Store the code in the first byte of the FCB and increment DE
+F$Default_User:	PUSH	DE
+		LD	C,BDOS$Set_Usr_No	; Get the current user number in the accumulator.
+		LD	E,0FFH
+		CALL	BDOS##
+F$Save_User:	POP	DE			; Get the address of the FCB and calculate the address of the
+		LD	HL,36			; mode byte.
+		ADD	HL,DE
+		RLD				; Move the user number to the lo 4 bits of the status byte.
+		XOR	A			; Clear the accumulator to clear the lo 4 bits of the byte
+		RLD				; and shuffle everything up to the hi byte!
+		POP	BC			; Restore counter and pointer to next character.
+		POP	HL
+		INC	DE			; Pointer to the first byte of the name field.
+;
+;-- Parse filename (must be specified), padding FCB with nulls if required.
+;
+F$Parse_Name:	LD      B,8			; Maximum number of characters in name.
+		CALL	F$Parse_Token		; Parse rest of token.
+		LD	A,(HL)
+		CP	'.'
+		JR	Z,F$Parse_Type
+		CP	ASC$NUL
+		JR	Z,F$No_Type		; End of string reached.
+		XOR	A
+		CP	C
+		JR	Z,F$No_Type		; No more characters.
+F$Invalid_Name:	LD	A,ERR$Bad_File		; Unexpected characters in filename.
+		RET
+;
+;-- If no file type was specified the fill the FCB with blanks.
+;
+F$No_Type:	LD	B,3			; No file type specified.
+		CALL	F$Fill_Spaces		; Subsitute three ' '.
+		JR	F$Fill_FCB
+;		
+;-- Parse file type, if less than 3 chracters long the field is null padded.
+;
+F$Parse_Type:	INC	HL			; Skip '.' character.
+		DEC	C
+		LD	B,3			; Maximum number of characters in type.
+		CALL	F$Parse_Token
+		LD	A,(HL)
+		CP	ASC$NUL
+		JR	Z,F$Fill_FCB		; End of string reached.
+		XOR	A
+		CP	C
+		JR	Z,F$Fill_FCB		; No more characters.
+		JR	F$Invalid_Name
+;
+;-- Reset the remainder of FCB.
+;
+F$Fill_FCB:	XOR	A
+		LD	B,24			; No of bytes remaining in FCB.
+		CALL	F$Fill_Token		; Zero rest of FCB.
+		RET
+;
+;-- Parse rest of token.
+;
+F$Parse_Token:	INC	C			; Only way to set flags from C without distroying the contens
+		DEC	C			; of the accumulator, which holds the last character scanned.
+		JR	Z,F$Fill_Spaces		; Check no of remaining characters to parse.
+		LD	A,(HL)			; Get next string character.
+		OR	A			; If there are no more characters
+		JR	Z,F$Fill_Spaces		; to check fill the rest with spaces.
+		CP	'.'			; No effect on second pass - assuming
+		JR	Z,F$Fill_Spaces		; only one '.' in filename
+		CP	'*'			; If next character is a wildcard then
+		JR	Z,F$Fill_Field		; fill field with '?'.
+F$Parse_Letter:	CP      '!'			; Characters allowed in filenames
+                JR      C,F$Parse_Err		; are (! # $ % & ? @) 
+                CP      '!'+1			; and (0..9,A..Z)
+                JR	C,F$Parse_Next
+                CP      '#'
+                JR      C,F$Parse_Err
+                CP      '&'+1
+                JR	C,F$Parse_Next
+                CP      '0'
+                JR      C,F$Parse_Err
+                CP      '9'+1
+                JR	C,F$Parse_Next
+		CP      '?'			; Wildcards (?) allowed.
+                JR      C,F$Parse_Err
+                CP      'Z'+1
+		JR	NC,F$Parse_Err
+F$Parse_Next:	LD	(DE),A			; Put valid character in FCB.
+		INC	DE
+		INC	HL
+		DEC	C
+		DJNZ	F$Parse_Token		; More characters to do.
+		RET				; Token parsed...
+;
+;-- Return and error code if a bad letter is found.
+;
+F$Parse_Err:	POP	HL			; Get rid of old return address.
+		JR	F$Invalid_Name
+;
+;-- Fill rest of field with spaces or '?' as approprite.
+;
+F$Fill_Field:	INC	HL			; Skip wild card character.
+		DEC	C
+		LD	A,'?'
+		JR	F$Fill_Token
+F$Fill_Spaces:	LD	A,ASC$SP
+		ENDIF
+		IF 	F$Check_Devices OR F$Check_Files
+F$Fill_Token:	LD	(DE),A			; Fill remaining characters in FCB
+		INC	DE			; with ' ' or '?'.
+		DJNZ	F$Fill_Token
+		RET
+;
+		ENDIF
+;
+		END

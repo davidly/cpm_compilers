@@ -1,0 +1,481 @@
+initf (ref file, ref array [] of char) - 19 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1
+
+
+                                		TITLE	initf (ref file, ref array [] of char) - 19 May 87 - MT
+                                		SUBTTL	'Initlise a logical or physical file'
+                                ;
+                         C      		INCLUDE	SYMBOLS
+                         C      ;		TITLE   SYMBOLS - 23 Mar 89 - MT
+                         C      ;		SUBTTL	'Symbol definitions'
+                         C      ;
+                         C      ;		VERSION	'SYMBOLS 3.20 - 06 Feb 21'
+                         C      .LIST
+                          +     		VERSION	'INITF 3.16 - 01 Nov 91'
+                                ;
+                                ;--- Parses a filename and initlizes the file header which comprises of 166
+                                ;    bytes structured as below. The DMA buffer is used for all physical I/O
+                                ;    operations  and is also used to implement buffered I/O  operations  on
+                                ;    logical devices.
+                                ;
+                                ;   +-+--------+---+-----------+-+-+--------------------------------------+
+                                ;   | |        |   |           | | |                                      |
+                                ;   +-+--------+---+-----------+-+-+--------------------------------------+
+                                ;				| |
+                                ;   |--- File Control Block ---|| ||----------- DMA Buffer ---------------|
+                                ;	    (36 bytes)		| |		(128 bytes)
+                                ;			       /   \
+                                ;			 Status     Buffer pointer
+                                ;			 (1 byte)   (1 byte)
+                                ;
+                                ;   Any  logical device or filename can be used to when initializing a file
+                                ;   including  extended  drive/user  specifications  and  wildcards. (Valid
+                                ;   logical  devices are TTY: or CON: for the console device, LST: for  the
+                                ;   printer  port, PUN: and LPT: for serial output, RDR: for serial  input,
+                                ;   NUL: for the null device, and EOF: for end of file.
+                                ;
+                                ;   The  status byte is used to store both the user number for the file and
+                                ;   the  file access mode, this is done by using upper four nibble to  hold
+                                ;   the user number and the lower nibble to store the file access mode.
+                                ;
+                                ;   Any errors will return an error code to the calling program.
+                                ;
+                                ;** 20 Sep 92 - I  started writing this routine on Einstein but will  never
+                                ;		test  the full suite on that machine as it booted  for  the
+                                ;               last time today (Aug 81 - Sep 92) - MT
+                                ;
+                                ;-- This program is free software: you can redistribute it and/or modify it
+                                ;   under  the terms of the GNU General Public License as published by  the
+                                ;   Free Software Foundation, either version 3 of the License, or (at  your
+                                ;   option) any later version.
+                                ;
+                                ;   This  program  is distributed in the hope that it will be  useful,  but
+                                ;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+                                ;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+                                ;   General Public License for more details.
+                                ;
+                                ;** 18 May 87 - Will now parse wildcards correctly - MT
+                                ;
+                                ;** 20 May 87 - Filename may be terminated with an ASCNULs - MT
+                                ;
+initf (ref file, ref array [] of char) - 19 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-1
+'Initlise a logical or physical file'
+
+                                ;** 30 Oct 89 - Modified to include drive code of default disk in FCB - MT
+                                ;
+                                ;** 17 Oct 90 - Now uses common code to parse name and type field - MT
+                                ;
+                                ;** 12 Nov 90 - Updated to parse logical device names - MT
+                                ;
+                                ;** 20 Jan 91 - Improved filename validation and error checking - MT
+                                ;
+                                ;** 18 Jul 91 - Modified to pass parameter by value - MT
+                                ;
+                                ;** 23 Jul 91 - Optimized device checking algolrithim - MT
+                                ;
+                                ;** 23 Jul 91 - Conditional assembly options added - MT
+                                ;
+                                ;**  7 Sep 91 - Modified table search algorithim - MT
+                                ;
+                                ;** 26 Sep 91 - Fixed bug in logical device parser - MT
+                                ;
+                                ;** 24 Oct 91 - Filenames can now include drive specification - MT
+                                ;
+                                ;** 30 Oct 91 - Added extended drive/user parsing of default device - MT
+                                ;
+                                ;** 30 Oct 91 - Clears FCB even if initlizing a logical device - MT
+                                ;
+                                ;**  1 Nov 91 - Full extended drive/user parsing implemented - MT
+                                ;
+  177777                        F$Check_Devices	DEFL	TRUE			; Check for device names and
+  177777                        F$Check_Files	DEFL	TRUE			; filenames.
+                                ;
+                                ;--- Parse logical device name.
+                                ;
+                                		IF	F$Check_Devices
+  000033'                 +     INITF::		PROCEDURE
+                                ;
+                                ;-- Attempt to match string to an entry in the table.
+                                ;
+                                ;-- Check that the string length is vaild.
+                                ;
+                                ;   Note - This  check does not properly check the high byte of the  string
+                                ;   length.
+                                ;
+  000046' 353                   		EX	DE,HL			; Get string length in BC.
+  000047' 116                   		LD	C,(HL)
+  000050' 043                   		INC	HL
+  000051' 106                   		LD	B,(HL)
+  000052' 171                   		LD	A,C
+  000053' 356 004               		XOR	LOW F$Name_Len		; Check that the low byte and the high byte
+  000055' 260                   		OR	B			; (which it is assumed must be zero) of the string length are correct.
+  000056' 043                   		INC	HL			; Now points to first character.
+  000057' 050 015               		JR	Z,F$Length_OK
+                                ;
+                                ;-- Alternatively the string may be null treminated.
+                                ;
+  000061' 305                   		PUSH	BC			; The number of characters is also required to tell us how long the filename is...
+  000062' 345                   		PUSH	HL			; Better save HL now...
+  000063' 001 000004            		LD	BC,F$Name_Len
+initf (ref file, ref array [] of char) - 19 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-2
+'Initlise a logical or physical file'
+
+  000066' 011                   		ADD	HL,BC			; Find address of (assumed) end of string.
+  000067' 257                   		XOR	A
+  000070' 266                   		OR	(HL)			; Is this byte the expected null ?
+  000071' 341                   		POP	HL			; Restore stack before we continue.
+                                		IF 	F$Check_Files		; If the string could be a filename then 
+  000072' 301                   		POP	BC
+  000073' 302 000245'           		JP	NZ,F$Parse_Disk		; we must check to see if it is...
+                                		ENDIF
+                                ;
+                                ;-- Check that filename matches a table entry.
+                                ;
+  000076' 305                   F$Length_OK:	PUSH	BC			; Save number of characters in filename (again).
+  000077' 325                   		PUSH	DE			; Save pointer to FCB, if this works it will be needed again !
+  000100' 353                   		EX	DE,HL
+  000101' 041 000163'           		LD	HL,F$Dev_Table		; Start of device name table.
+  000104' 001 000062            		LD	BC,F$Table_Len		; No of bytes in table.
+  000107' 032                   F$Retry:	LD	A,(DE)			; Search ths whole table for the
+  000110' 355 261               		CPIR				; first byte in string.
+  000112' 050 006               		JR	Z,F$Check_Name		; First byte exists in the table, check the rest...
+                                		IF 	F$Check_Files		; If the string could be a filename then 
+  000114' 353                   		EX	DE,HL			; we must check to see if it is. Put pointer to string
+  000115' 321                   		POP	DE			; back in HL, restore pointer to FCB and
+  000116' 301                   		POP	BC			; number of characters in filename.
+  000117' 302 000245'           		JP	NZ,F$Parse_Disk
+                                		ENDIF
+                                ;
+                                ;-- Check that all the rest of the bytes following the start of the  string
+                                ;   match.
+                                ;
+  000122' 345                   F$Check_Name:	PUSH	HL			; Save pointer to next byte in table,
+  000123' 325                   		PUSH	DE			; first character in string and,
+  000124' 305                   		PUSH	BC			; the number of bytes left to search
+  000125' 006 003               		LD	B,F$Name_Len-1		; Set up counter to check every byte in string.
+  000127' 023                   F$Next_Byte:	INC	DE			; Increment the pointer 
+  000130' 032                   		LD	A,(DE)			; to get the next byte from the string.
+  000131' 256                   		XOR	(HL)			; Does it match the next character in the 
+  000132' 040 003               		JR	NZ,F$Check_Failed	; table ?
+  000134' 043                   		INC	HL
+  000135' 020 370               		DJNZ	F$Next_Byte		; Have we checked all the bytes in the name ?
+  000137' 301                   F$Check_Failed:	POP	BC			; Restore counter and pointers ready
+  000140' 321                   		POP	DE			; to check the rest of the table
+  000141' 341                   		POP	HL			; if required.
+  000142' 040 343               		JR	NZ,F$Retry
+                                ;
+                                ;-- Use table entry to set up FCB.
+                                ;
+  000144' 053                   		DEC	HL			; Set pointer to start of table entry - I hope !
+  000145' 053                   		DEC	HL
+  000146' 321                   		POP	DE			; Restore pointer to FCB.
+  000147' 301                   		POP	BC			; Ditch length of filename.
+  000150' 001 000005            		LD	BC,F$Name_Len+1		; Number of bytes to move to FCB from table.
+  000153' 355 260               		LDIR
+  000155' 257                   		XOR	A			; Fill the rest of the FCB with AscNUL's
+  000156' 006 045               		LD	B,36+1			; including the mode byte !
+  000160' 303 000612'           		JP	F$Fill_Token		; No problems found.
+                                ;
+initf (ref file, ref array [] of char) - 19 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-3
+'Initlise a logical or physical file'
+
+                                ;-- Table of valid device codes and names.
+                                ;
+  000163' 021 103 117           F$Dev_Table:	DEFB	SYS$Console,'CON:'
+  000166' 116 072               
+  000170' 021 124 124           		DEFB	SYS$Console,'TTY:'
+  000173' 131 072               
+  000175' 022 116 125           		DEFB	SYS$Null,'NUL:'
+  000200' 114 072               
+  000202' 023 114 123           		DEFB	SYS$Printer,'LST:'
+  000205' 124 072               
+  000207' 023 120 122           		DEFB	SYS$Printer,'PRN:'
+  000212' 116 072               
+  000214' 024 120 125           		DEFB	SYS$Punch,'PUN:'
+  000217' 116 072               
+  000221' 024 114 120           		DEFB	SYS$Punch,'LPT:'
+  000224' 124 072               
+  000226' 025 122 104           		DEFB	SYS$Reader,'RDR:'
+  000231' 122 072               
+  000233' 027 103 115           		DEFB	SYS$Command,'CMD:'
+  000236' 104 072               
+  000240' 026 105 117           		DEFB	SYS$EOF,'EOF:'
+  000243' 106 072               
+                                ;
+  000004                        F$Name_Len	DEFL	4			; Define table logical device name length (fixed).
+  000062                        F$Table_Len	DEFL	5*10			; Total table length.
+                                ;
+                                		ENDIF
+                                		IF	F$Check_Files
+                                ;
+                                ;-- Explictly  set up drive code - use of 00H will be affected by  a  drive 
+                                ;   reset and is used to indecate that the file has not been initlized. The
+                                ;   code assumes that a valid drive code and optional user number has  been
+                                ;   specified  and attempt to set up the buffer accordingly.  If this fails
+                                ;   it  selects the default drive and user number and then  starts  parsing
+                                ;   the file name again .
+                                ;
+  000245' 345                   F$Parse_Disk:	PUSH	HL			; Save pointers and string length.
+  000246' 305                   		PUSH	BC
+  000247' 325                   		PUSH	DE
+  000250' 015                   		DEC	C			; Need to check the number of remaining chacters.
+  000251' 014                   		INC	C
+  000252' 312 000510'           		JP	Z,F$Parse_Token		; Get out the easy way.
+  000255' 176                   		LD	A,(HL)			; Get the supposed drive code and chack that it is
+  000256' 376 101               		CP	'A'			; in the range A .. P.
+  000260' 070 104               		JR	C,F$Default_Disk	; Since it is not a valid drive code assume that there
+  000262' 376 121               		CP	'P'+1			; isn't one...
+  000264' 060 100               		JR	NC,F$Default_Disk
+  000266' 346 037               		AND	00011111B		; Convert to the required code for the FCB - easy really.
+  000270' 022                   		LD	(DE),A
+  000271' 043                   		INC	HL
+                                ;
+                                ;-- Parse the user name and store it in the high nibble of the access  mode
+                                ;   byte since there is nowhere in a standard CP/M FCB for it to go.
+                                ;
+  000272' 006 000               		LD	B,0
+  000274' 176                   		LD	A,(HL)			; Get the next character from the string.
+initf (ref file, ref array [] of char) - 19 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-4
+'Initlise a logical or physical file'
+
+  000275' 376 072               		CP	':'			; Is it a device delimiter ?
+  000277' 050 053               		JR	Z,F$No_User		; No user number specified.
+  000301' 376 060               F$Parse_User:	CP	Asc$ZERO		; Do we have a valid digit ?
+  000303' 070 061               		JR	C,F$Default_Disk	; If not this can't be a device specification.
+  000305' 376 072               		CP	Asc$ZERO +9 +1
+  000307' 060 055               		JR	NC,F$Default_Disk
+  000311' 326 060               		SUB	Asc$ZERO		; Convert character from ASCII to binary.
+  000313' 365                   		PUSH	AF			; Save value and
+  000314' 170                   		LD	A,B			; multiply existing value by ten
+  000315' 007                   		RLCA
+  000316' 007                   		RLCA
+  000317' 007                   		RLCA
+  000320' 200                   		ADD	A,B
+  000321' 200                   		ADD	A,B
+  000322' 107                   		LD	B,A
+  000323' 361                   		POP	AF
+  000324' 200                   		ADD	A,B			; before adding new digit.
+  000325' 107                   		LD	B,A
+  000326' 376 020               		CP	16			; If out of range then no valid user number was specified.
+  000330' 060 022               		JR	NC,F$No_User
+  000332' 043                   		INC	HL
+  000333' 176                   		LD	A,(HL)
+  000334' 376 072               		CP	':'
+  000336' 040 341               		JR	NZ,F$Parse_User
+  000340' 170                   F$User_Done:	LD	A,B			; Put new user number in the accumulator.
+  000341' 006 006               		LD	B,6			; Remove orignal pointers from the stack
+  000343' 063                   		INC	SP
+  000344' 020 375               		DJNZ	$-1
+  000346' 043                   		INC	HL
+  000347' 345                   		PUSH	HL			; and save new pointers.
+  000350' 305                   		PUSH	BC
+  000351' 325                   		PUSH	DE
+  000352' 030 032               		JR	F$Save_User
+  000354' 006 006               F$No_User:	LD	B,6			; Restore the stack.
+  000356' 063                   		INC	SP
+  000357' 020 375               		DJNZ	$-1
+  000361' 043                   		INC	HL
+  000362' 345                   		PUSH	HL
+  000363' 305                   		PUSH	BC
+  000364' 030 010               		JR	F$Default_User
+                                ;
+                                ;-- If  no valid drive specifier could be found then get the  default  from
+                                ;   BDOS.
+                                ;
+  000366' 016 031               F$Default_Disk:	LD	C,BDOS$Get_Drive	; Get current drive code in the accumulator.
+  000370' 315 000000*           		CALL	BDOS##
+  000373' 321                   		POP	DE			; Restore pointer to FCB.
+  000374' 074                   		INC	A			; Increment code to give drive code as used in FCB.
+  000375' 022                   		LD	(DE),A			; Store the code in the first byte of the FCB and increment DE
+  000376' 325                   F$Default_User:	PUSH	DE
+  000377' 016 040               		LD	C,BDOS$Set_Usr_No	; Get the current user number in the accumulator.
+  000401' 036 377               		LD	E,0FFH
+  000403' 315 000000*           		CALL	BDOS##
+  000406' 321                   F$Save_User:	POP	DE			; Get the address of the FCB and calculate the address of the
+  000407' 041 000044            		LD	HL,36			; mode byte.
+  000412' 031                   		ADD	HL,DE
+initf (ref file, ref array [] of char) - 19 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-5
+'Initlise a logical or physical file'
+
+  000413' 355 157               		RLD				; Move the user number to the lo 4 bits of the status byte.
+  000415' 257                   		XOR	A			; Clear the accumulator to clear the lo 4 bits of the byte
+  000416' 355 157               		RLD				; and shuffle everything up to the hi byte!
+  000420' 301                   		POP	BC			; Restore counter and pointer to next character.
+  000421' 341                   		POP	HL
+  000422' 023                   		INC	DE			; Pointer to the first byte of the name field.
+                                ;
+                                ;-- Parse filename (must be specified), padding FCB with nulls if required.
+                                ;
+  000423' 006 010               F$Parse_Name:	LD      B,8			; Maximum number of characters in name.
+  000425' 315 000510'           		CALL	F$Parse_Token		; Parse rest of token.
+  000430' 176                   		LD	A,(HL)
+  000431' 376 056               		CP	'.'
+  000433' 050 022               		JR	Z,F$Parse_Type
+  000435' 376 000               		CP	ASC$NUL
+  000437' 050 007               		JR	Z,F$No_Type		; End of string reached.
+  000441' 257                   		XOR	A
+  000442' 271                   		CP	C
+  000443' 050 003               		JR	Z,F$No_Type		; No more characters.
+  000445' 076 001               F$Invalid_Name:	LD	A,ERR$Bad_File		; Unexpected characters in filename.
+  000447' 311                   		RET
+                                ;
+                                ;-- If no file type was specified the fill the FCB with blanks.
+                                ;
+  000450' 006 003               F$No_Type:	LD	B,3			; No file type specified.
+  000452' 315 000610'           		CALL	F$Fill_Spaces		; Subsitute three ' '.
+  000455' 030 022               		JR	F$Fill_FCB
+                                ;		
+                                ;-- Parse file type, if less than 3 chracters long the field is null padded.
+                                ;
+  000457' 043                   F$Parse_Type:	INC	HL			; Skip '.' character.
+  000460' 015                   		DEC	C
+  000461' 006 003               		LD	B,3			; Maximum number of characters in type.
+  000463' 315 000510'           		CALL	F$Parse_Token
+  000466' 176                   		LD	A,(HL)
+  000467' 376 000               		CP	ASC$NUL
+  000471' 050 006               		JR	Z,F$Fill_FCB		; End of string reached.
+  000473' 257                   		XOR	A
+  000474' 271                   		CP	C
+  000475' 050 002               		JR	Z,F$Fill_FCB		; No more characters.
+  000477' 030 344               		JR	F$Invalid_Name
+                                ;
+                                ;-- Reset the remainder of FCB.
+                                ;
+  000501' 257                   F$Fill_FCB:	XOR	A
+  000502' 006 030               		LD	B,24			; No of bytes remaining in FCB.
+  000504' 315 000612'           		CALL	F$Fill_Token		; Zero rest of FCB.
+  000507' 311                   		RET
+                                ;
+                                ;-- Parse rest of token.
+                                ;
+  000510' 014                   F$Parse_Token:	INC	C			; Only way to set flags from C without distroying the contens
+  000511' 015                   		DEC	C			; of the accumulator, which holds the last character scanned.
+  000512' 050 074               		JR	Z,F$Fill_Spaces		; Check no of remaining characters to parse.
+  000514' 176                   		LD	A,(HL)			; Get next string character.
+  000515' 267                   		OR	A			; If there are no more characters
+initf (ref file, ref array [] of char) - 19 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-6
+'Initlise a logical or physical file'
+
+  000516' 050 070               		JR	Z,F$Fill_Spaces		; to check fill the rest with spaces.
+  000520' 376 056               		CP	'.'			; No effect on second pass - assuming
+  000522' 050 064               		JR	Z,F$Fill_Spaces		; only one '.' in filename
+  000524' 376 052               		CP	'*'			; If next character is a wildcard then
+  000526' 050 052               		JR	Z,F$Fill_Field		; fill field with '?'.
+  000530' 376 041               F$Parse_Letter:	CP      '!'			; Characters allowed in filenames
+  000532' 070 043                               JR      C,F$Parse_Err		; are (! # $ % & ? @) 
+  000534' 376 042                               CP      '!'+1			; and (0..9,A..Z)
+  000536' 070 030                               JR	C,F$Parse_Next
+  000540' 376 043                               CP      '#'
+  000542' 070 033                               JR      C,F$Parse_Err
+  000544' 376 047                               CP      '&'+1
+  000546' 070 020                               JR	C,F$Parse_Next
+  000550' 376 060                               CP      '0'
+  000552' 070 023                               JR      C,F$Parse_Err
+  000554' 376 072                               CP      '9'+1
+  000556' 070 010                               JR	C,F$Parse_Next
+  000560' 376 077               		CP      '?'			; Wildcards (?) allowed.
+  000562' 070 013                               JR      C,F$Parse_Err
+  000564' 376 133                               CP      'Z'+1
+  000566' 060 007               		JR	NC,F$Parse_Err
+  000570' 022                   F$Parse_Next:	LD	(DE),A			; Put valid character in FCB.
+  000571' 023                   		INC	DE
+  000572' 043                   		INC	HL
+  000573' 015                   		DEC	C
+  000574' 020 312               		DJNZ	F$Parse_Token		; More characters to do.
+  000576' 311                   		RET				; Token parsed...
+                                ;
+                                ;-- Return and error code if a bad letter is found.
+                                ;
+  000577' 341                   F$Parse_Err:	POP	HL			; Get rid of old return address.
+  000600' 030 243               		JR	F$Invalid_Name
+                                ;
+                                ;-- Fill rest of field with spaces or '?' as approprite.
+                                ;
+  000602' 043                   F$Fill_Field:	INC	HL			; Skip wild card character.
+  000603' 015                   		DEC	C
+  000604' 076 077               		LD	A,'?'
+  000606' 030 002               		JR	F$Fill_Token
+  000610' 076 040               F$Fill_Spaces:	LD	A,ASC$SP
+                                		ENDIF
+                                		IF 	F$Check_Devices OR F$Check_Files
+  000612' 022                   F$Fill_Token:	LD	(DE),A			; Fill remaining characters in FCB
+  000613' 023                   		INC	DE			; with ' ' or '?'.
+  000614' 020 374               		DJNZ	F$Fill_Token
+  000616' 311                   		RET
+                                ;
+                                		ENDIF
+                                ;
+                                		END
+initf (ref file, ref array [] of char) - 19 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	S
+'Initlise a logical or physical file'
+
+Macros:
+COPYRIGHT       FUNCTION        PROCEDURE       PROGRAM         USING           
+VERSION         
+
+Symbols:
+000046'	..0000          000006 	ASC$ACK         000052 	ASC$AST         
+000007 	ASC$BEL         000003 	ASC$BRK         000010 	ASC$BS          
+000030 	ASC$CAN         000015 	ASC$CR          000021 	ASC$DC1         
+000022 	ASC$DC2         000023 	ASC$DC3         000024 	ASC$DC4         
+000177 	ASC$DEL         000020 	ASC$DLE         000005 	ASC$ENQ         
+000032 	ASC$EOF         000031 	ASC$EOM         000004 	ASC$EOT         
+000075 	ASC$EQU         000033 	ASC$ESC         000027 	ASC$ETB         
+000014 	ASC$FF          000034 	ASC$FS          000035 	ASC$GS          
+000012 	ASC$LF          000055 	ASC$MINUS       000025 	ASC$NAK         
+000055 	ASC$NEGATIVE    000071 	ASC$NINE        000000 	ASC$NUL         
+000053 	ASC$PLUS        000040 	ASC$POSITIVE    000056 	ASC$PT          
+000036 	ASC$RS          000054 	ASC$SEP         000017 	ASC$SI          
+000057 	ASC$SLH         000016 	ASC$SO          000001 	ASC$SOH         
+000040 	ASC$SP          000002 	ASC$STX         000026 	ASC$SYN         
+000011 	ASC$TAB         000037 	ASC$US          000013 	ASC$VT          
+000060 	ASC$ZERO        000404*	BDOS            000020 	BDOS$CLOSE_FILE 
+000001 	BDOS$CON_INPUT  000002 	BDOS$CON_OUTPUT 000013 	BDOS$CON_STATUS 
+000006 	BDOS$DIRECT_IO  000023 	BDOS$ERASE_FILE 000021 	BDOS$FIND_FILE  
+000022 	BDOS$FIND_NEXT  000037 	BDOS$GET_DPB    000031 	BDOS$GET_DRIVE  
+000007 	BDOS$GET_IOBYTE 000033 	BDOS$GET_VECTOR 000005 	BDOS$LST_OUTPUT 
+000026 	BDOS$MAKE_FILE  000017 	BDOS$OPEN_FILE  000011 	BDOS$PRINT_STR  
+000004 	BDOS$PUN_OUTPUT 000003 	BDOS$RDR_INPUT  000041 	BDOS$READ_RND   
+000024 	BDOS$READ_SEQ   000012 	BDOS$READ_STR   000027 	BDOS$REN_FILE   
+000000 	BDOS$RESET      000015 	BDOS$RESET_DISK 000016 	BDOS$SELECT     
+000032 	BDOS$SET_DMA    000010 	BDOS$SET_IOBYTE 000040 	BDOS$SET_USR_NO 
+000014 	BDOS$VER_NO     000042 	BDOS$WRITE_RND  000025 	BDOS$WRITE_SEQ  
+000000 	BIOS$BOOT       000011 	BIOS$CON_INPUT  000014 	BIOS$CON_OUTPUT 
+000006 	BIOS$CON_STAT   000030 	BIOS$HOME       000017 	BIOS$LST_OUTPUT 
+000055 	BIOS$LST_STAT   000022 	BIOS$PUN_OUTPUT 000025 	BIOS$RDR_INPUT  
+000047 	BIOS$READ       000033 	BIOS$SELECT     000044 	BIOS$SET_DMA    
+000041 	BIOS$SET_SECTOR 000036 	BIOS$SET_TRACK  000003 	BIOS$WARMBOOT   
+000052 	BIOS$WRITE      000000 	CPM$BASE        000000 	CPM$BOOT        
+000200 	CPM$BUFF        000134 	CPM$FB1         000154 	CPM$FB2         
+000200 	CPM$TAIL        000022 	ERR$BAD_COMMAND 000002 	ERR$BAD_DEVICE  
+000001 	ERR$BAD_FILE    000003 	ERR$BAD_MODE    000004 	ERR$BAD_USER    
+000010 	ERR$CANT_CLOSE  000007 	ERR$CANT_CREATE 000005 	ERR$CANT_INIT   
+000006 	ERR$CANT_OPEN   000014 	ERR$DISK_FULL   000011 	ERR$FILE_EXISTS 
+000013 	ERR$NOT_OPENED  000012 	ERR$NO_FILE     000021 	ERR$NO_MEMORY   
+000016 	ERR$READ_EOF    000015 	ERR$READ_FAIL   000020 	ERR$READ_ONLY   
+000000 	ERR$SUCCESS     000023 	ERR$UNDEFINED   000014 	ERR$WRITE_FAIL  
+000017 	ERR$WRITE_ONLY  177777 	F$CHECK_DEVICES 000137'	F$CHECK_FAILED  
+177777 	F$CHECK_FILES   000122'	F$CHECK_NAME    000366'	F$DEFAULT_DISK  
+000376'	F$DEFAULT_USER  000163'	F$DEV_TABLE     000501'	F$FILL_FCB      
+000602'	F$FILL_FIELD    000610'	F$FILL_SPACES   000612'	F$FILL_TOKEN    
+000445'	F$INVALID_NAME  000076'	F$LENGTH_OK     000004 	F$NAME_LEN      
+000127'	F$NEXT_BYTE     000450'	F$NO_TYPE       000354'	F$NO_USER       
+000245'	F$PARSE_DISK    000577'	F$PARSE_ERR     000530'	F$PARSE_LETTER  
+000423'	F$PARSE_NAME    000570'	F$PARSE_NEXT    000510'	F$PARSE_TOKEN   
+000457'	F$PARSE_TYPE    000301'	F$PARSE_USER    000107'	F$RETRY         
+000406'	F$SAVE_USER     000062 	F$TABLE_LEN     000340'	F$USER_DONE     
+000000 	FALSE           000033I'	INITF           000000 	NULL            
+initf (ref file, ref array [] of char) - 19 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	S-1
+'Initlise a logical or physical file'
+
+000027 	SYS$COMMAND     000021 	SYS$CONSOLE     000026 	SYS$EOF         
+000022 	SYS$NULL        000023 	SYS$PRINTER     000024 	SYS$PUNCH       
+000025 	SYS$READER      177777 	TRUE            
+
+
+
+No Fatal error(s)
+
+
+ 
+000406'	F$SAVE_USER     000062 	F$TABLE_LEN     000340'	F$USER_DONE     
+000000 	FALSE   

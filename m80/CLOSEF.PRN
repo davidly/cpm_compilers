@@ -1,0 +1,267 @@
+closef (ref file) - 7 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1
+
+
+                                		TITLE	closef (ref file) - 7 May 87 - MT
+                                		SUBTTL	'Close a locical or physical file'
+                                ;
+                         C      		INCLUDE SYMBOLS
+                         C      ;		TITLE   SYMBOLS - 23 Mar 89 - MT
+                         C      ;		SUBTTL	'Symbol definitions'
+                         C      ;
+                         C      ;		VERSION	'SYMBOLS 3.20 - 06 Feb 21'
+                         C      .LIST
+                          +     		VERSION	'CLOSEF 3.9 - 30 Jan 21'
+                                ;
+                                ;-- If the file has been opened to a logical device then all that is needed
+                                ;   is to reset device code, if it is a disk files that has been opened for
+                                ;   reading or writing then file is closed by calling the BDOS (to maintain
+                                ;   compatibility  with MP/M systems where it is required to close any file
+                                ;   to unlock access. 
+                                ;
+                                ;   In addition if the file was opened for writing then this routine checks
+                                ;   that the contents of the buffer have been written to disk, if buffer is
+                                ;   only partly full then it is padded with CTRL-Z characters before  being
+                                ;   written to disk and the file closed.
+                                ;
+                                ;   This procedure assumes that a file header block exists in the following
+                                ;   format and it has been correctly initlized.
+                                ;
+                                ;   +-+--------+---+-----------+-+-+--------------------------------------+
+                                ;   | |        |   |           | | |                                      |
+                                ;   +-+--------+---+-----------+-+-+--------------------------------------+
+                                ;				| |
+                                ;   |--- File Control Block ---|| ||----------- DMA Buffer ---------------|
+                                ;	    (36 bytes)		| |		(128 bytes)
+                                ;			       /   \
+                                ;			 Status     Buffer pointer
+                                ;			 (1 byte)   (1 byte)
+                                ;
+                                ;   By using the status byte to store both the user number for the file and
+                                ;   the  file access mode, this routine can access files in any USR area on
+                                ;   the disk by moving to the USR area holding the file, closing the  file,
+                                ;   then moving back to the default USR area.
+                                ;
+                                ;-- This program is free software: you can redistribute it and/or modify it
+                                ;   under  the terms of the GNU General Public License as published by  the
+                                ;   Free Software Foundation, either version 3 of the License, or (at  your
+                                ;   option) any later version.
+                                ;
+                                ;   This  program  is distributed in the hope that it will be  useful,  but
+                                ;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+                                ;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+                                ;   General Public License for more details.
+                                ;
+                                ;   You should have received a copy of the GNU General Public License along
+                                ;   with this program.  If not, see <http://www.gnu.org/licenses/>.
+                                ;
+                                ;** 18 May 87 -	Now correctly closes files opened for reading - MT
+                                ;
+                                ;** 15 Jan 91 -	Revised to handle IO streams - MT
+closef (ref file) - 7 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-1
+'Close a locical or physical file'
+
+                                ;
+                                ;** 25 Jan 91 -	Checks for wildcards - MT
+                                ;
+                                ;**  6 Apr 91 -	Updated to use new symbols - MT
+                                ;
+                                ;** 25 Nov 91 -	Modified to use call by value - MT
+                                ;
+                                ;** 21 May 92 -	Now allows files to be in any USR area - MT
+                                ;
+                                ;** 27 Jul 92 -	Fixed  bug  which  corrupted pointer to  file  header  when 
+                                ;		padding buffer with Asc$EOF's - MT
+                                ;
+                                ;** 30 Jan 21 -	Fixed a very old bug in the code that checked that the file
+                                ;		had been closed properly and set the return status - MT
+                                ;
+                                ;** To Do:	Clear device code when closing a disk file?
+                                ;
+                                ;-- Check that the output file has been opened for writing to disk.
+                                ;
+  000033'                 +     CLOSEF::	PROCEDURE			; All registers preserved.
+  000046' 176                   		LD	A,(HL)			; Get device code.
+  000047' 267                   		OR	A			; If the device code has not been set then the file has not been opened.
+  000050' 076 013               		LD	A,ERR$Not_Opened
+  000052' 310                   		RET	Z			; File improperly opened !
+                                ;
+                                ;-- Check for logical devices.
+                                ;
+  000053' 176                   		LD	A,(HL)			; Get device code.
+  000054' 376 021               		CP	SYS$Console		; Check that we are writing to a physical device and flush the output buffer
+  000056' 070 003                               JR	C,F$Disk_File		; adding <Ctrl-Z>s to the end of file if required.
+  000060' 257                   		XOR	A			; Logical devices require no further action other than to clear the device code
+  000061' 167                   		LD	(HL),A			; and return a success code (and clear device code).
+  000062' 311                   		RET
+                                
+                                ;-- Check that file name is unambigous.
+                                ;
+  000063' 124                   F$Disk_File:	LD	D,H			; Put the address of the FCB in DE.
+  000064' 135                   		LD	E,L
+  000065' 006 013               		LD      B,8+3			; Number of characters to check.
+  000067' 016 077                               LD      C,'?'
+  000071' 043                   F$Wild_Loop:    INC     HL
+  000072' 176                                   LD      A,(HL)			; Get next character.
+  000073' 271                                   CP      C
+  000074' 076 001               		LD	A,ERR$Bad_File
+  000076' 310                   		RET     Z			; Bad file name !
+  000077' 005                   		DEC     B
+  000100' 040 367                               JR      NZ,F$Wild_Loop		; Test the rest of the FCB.
+                                ;
+                                ;-- Save current usr number on the stack.
+                                ;
+  000102' 325                   		PUSH	DE			; Save the address of the FCB.
+  000103' 016 040               		LD	C,BDOS$Set_Usr_No	; Use set usr number function to get the current usr number
+  000105' 036 377               		LD	E,0FFH			; by putting 0FFH in E.
+  000107' 315 000000*           		CALL	BDOS##
+  000112' 157                   		LD	L,A			; Put usr number into HL.
+  000113' 343                   		EX	(SP),HL			; Save it on the stack and get the pointer to the FCB in HL.
+closef (ref file) - 7 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-2
+'Close a locical or physical file'
+
+  000114' 353                   		EX	DE,HL			; Restore pointer to FCB.
+                                ;
+                                ;-- Set up usr number of output file.
+                                ;
+  000115' 325                   		PUSH	DE			; Save address of FCB.
+  000116' 041 000044            		LD	HL,36			; Offset to status byte.
+  000121' 031                   		ADD	HL,DE
+  000122' 257                   		XOR	A
+  000123' 355 157               		RLD	
+  000125' 137                   		LD	E,A			; Get usr number of output file.
+  000126' 355 157               		RLD
+  000130' 355 157               		RLD
+  000132' 016 040               		LD	C,BDOS$Set_Usr_No	; Set up new usr number.
+  000134' 315 000000*           		CALL	BDOS##
+  000137' 321                   		POP	DE			; Restore address of FCB in DE for BDOS write function.
+                                ;
+                                ;-- Flush record to disk and close file.
+                                ;
+  000140' 041 000044            		LD	HL,36			; Get the file access mode from the status byte using the
+  000143' 031                   		ADD	HL,DE			; address of the file header held in DE.
+  000144' 176                   		LD	A,(HL)
+  000145' 346 017               		AND	00001111B		; Check that the file was opened for writing, note this is done by checking that
+  000147' 376 002               		CP	'R' AND 00001111B	; the file was opened for read access since closef() is valid for files opened for
+  000151' 050 050               		JR	Z,F$Close_File		; both write and append. Don't worry about flushing the buffer unless writing.
+                                ;
+                                ;-- Fill remainder of buffer with ASC$EOFs if required.
+                                ;
+  000153' 043                   		INC	HL			; Set up pointer to buffer pointer.
+  000154' 176                   		LD	A,(HL)			; Get the current value of the buffer pointer and increment HL to point
+  000155' 043                   		INC	HL			; to the buffer itself.
+  000156' 267                   		OR	A			; If the buffer is already empty then the file ended on a record boundry
+  000157' 050 042               		JR	Z,F$Close_File		; so don't bother to write a <Ctrl-Z>, just close the file.
+  000161' 325                   		PUSH	DE			; Save address of FCB and DMA these are needed later.
+  000162' 345                   		PUSH	HL
+  000163' 006 000               		LD	B,0
+  000165' 117                   		LD	C,A
+  000166' 011                   		ADD	HL,BC			; HL pointer to first character to fill.
+  000167' 026 032               		LD	D,ASC$EOF
+  000171' 162                   F$Fill_Next:	LD	(HL),D
+  000172' 043                   		INC	HL
+  000173' 074                   		INC	A
+  000174' 376 200               		CP	128
+  000176' 040 371               		JR	NZ,F$Fill_Next
+  000200' 321                   		POP	DE			; Restore DMA address (pushed from HL).
+                                ;
+                                ;-- Flush buffer to disk if required.
+                                ;
+  000201' 016 032               		LD	C,BDOS$Set_DMA
+  000203' 315 000000*           		CALL	BDOS##
+  000206' 321                   		POP	DE			; Restore pointer to FCB (pushed from DE).
+  000207' 325                   		PUSH	DE
+  000210' 016 025               		LD	C,BDOS$Write_Seq
+  000212' 315 000000*           		CALL	BDOS##
+  000215' 267                   		OR	A			; Set flags from A.
+  000216' 321                   		POP	DE
+  000217' 076 014               		LD	A,ERR$Disk_Full		; Can't flush buffer to disk.
+closef (ref file) - 7 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-3
+'Close a locical or physical file'
+
+  000221' 040 013               		JR	NZ,F$Exit		; Disk Full !
+                                ;
+                                ;- Finally close the file.
+                                ;
+  000223' 016 020               F$Close_File:	LD	C,BDOS$Close_File	; Close file whether opened for read or write access to maintain compatibility
+  000225' 315 000000*           		CALL	BDOS##			; with MP/M systems.
+  000230' 074                   		INC	A			; BDOS returns the file extant number of 0FFH if it could not close the file.
+  000231' 076 010               		LD	A,ERR$Cant_Close	; Can't close file.
+                                ;
+                                ;** 30 Jan 21 -	Fixed a very old bug in the code that checked that the file 
+                                ;		had been closed properly and set the return status - MT
+                                ;
+  000233' 050 001               		JR	Z,F$Exit		
+  000235' 257                   		XOR	A			; Success !
+                                ;
+                                ;-- Reset usr number to current value.
+                                ;
+  000236' 321                   F$Exit:		POP	DE			; Restore current user number from the stack
+  000237' 365                   		PUSH	AF			; and save the error code.
+  000240' 016 040               		LD	C,BDOS$Set_Usr_No	; Reset the usr number.
+  000242' 315 000000*           		CALL	BDOS##
+  000245' 361                   		POP	AF			; Restore the error code.
+  000246' 311                   		RET
+                                ;
+                                		END
+closef (ref file) - 7 May 87 - MT	MACRO-80 3.44	09-Dec-81	PAGE	S
+'Close a locical or physical file'
+
+Macros:
+COPYRIGHT       FUNCTION        PROCEDURE       PROGRAM         USING           
+VERSION         
+
+Symbols:
+000046'	..0000          000006 	ASC$ACK         000052 	ASC$AST         
+000007 	ASC$BEL         000003 	ASC$BRK         000010 	ASC$BS          
+000030 	ASC$CAN         000015 	ASC$CR          000021 	ASC$DC1         
+000022 	ASC$DC2         000023 	ASC$DC3         000024 	ASC$DC4         
+000177 	ASC$DEL         000020 	ASC$DLE         000005 	ASC$ENQ         
+000032 	ASC$EOF         000031 	ASC$EOM         000004 	ASC$EOT         
+000075 	ASC$EQU         000033 	ASC$ESC         000027 	ASC$ETB         
+000014 	ASC$FF          000034 	ASC$FS          000035 	ASC$GS          
+000012 	ASC$LF          000055 	ASC$MINUS       000025 	ASC$NAK         
+000055 	ASC$NEGATIVE    000071 	ASC$NINE        000000 	ASC$NUL         
+000053 	ASC$PLUS        000040 	ASC$POSITIVE    000056 	ASC$PT          
+000036 	ASC$RS          000054 	ASC$SEP         000017 	ASC$SI          
+000057 	ASC$SLH         000016 	ASC$SO          000001 	ASC$SOH         
+000040 	ASC$SP          000002 	ASC$STX         000026 	ASC$SYN         
+000011 	ASC$TAB         000037 	ASC$US          000013 	ASC$VT          
+000060 	ASC$ZERO        000243*	BDOS            000020 	BDOS$CLOSE_FILE 
+000001 	BDOS$CON_INPUT  000002 	BDOS$CON_OUTPUT 000013 	BDOS$CON_STATUS 
+000006 	BDOS$DIRECT_IO  000023 	BDOS$ERASE_FILE 000021 	BDOS$FIND_FILE  
+000022 	BDOS$FIND_NEXT  000037 	BDOS$GET_DPB    000031 	BDOS$GET_DRIVE  
+000007 	BDOS$GET_IOBYTE 000033 	BDOS$GET_VECTOR 000005 	BDOS$LST_OUTPUT 
+000026 	BDOS$MAKE_FILE  000017 	BDOS$OPEN_FILE  000011 	BDOS$PRINT_STR  
+000004 	BDOS$PUN_OUTPUT 000003 	BDOS$RDR_INPUT  000041 	BDOS$READ_RND   
+000024 	BDOS$READ_SEQ   000012 	BDOS$READ_STR   000027 	BDOS$REN_FILE   
+000000 	BDOS$RESET      000015 	BDOS$RESET_DISK 000016 	BDOS$SELECT     
+000032 	BDOS$SET_DMA    000010 	BDOS$SET_IOBYTE 000040 	BDOS$SET_USR_NO 
+000014 	BDOS$VER_NO     000042 	BDOS$WRITE_RND  000025 	BDOS$WRITE_SEQ  
+000000 	BIOS$BOOT       000011 	BIOS$CON_INPUT  000014 	BIOS$CON_OUTPUT 
+000006 	BIOS$CON_STAT   000030 	BIOS$HOME       000017 	BIOS$LST_OUTPUT 
+000055 	BIOS$LST_STAT   000022 	BIOS$PUN_OUTPUT 000025 	BIOS$RDR_INPUT  
+000047 	BIOS$READ       000033 	BIOS$SELECT     000044 	BIOS$SET_DMA    
+000041 	BIOS$SET_SECTOR 000036 	BIOS$SET_TRACK  000003 	BIOS$WARMBOOT   
+000052 	BIOS$WRITE      000033I'	CLOSEF          000000 	CPM$BASE        
+000000 	CPM$BOOT        000200 	CPM$BUFF        000134 	CPM$FB1         
+000154 	CPM$FB2         000200 	CPM$TAIL        000022 	ERR$BAD_COMMAND 
+000002 	ERR$BAD_DEVICE  000001 	ERR$BAD_FILE    000003 	ERR$BAD_MODE    
+000004 	ERR$BAD_USER    000010 	ERR$CANT_CLOSE  000007 	ERR$CANT_CREATE 
+000005 	ERR$CANT_INIT   000006 	ERR$CANT_OPEN   000014 	ERR$DISK_FULL   
+000011 	ERR$FILE_EXISTS 000013 	ERR$NOT_OPENED  000012 	ERR$NO_FILE     
+000021 	ERR$NO_MEMORY   000016 	ERR$READ_EOF    000015 	ERR$READ_FAIL   
+000020 	ERR$READ_ONLY   000000 	ERR$SUCCESS     000023 	ERR$UNDEFINED   
+000014 	ERR$WRITE_FAIL  000017 	ERR$WRITE_ONLY  000223'	F$CLOSE_FILE    
+000063'	F$DISK_FILE     000236'	F$EXIT          000171'	F$FILL_NEXT     
+000071'	F$WILD_LOOP     000000 	FALSE           000000 	NULL            
+000027 	SYS$COMMAND     000021 	SYS$CONSOLE     000026 	SYS$EOF         
+000022 	SYS$NULL        000023 	SYS$PRINTER     000024 	SYS$PUNCH       
+000025 	SYS$READER      177777 	TRUE            
+
+
+
+No Fatal error(s)
+
+
+READ_ONLY   000000 	ERR$SUCCESS     000023 	ERR$UNDEFINED   
+000014 	ERR$WRITE_FAIL  000017

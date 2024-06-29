@@ -1,0 +1,114 @@
+BDOS - 27 Jan 91 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1
+
+
+                                		TITLE	BDOS - 27 Jan 91 - MT
+                                		SUBTTL	'BDOS and BIOS calls'
+                                ;
+                         C      		INCLUDE	SYMBOLS
+                         C      ;		TITLE   SYMBOLS - 23 Mar 89 - MT
+                         C      ;		SUBTTL	'Symbol definitions'
+                         C      ;
+                         C      ;		VERSION	'SYMBOLS 3.20 - 06 Feb 21'
+                         C      .LIST
+                                ;
+                                ;-- Implements a tidy means of accessing BDOS and BIOS routines directly. 
+                                ;
+                                ;   The  base address of the BIOS jump table is easily found as the MSB  of
+                                ;   the address specified in the JMP instruction at 0000H.  Making the BIOS
+                                ;   function codes the same as the offsets of the jump addresses simplifies
+                                ;   the task of finding the address of the BIOS entry point.
+                                ;
+                                ;-- This program is free software: you can redistribute it and/or modify it
+                                ;   under  the terms of the GNU General Public License as published by  the
+                                ;   Free Software Foundation, either version 3 of the License, or (at  your
+                                ;   option) any later version.
+                                ;
+                                ;   This  program  is distributed in the hope that it will be  useful,  but
+                                ;   WITHOUT   ANY   WARRANTY;  without  even  the   implied   warranty   of
+                                ;   MERCHANTABILITY  or  FITNESS  FOR A PARTICULAR  PURPOSE.  See  the  GNU
+                                ;   General Public License for more details.
+                                ;
+                                ;   You should have received a copy of the GNU General Public License along
+                                ;   with this program.  If not, see <http://www.gnu.org/licenses/>.
+                                ;
+                                ;-- Calculate BIOS entry point from BIOS function number. 
+                                ;
+                                ;   To maintain compatibility with BDOS calls the calling convention is  as
+                                ;   follows:
+                                ;
+                                ;	C  = BIOS Function.		A = Return status or character.
+                                ;	E  = Byte arguments.
+                                ;	DE = Word argumants.
+                                ;
+                                ;** 10 Apr 91 -	Modified to use the jump address at CPM$Base + 1 (0001H) to
+                                ;		find BIOS offset - MT
+                                ;
+  000000' 052 000001            BIOS::		LD	HL,(CPM$Base + 1)	; Get address of warmstart routine and use hi byte as BIOS address.
+  000003' 151                   		LD	L,C			; Put code (actually the offset into the jump table) in to LSB of address, and the BIOS 
+  000004' 113                   		LD	C,E			; offset into the MSB. Put or word byte arguments into BC where the BIOS expects them.
+  000005' 102                   		LD	B,D
+  000006' 351                   		JP	(HL)			; Jump to BIOS function...
+                                ;
+  000007' 303 000005            BDOS::		JP	0005H
+                                ;
+                                		END
+BDOS - 27 Jan 91 - MT	MACRO-80 3.44	09-Dec-81	PAGE	S
+'BDOS and BIOS calls'
+
+Macros:
+COPYRIGHT       FUNCTION        PROCEDURE       PROGRAM         USING           
+VERSION         
+
+Symbols:
+000006 	ASC$ACK         000052 	ASC$AST         000007 	ASC$BEL         
+000003 	ASC$BRK         000010 	ASC$BS          000030 	ASC$CAN         
+000015 	ASC$CR          000021 	ASC$DC1         000022 	ASC$DC2         
+000023 	ASC$DC3         000024 	ASC$DC4         000177 	ASC$DEL         
+000020 	ASC$DLE         000005 	ASC$ENQ         000032 	ASC$EOF         
+000031 	ASC$EOM         000004 	ASC$EOT         000075 	ASC$EQU         
+000033 	ASC$ESC         000027 	ASC$ETB         000014 	ASC$FF          
+000034 	ASC$FS          000035 	ASC$GS          000012 	ASC$LF          
+000055 	ASC$MINUS       000025 	ASC$NAK         000055 	ASC$NEGATIVE    
+000071 	ASC$NINE        000000 	ASC$NUL         000053 	ASC$PLUS        
+000040 	ASC$POSITIVE    000056 	ASC$PT          000036 	ASC$RS          
+000054 	ASC$SEP         000017 	ASC$SI          000057 	ASC$SLH         
+000016 	ASC$SO          000001 	ASC$SOH         000040 	ASC$SP          
+000002 	ASC$STX         000026 	ASC$SYN         000011 	ASC$TAB         
+000037 	ASC$US          000013 	ASC$VT          000060 	ASC$ZERO        
+000007I'	BDOS            000020 	BDOS$CLOSE_FILE 000001 	BDOS$CON_INPUT  
+000002 	BDOS$CON_OUTPUT 000013 	BDOS$CON_STATUS 000006 	BDOS$DIRECT_IO  
+000023 	BDOS$ERASE_FILE 000021 	BDOS$FIND_FILE  000022 	BDOS$FIND_NEXT  
+000037 	BDOS$GET_DPB    000031 	BDOS$GET_DRIVE  000007 	BDOS$GET_IOBYTE 
+000033 	BDOS$GET_VECTOR 000005 	BDOS$LST_OUTPUT 000026 	BDOS$MAKE_FILE  
+000017 	BDOS$OPEN_FILE  000011 	BDOS$PRINT_STR  000004 	BDOS$PUN_OUTPUT 
+000003 	BDOS$RDR_INPUT  000041 	BDOS$READ_RND   000024 	BDOS$READ_SEQ   
+000012 	BDOS$READ_STR   000027 	BDOS$REN_FILE   000000 	BDOS$RESET      
+000015 	BDOS$RESET_DISK 000016 	BDOS$SELECT     000032 	BDOS$SET_DMA    
+000010 	BDOS$SET_IOBYTE 000040 	BDOS$SET_USR_NO 000014 	BDOS$VER_NO     
+000042 	BDOS$WRITE_RND  000025 	BDOS$WRITE_SEQ  000000I'	BIOS            
+000000 	BIOS$BOOT       000011 	BIOS$CON_INPUT  000014 	BIOS$CON_OUTPUT 
+000006 	BIOS$CON_STAT   000030 	BIOS$HOME       000017 	BIOS$LST_OUTPUT 
+000055 	BIOS$LST_STAT   000022 	BIOS$PUN_OUTPUT 000025 	BIOS$RDR_INPUT  
+000047 	BIOS$READ       000033 	BIOS$SELECT     000044 	BIOS$SET_DMA    
+000041 	BIOS$SET_SECTOR 000036 	BIOS$SET_TRACK  000003 	BIOS$WARMBOOT   
+000052 	BIOS$WRITE      000000 	CPM$BASE        000000 	CPM$BOOT        
+000200 	CPM$BUFF        000134 	CPM$FB1         000154 	CPM$FB2         
+000200 	CPM$TAIL        000022 	ERR$BAD_COMMAND 000002 	ERR$BAD_DEVICE  
+000001 	ERR$BAD_FILE    000003 	ERR$BAD_MODE    000004 	ERR$BAD_USER    
+000010 	ERR$CANT_CLOSE  000007 	ERR$CANT_CREATE 000005 	ERR$CANT_INIT   
+000006 	ERR$CANT_OPEN   000014 	ERR$DISK_FULL   000011 	ERR$FILE_EXISTS 
+000013 	ERR$NOT_OPENED  000012 	ERR$NO_FILE     000021 	ERR$NO_MEMORY   
+000016 	ERR$READ_EOF    000015 	ERR$READ_FAIL   000020 	ERR$READ_ONLY   
+000000 	ERR$SUCCESS     000023 	ERR$UNDEFINED   000014 	ERR$WRITE_FAIL  
+000017 	ERR$WRITE_ONLY  000000 	FALSE           000000 	NULL            
+000027 	SYS$COMMAND     000021 	SYS$CONSOLE     000026 	SYS$EOF         
+000022 	SYS$NULL        000023 	SYS$PRINTER     000024 	SYS$PUNCH       
+000025 	SYS$READER      177777 	TRUE            
+
+
+
+No Fatal error(s)
+
+
+NOT_OPENED  000012 	ERR$NO_FILE     000021 	ERR$NO_MEMORY   
+000016 	ERR$READ_EOF    000015 	ERR$READ_FAIL   00002

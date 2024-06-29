@@ -1,0 +1,178 @@
+writef (ref file,ref record) - 26 Nov 91 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1
+
+
+                                		TITLE	writef (ref file,ref record) - 26 Nov 91 - MT
+                                		SUBTTL	'Write a record to a physical file'
+                                ;
+                         C      		INCLUDE SYMBOLS
+                         C      ;		TITLE   SYMBOLS - 23 Mar 89 - MT
+                         C      ;		SUBTTL	'Symbol definitions'
+                         C      ;
+                         C      ;		VERSION	'SYMBOLS 3.20 - 06 Feb 21'
+                         C      .LIST
+                          +     		VERSION	'WRITEF rev 3.1 -  6 Apr 92'
+                                ;
+                                ;-- Writes a 128 byte record from a buffer to a physical  device.  Attempts
+                                ;   to  write to a logical device or file opened for reading will result in
+                                ;   an  error.  This procedure assumes that a file header block exists  and
+                                ;   that the file has been opened for writing.
+                                ;
+                                ;   +-+--------+---+-----------+-+-+--------------------------------------+
+                                ;   | |        |   |           | | |                                      |
+                                ;   +-+--------+---+-----------+-+-+--------------------------------------+
+                                ;				| |
+                                ;   |--- File Control Block ---|| ||----------- DMA Buffer ---------------|
+                                ;	    (36 bytes)		| |		(128 bytes)
+                                ;			       /   \
+                                ;			 Status     Buffer pointer
+                                ;			 (1 byte)   (1 byte)
+                                ;
+                                ;
+                                ;   This  routine can write a record directly from any location in  memory,
+                                ;   it is not necessary to use the default DMA buffer.
+                                ;
+                                ;**  6 Apr 92 -	Modified to use the usr number held in mode byte - MT
+                                ;
+                                ;-- Check that the output file has been correctly opened for writing to disk.
+                                ;
+  000037'                 +     WRITEF::	PROCEDURE			; All registers preserved.
+  000052' 176                   		LD	A,(HL)			; Get device code.
+  000053' 267                   		OR	A			; If the device code has not been set then the file has not been opened.
+  000054' 076 013               		LD	A,ERR$Not_Opened
+  000056' 310                   		RET	Z
+  000057' 176                   		LD	A,(HL)			; Get device code.
+  000060' 376 021               		CP	SYS$Console		; Check that we are writing to a physical device, block write to a logical
+  000062' 076 002               		LD	A,ERR$Bad_Device	; device is not possible.
+  000064' 320                   		RET	NC
+  000065' 345                   		PUSH	HL			; Save the pointer to the FCB.
+  000066' 001 000044            		LD	BC,36			; Get the file access mode from the
+  000071' 011                   		ADD	HL,BC			; buffer.
+  000072' 176                   		LD	A,(HL)
+  000073' 346 017               		AND	00001111B		; Check that the file was opened for writing.
+  000075' 376 007               		CP	'W' AND 00001111B
+  000077' 076 003               		LD	A,ERR$Bad_Mode
+  000101' 341                   		POP	HL			; Restore pointer to FCB.
+  000102' 300                   		RET	NZ
+                                ;
+                                ;-- Set up the DMA address and reset the buffer pointer.
+                                ;
+  000103' 345                   I$Write_Record:	PUSH	HL			; Save DMA address and the address of the FCB 
+writef (ref file,ref record) - 26 Nov 91 - MT	MACRO-80 3.44	09-Dec-81	PAGE	1-1
+'Write a record to a physical file'
+
+  000104' 325                   		PUSH 	DE			; on the stack.
+  000105' 321                   		POP	DE
+  000106' 016 032               		LD	C,BDOS$Set_DMA		; DE already points to the record so use it for DMA.
+  000110' 315 000000*           		CALL	BDOS##			; Set DMA address (no errors to worry about here).
+  000113' 321                   		POP	DE			; What was the the address FCB ?
+  000114' 041 000045            		LD	HL,37			; Calculate address of buffer pointer
+  000117' 031                   		ADD	HL,DE			; and reset it.
+  000120' 257                   		XOR	A
+  000121' 167                   		LD	(HL),A
+                                ;
+                                ;-- Save current usr number on the stack.
+                                ;
+  000122' 325                   		PUSH	DE			; Save the address of the FCB.
+  000123' 016 040               		LD	C,BDOS$Set_Usr_No	; Use set usr number function to get the current usr number
+  000125' 036 377               		LD	E,0FFH			; by putting 0FFH in E.
+  000127' 315 000000*           		CALL	BDOS##
+  000132' 157                   		LD	L,A			; Put usr number into HL.
+  000133' 343                   		EX	(SP),HL			; Save it on the stack and get the pointer to the FCB in HL.
+  000134' 353                   		EX	DE,HL			; Restore pointer to FCB.
+                                ;
+                                ;-- Set up usr number of output file.
+                                ;
+  000135' 325                   		PUSH	DE			; Save address of FCB.
+  000136' 041 000044            		LD	HL,36			; Offset to status byte.
+  000141' 031                   		ADD	HL,DE
+  000142' 257                   		XOR	A
+  000143' 355 157               		RLD	
+  000145' 137                   		LD	E,A			; Get usr number of output file.
+  000146' 355 157               		RLD
+  000150' 355 157               		RLD
+  000152' 016 040               		LD	C,BDOS$Set_Usr_No	; Set up new usr number.
+  000154' 315 000000*           		CALL	BDOS##
+  000157' 321                   		POP	DE			; Restore address of FCB in DE for BDOS write function.
+                                ;
+                                ;-- Write record to disk.
+                                ;
+  000160' 016 025               		LD	C,BDOS$Write_Seq	; Perform a sequential write to transfer the next
+  000162' 315 000000*           		CALL	BDOS##			; record into the DMA buffer previously defined.
+  000165' 267                   		OR	A			; Set flags.
+                                ;
+                                ;-- Reset usr number to current value.
+                                ;
+  000166' 321                   		POP	DE			; Restore current user number from the stack
+  000167' 365                   		PUSH	AF			; and save the error code.
+  000170' 016 040               		LD	C,BDOS$Set_Usr_No	; Reset the usr number.
+  000172' 315 000000*           		CALL	BDOS##
+  000175' 361                   		POP	AF			; Restore the error code.
+                                ;
+                                ;-- Check for write errors.
+                                ;
+  000176' 310                   		RET	Z			; No problem.
+  000177' 076 014               		LD	A,ERR$Write_Fail	; Set up correct error code for a write error - Disk Full !
+  000201' 311                   		RET
+                                ;
+                                		END
+writef (ref file,ref record) - 26 Nov 91 - MT	MACRO-80 3.44	09-Dec-81	PAGE	S
+'Write a record to a physical file'
+
+Macros:
+COPYRIGHT       FUNCTION        PROCEDURE       PROGRAM         USING           
+VERSION         
+
+Symbols:
+000052'	..0000          000006 	ASC$ACK         000052 	ASC$AST         
+000007 	ASC$BEL         000003 	ASC$BRK         000010 	ASC$BS          
+000030 	ASC$CAN         000015 	ASC$CR          000021 	ASC$DC1         
+000022 	ASC$DC2         000023 	ASC$DC3         000024 	ASC$DC4         
+000177 	ASC$DEL         000020 	ASC$DLE         000005 	ASC$ENQ         
+000032 	ASC$EOF         000031 	ASC$EOM         000004 	ASC$EOT         
+000075 	ASC$EQU         000033 	ASC$ESC         000027 	ASC$ETB         
+000014 	ASC$FF          000034 	ASC$FS          000035 	ASC$GS          
+000012 	ASC$LF          000055 	ASC$MINUS       000025 	ASC$NAK         
+000055 	ASC$NEGATIVE    000071 	ASC$NINE        000000 	ASC$NUL         
+000053 	ASC$PLUS        000040 	ASC$POSITIVE    000056 	ASC$PT          
+000036 	ASC$RS          000054 	ASC$SEP         000017 	ASC$SI          
+000057 	ASC$SLH         000016 	ASC$SO          000001 	ASC$SOH         
+000040 	ASC$SP          000002 	ASC$STX         000026 	ASC$SYN         
+000011 	ASC$TAB         000037 	ASC$US          000013 	ASC$VT          
+000060 	ASC$ZERO        000173*	BDOS            000020 	BDOS$CLOSE_FILE 
+000001 	BDOS$CON_INPUT  000002 	BDOS$CON_OUTPUT 000013 	BDOS$CON_STATUS 
+000006 	BDOS$DIRECT_IO  000023 	BDOS$ERASE_FILE 000021 	BDOS$FIND_FILE  
+000022 	BDOS$FIND_NEXT  000037 	BDOS$GET_DPB    000031 	BDOS$GET_DRIVE  
+000007 	BDOS$GET_IOBYTE 000033 	BDOS$GET_VECTOR 000005 	BDOS$LST_OUTPUT 
+000026 	BDOS$MAKE_FILE  000017 	BDOS$OPEN_FILE  000011 	BDOS$PRINT_STR  
+000004 	BDOS$PUN_OUTPUT 000003 	BDOS$RDR_INPUT  000041 	BDOS$READ_RND   
+000024 	BDOS$READ_SEQ   000012 	BDOS$READ_STR   000027 	BDOS$REN_FILE   
+000000 	BDOS$RESET      000015 	BDOS$RESET_DISK 000016 	BDOS$SELECT     
+000032 	BDOS$SET_DMA    000010 	BDOS$SET_IOBYTE 000040 	BDOS$SET_USR_NO 
+000014 	BDOS$VER_NO     000042 	BDOS$WRITE_RND  000025 	BDOS$WRITE_SEQ  
+000000 	BIOS$BOOT       000011 	BIOS$CON_INPUT  000014 	BIOS$CON_OUTPUT 
+000006 	BIOS$CON_STAT   000030 	BIOS$HOME       000017 	BIOS$LST_OUTPUT 
+000055 	BIOS$LST_STAT   000022 	BIOS$PUN_OUTPUT 000025 	BIOS$RDR_INPUT  
+000047 	BIOS$READ       000033 	BIOS$SELECT     000044 	BIOS$SET_DMA    
+000041 	BIOS$SET_SECTOR 000036 	BIOS$SET_TRACK  000003 	BIOS$WARMBOOT   
+000052 	BIOS$WRITE      000000 	CPM$BASE        000000 	CPM$BOOT        
+000200 	CPM$BUFF        000134 	CPM$FB1         000154 	CPM$FB2         
+000200 	CPM$TAIL        000022 	ERR$BAD_COMMAND 000002 	ERR$BAD_DEVICE  
+000001 	ERR$BAD_FILE    000003 	ERR$BAD_MODE    000004 	ERR$BAD_USER    
+000010 	ERR$CANT_CLOSE  000007 	ERR$CANT_CREATE 000005 	ERR$CANT_INIT   
+000006 	ERR$CANT_OPEN   000014 	ERR$DISK_FULL   000011 	ERR$FILE_EXISTS 
+000013 	ERR$NOT_OPENED  000012 	ERR$NO_FILE     000021 	ERR$NO_MEMORY   
+000016 	ERR$READ_EOF    000015 	ERR$READ_FAIL   000020 	ERR$READ_ONLY   
+000000 	ERR$SUCCESS     000023 	ERR$UNDEFINED   000014 	ERR$WRITE_FAIL  
+000017 	ERR$WRITE_ONLY  000000 	FALSE           000103'	I$WRITE_RECORD  
+000000 	NULL            000027 	SYS$COMMAND     000021 	SYS$CONSOLE     
+000026 	SYS$EOF         000022 	SYS$NULL        000023 	SYS$PRINTER     
+000024 	SYS$PUNCH       000025 	SYS$READER      177777 	TRUE            
+000037I'	WRITEF          
+
+
+
+No Fatal error(s)
+
+
+MEMORY   
+000016 	ERR$READ_EOF    000015 	ERR$READ_FAIL   00002
