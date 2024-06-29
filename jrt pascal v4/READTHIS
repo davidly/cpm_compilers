@@ -1,0 +1,51 @@
+This file contains information which can
+be used to verify that files on the
+distribution disk are free from error.
+The VERIFY program will compute the sum
+of the bytes and the number of sectors
+for a file.  To run VERIFY just enter
+"EXEC4 VERIFY".  It will ask for the name
+of the file to be checked.  It will then
+print out the sum and sector count for
+the file.
+
+filename          sectors       sum
+ARCTAN.PAS          16      14554831
+CONVERTM.INT        27      14517512
+COS.PAS             13      12391860
+CRTMAP.PAS          39      44133430
+CUSTOMIZ.INT        10       8101175
+DEBUG.INT            3       1513428
+ERASE.INT            6       1883617
+EXEC4.COM          188      56266455
+EXP.PAS             29      22866736
+INDEX0.INT          75      24192007
+INDEX1.INT          51      14850541
+INDEX2.INT          12       6867133
+JGRAF.INT           29       5288936
+JGRAF.PAS           77      80612723
+JRTASM.INT         118      39308198
+JSTAT.PAS           23      23813157
+LETTERS.INT         10       2127916
+LINKER.INT          29       9820434
+LN.PAS              15      12986745
+LOWER.PAS           12      12321274
+PAS4.COM           170      53027124
+PAS40.LIB          114     109912589
+PAS400.INT         190      44087469
+PAS401.INT          52      22239829
+PAS402.INT          41       9234932
+PAS403.INT          35       9899420
+PAS404.INT          13       5277920
+PAS405.INT          27       7609914
+PAS406.INT          25       7930099
+PICTURE.INT         42      10666019
+RENAME.INT           7       2441556
+RESETBIT.ASM         5       5944774
+SEARCH.INT           4        421409
+SETBIT.ASM           5       6016140
+SIN.PAS             12      11297845
+SQRT.PAS             8       6769075
+TESTBIT.ASM          6       6850814
+VERIFY.INT           8        670101
+
