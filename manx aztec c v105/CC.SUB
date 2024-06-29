@@ -1,0 +1,13 @@
+=this submit file is used to compile a "C" file on B:.
+b:
+era $1.o
+era $1.com
+a:cii $1.c
+a:as $1.asm
+cat $1.*
+era $1.asm
+cat $1.*
+=note: libc.lib must be last parameter on list of libraries
+a:ln $1.o libc.lib 
+$1
+
