@@ -5,7 +5,7 @@ The license for this repo applies to code I wrote for this repo including versio
 
 I do not own licensing for any of these tools. This repo is simply an aggregation of the tools to ease testing of my NTVCM CP/M 2.2 emulator.
 
-These tools are available for download from many sites on the internet. They are often in forms that make their extraction and/or use difficult. This repo makes their use more simple.
+These tools are available for download from many sites on the internet. They are often in forms that make their extraction and/or use difficult. This repo simplifies the process.
 
 If you own the copyright to any of these tools and want me to take them down, please let me know and I'll do so ASAP. It's not my intention to pirate anyone's software.
 
@@ -22,6 +22,10 @@ The benchmarks include:
   * ttt: proves you can't win at tic-tac-toe if the opponent is competent
   * tm: test malloc. This calls malloc/calloc/free in the C runtime to measure performance. It's C only.
 
+If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them.
 
+The emulator is available here: [NTVCM](https://github.com/davidly/ntvcm/)
 
+Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by NTVCM:
 
+![chart](https://github.com/davidly/cpm_compilers/assets/1497921/a664bb1e-18e8-4b1a-953b-feafc5087382)
