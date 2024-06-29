@@ -1,0 +1,11 @@
+
+;float flaeche()
+;              ^
+;*****Zeile: 10   TYP UNVEREINBAR  ******
+
+;float flaeche()
+;              ^
+;*****Zeile: 10   SCHON DEFINIERT  ******
+
+;2 FEHLER
+

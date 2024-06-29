@@ -1,0 +1,118 @@
+;MI - C  v-3.18I  (C) COPYRIGHT  G. KERSTING / H. ROSE, 1983
+;	HIER HAT BENUTZERTEXT PLATZ
+	DSEG
+c:
+	DEFW	C301+0,C301+7,C301+11,C301+16
+C301:
+
+	DEFB	70,73,78,71,69,82,0,84,65,84
+	DEFB	0,90,69,73,71,0,76,65,66,83
+	DEFB	65,76,0
+	CSEG
+	DSEG
+cp:
+	DEFW	c+6,c+4,c+2,c
+	CSEG
+	DSEG
+cpp:
+	DEFW	cp
+	CSEG
+main:
+	LD	HL,(cpp)
+	INC	HL
+	INC	HL
+	LD	(cpp),HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	EX	DE,HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	PUSH	DE
+	LD	DE,C303+0
+	PUSH	DE
+	CALL	printf
+	POP	BC
+	POP	BC
+	LD	HL,(cpp)
+	INC	HL
+	INC	HL
+	LD	(cpp),HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	DEC	HL
+	DEC	DE
+	DEC	DE
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	EX	DE,HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	LD	HL,4
+	ADD	HL,DE
+	PUSH	HL
+	LD	DE,C303+7
+	PUSH	DE
+	CALL	printf
+	POP	BC
+	POP	BC
+	LD	HL,(cpp)
+	DEC	HL
+	DEC	HL
+	DEC	HL
+	DEC	HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	EX	DE,HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	INC	DE
+	INC	DE
+	INC	DE
+	PUSH	DE
+	LD	DE,C303+14
+	PUSH	DE
+	CALL	printf
+	POP	BC
+	POP	BC
+	LD	HL,(cpp)
+	DEC	HL
+	DEC	HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	DEC	DE
+	DEC	DE
+	EX	DE,HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	INC	DE
+	PUSH	DE
+	LD	DE,C303+21
+	PUSH	DE
+	CALL	printf
+	POP	BC
+	POP	BC
+	RET
+C303:
+
+	DEFB	37,54,115,32,32,32,0,37,54,115
+	DEFB	32,32,32,0,37,54,115,32,32,32
+	DEFB	0,37,54,115,32,32,32,0
+	GLOBAL	c
+	GLOBAL	main
+	GLOBAL	cp
+	EXTERNAL	printf
+	GLOBAL	cpp
+	DSEG
+
+;0 FEHLER
+	END
+
