@@ -1,0 +1,577 @@
+;*************************************************
+;						*
+;    Q/C Runtime Library Version 3.1 (Z80)	*
+;Copyright (c) 1983 by Quality Computer Systems *
+;						*
+;		06/08/83			*
+;************************************************
+;
+	.Z80
+;
+;Get byte from the address in BC and sign extend into HL
+	PUBLIC	?gcf
+?gcf:	LD	L,C
+	LD	H,B
+;Get byte from the address in HL and sign extend into HL
+	PUBLIC	?gc
+?gc:	LD	A,(HL)
+;Put the accum into HL and sign extend thru H
+	PUBLIC	?sxt
+?sxt:	LD	L,A
+	RLCA
+	SBC	A,A
+	LD	H,A
+	RET
+;Get byte from the address in HL and sign extend into DE
+	PUBLIC	?gcs
+?gcs:	LD	A,(HL)
+	LD	E,A
+	RLCA
+	SBC	A,A
+	LD	D,A
+	RET
+;Get a 16 bit integer from the address in BC into HL
+	PUBLIC	?gf
+?gf:	LD	L,C
+	LD	H,B
+;Get a 16 bit integer from the address in HL into HL
+	PUBLIC	?g
+?g:	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	RET
+;Get a 16 bit integer from the address in HL into DE
+	PUBLIC	?gs
+?gs:	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	RET
+;Store a 16 bit integer in HL at the address in DE
+	PUBLIC	?p
+?p:	LD	A,L
+	LD	(DE),A
+	INC	DE
+	LD	A,H
+	LD	(DE),A
+	RET
+;Inclusive OR HL and DE into HL
+	PUBLIC	?o
+?o:	LD	A,L
+	OR	E
+	LD	L,A
+	LD	A,H
+	OR	D
+	LD	H,A
+	RET
+;Exclusive OR HL and DE into HL
+	PUBLIC	?x
+?x:	LD	A,L
+	XOR	E
+	LD	L,A
+	LD	A,H
+	XOR	D
+	LD	H,A
+	RET
+;AND HL and DE into HL
+	PUBLIC	?a
+?a:	LD	A,L
+	AND	E
+	LD	L,A
+	LD	A,H
+	AND	D
+	LD	H,A
+	RET
+;All of the following compare routines return with:
+;	if condition = TRUE	HL = 1 and Z flag is reset
+;	if condition = FALSE	HL = 0 and Z flag is set
+;
+;Test DE == HL
+	PUBLIC	?e
+?e:	CALL	?ucmp
+	JR	NZ,?false
+	OR	L	;reset Z to signal TRUE
+	RET
+;Test DE != HL
+	PUBLIC	?ne
+?ne:	CALL	?ucmp
+	RET	NZ	;Z reset means DE != HL
+	DEC	L	;set HL = 0
+	RET
+;Test DE >  HL (signed)
+	PUBLIC	?gt
+?gt:	EX	DE,HL
+;Test DE < HL (signed)
+	PUBLIC	?lt
+?lt:	CALL	?cmp
+	JR	NC,?false ;carry reset means DE >= HL
+	OR	L	;reset Z to signal TRUE
+	RET
+;Test DE <= HL (signed)
+	PUBLIC	?le
+?le:	EX	DE,HL
+;Test DE >= HL (signed)
+	PUBLIC	?ge
+?ge:	CALL	?cmp
+	JR	C,?false ;carry set means DE < HL
+	OR	L	;reset Z to signal TRUE
+	RET
+;Test DE > HL (unsigned)
+	PUBLIC	?ugt
+?ugt:	EX	DE,HL
+;Test DE < HL (unsigned)
+	PUBLIC	?ult
+?ult:	CALL	?ucmp
+	JR	NC,?false ;carry reset means DC >= HL
+	OR	L	;reset Z to signal TRUE
+	RET
+;Test DE <= HL (unsigned)
+	PUBLIC	?ule
+?ule:	EX	DE,HL
+;Test DE >= HL (unsigned)
+	PUBLIC	?uge
+?uge:	CALL	?ucmp
+	JR	C,?false ;carry set means DE < HL
+	OR	L
+	RET
+;All comparison routines arrive here if FALSE
+?false: DEC	L	;set HL = 0 and set Z flag
+	RET
+;
+;Common routine to compare DE and HL.
+;
+;For a signed compare the positive and negative numbers
+;are first mapped into unsigned numbers by doing an
+;exclusive or of the sign bit with one. This allows us
+;to do an unsigned compare and still get the correct result.
+;The mapping looks like this:
+;
+;	-32768 (0x8000) --> 0	  (0x0000)
+;	-32767 (0x8001) --> 1	  (0x0001)
+;	 .....
+;	    -1 (0xFFFF) --> 32767 (0x7FFF)
+;	     0 (0x0000) --> 32768 (0x8000)
+;	     1 (0x0001) --> 32769 (0x8001)
+;	 .....
+;	 32766 (0x7FFE) --> 65534 (0xFFFE)
+;	 32767 (0x7FFF) --> 65535 (0xFFFF)
+;
+;The comparison sets the following conditions:
+;	Carry reflects the ordering (set means DE < HL)
+;	Zero set means equality
+;
+?cmp:	LD	A,D	;map signed numbers into unsigned
+	XOR	80H
+	LD	D,A
+	LD	A,H
+	XOR	80H
+	LD	H,A
+?ucmp:	LD	A,D	;do unsigned compare
+	CP	H
+	JR	NZ,?ucm1
+	LD	A,E
+	CP	L
+?ucm1:	LD	HL,1	;preset TRUE condition
+	RET
+;Shift DE arithmetically right by HL and return in HL
+	PUBLIC	?asr
+	PUBLIC	?asr1
+?asr:	EX	DE,HL
+?asr1:	DEC	E
+	RET	M
+	SRA	H
+	RR	L
+	JR	?asr1
+;Shift DE arithmetically and logically left by HL and return in HL
+	PUBLIC	?asl
+	PUBLIC	?asl1
+?asl:	EX	DE,HL
+?asl1:	DEC	E
+	RET	M
+	ADD	HL,HL
+	JR	?asl1
+;Shift DE logically right by HL and return in HL
+	PUBLIC	?lsr
+	PUBLIC	?lsr1
+?lsr:	EX	DE,HL
+?lsr1:	DEC	E
+	RET	M
+	SRL	H
+	RR	L
+	JR	?lsr1
+;Subtract (signed and unsigned) HL from DE and return in HL
+	PUBLIC	?s
+?s:	LD	A,E
+	SUB	L
+	LD	L,A
+	LD	A,D
+	SBC	A,H
+	LD	H,A
+	RET
+;Form the two's complement of HL
+	PUBLIC	?neg
+?neg:	CALL	?com
+	INC	HL
+	RET
+;Form the one's complement of HL
+	PUBLIC	?com
+?com:	LD	A,H
+	CPL
+	LD	H,A
+	LD	A,L
+	CPL
+	LD	L,A
+	RET
+;Form logical not of HL
+	PUBLIC	?n
+?n:	LD	A,H
+	OR	L
+	JR	Z,?not1
+	XOR	A	;set Z to indicate FALSE
+	LD	H,A	;set HL=0 to indicate FALSE
+	LD	L,A
+	RET
+?not1:	INC	L	;set HL=1 and reset Z to indicate TRUE
+	RET
+;Multiply (signed and unsigned) DE by HL and return in HL
+	PUBLIC	?mult
+?mult:	PUSH	BC	;save calling routine's stack frame pointer
+	LD	B,H
+	LD	C,L
+	LD	HL,0
+?mul1:	LD	A,C
+	RRCA
+	JR	NC,?mul2
+	ADD	HL,DE
+?mul2:	XOR	A
+	LD	A,B
+	RRA
+	LD	B,A
+	LD	A,C
+	RRA
+	LD	C,A
+	OR	B
+	JR	Z,?mulr
+	XOR	A
+	LD	A,E
+	RLA
+	LD	E,A
+	LD	A,D
+	RLA
+	LD	D,A
+	OR	E
+	JR	NZ,?mul1
+?mulr:	POP	BC	;restore calling routine's stack frame pointer
+	RET
+;Divide (signed) DE by HL and return quotient in C remainder in DE
+	PUBLIC	?div
+?div:	LD	A,H	;check for division by zero
+	OR	L
+	JR	NZ,?div0
+	LD	E,L	;force remainder to zero
+	LD	D,H
+	RET
+?div0:	PUSH	BC	;save calling routine's stack frame pointer
+	LD	A,H
+	XOR	D	;sign of quotient
+	PUSH	AF	;save to fix sign at end
+	LD	A,H
+	OR	A	;divisor negative?
+	JP	P,?div1
+	CALL	?neg	;it is, so make it positive
+?div1:	LD	A,D
+	OR	A	;sign of dividend = sign of remainder
+	PUSH	AF
+	JP	P,?div2 ;if dividend positive, we're ready
+	EX	DE,HL
+	CALL	?neg	;make divisor positive
+	EX	DE,HL
+?div2:	CALL	?udiv0	;do unsigned division
+	POP	AF	;remainder negative?
+	JP	P,?div3
+	EX	DE,HL
+	CALL	?neg	;fix sign of remainder
+	EX	DE,HL
+?div3:	POP	AF	;quotient negative?
+	POP	BC	;restore calling routine's stack frame pointer
+	RET	P
+	CALL	?neg	;fix sign of quotient
+	RET
+;Divide (unsigned) DE by HL and return quotient in C remainder in DE
+	PUBLIC	?udiv
+?udiv:	LD	A,H	;check for division by zero
+	OR	L
+	JR	NZ,?udiv0
+	LD	E,L	;force remainder to zero
+	LD	D,H
+	RET
+?udiv0: PUSH	BC	;save calling routine's stack frame pointer
+	LD	B,H	;move divisor to BC
+	LD	C,L
+	LD	A,16	;set loop counter
+	PUSH	AF
+	EX	DE,HL
+	LD	DE,0
+?udiv1: ADD	HL,HL	;HL << 1 (hi order bit to carry)
+	LD	A,E	;DE << 1 (lo order bit from hi order bit of HL)
+	RLA
+	LD	E,A
+	LD	A,D
+	RLA
+	LD	D,A
+	OR	E
+	JR	Z,?udiv3
+	LD	A,D	;test for BC > DE
+	CP	B
+	JR	C,?udiv3 ;check for B > D
+	JR	NZ,?udiv2 ;check for B != D
+	LD	A,E	;B == D, check for C > E
+	CP	C
+	JR	C,?udiv3
+?udiv2: LD	A,L
+	OR	1	;build quotient
+	LD	L,A
+	LD	A,E
+	SUB	C
+	LD	E,A
+	LD	A,D
+	SBC	A,B
+	LD	D,A
+?udiv3: POP	AF
+	DEC	A	;check loop counter
+	JR	Z,?udivr
+	PUSH	AF
+	JR	?udiv1
+?udivr: POP	BC	;restore calling routine's stack frame pointer
+	RET
+;Select the appropriate case for a switch statement
+	PUBLIC	?sw
+?sw:	EX	DE,HL	;save val of expression in DE
+	POP	HL	;get address of arg list
+	PUSH	BC	;save calling routine's stack frame pointer
+	LD	C,(HL)	;load no. of cases in C
+	INC	HL	;ignore high order byte of count
+?sw1:	DEC	C	;count down cases
+	JP	M,?sw3	;no more cases -- goto default
+	INC	HL	;val of expr == case val?
+	LD	A,(HL)
+	CP	E
+	INC	HL
+	JR	NZ,?sw2 ;no, goto next case
+	LD	A,(HL)
+	CP	D
+	JR	Z,?sw3	;yes, goto matching label
+?sw2:	INC	HL	;skip label for this case
+	INC	HL
+	JR	?sw1	;go try next case
+?sw3:	INC	HL	;get address of this case label
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	POP	BC	;restore calling routine's stack frame pointer
+	JP	(HL)	;go to case label
+;Function to make a CP/M system call
+;
+;bdos(c, de)
+;char c; (c -> C)
+;int de; (de -> DE)
+	PUBLIC	bdos?
+bdos?:	PUSH	BC	;save calling routine's stack frame ptr
+	PUSH	IX
+	LD	HL,6	;get address of de
+	ADD	HL,SP
+	LD	E,(HL)	;load de
+	INC	HL
+	LD	D,(HL)
+	INC	HL
+	LD	C,(HL)	;load function number (c)
+	CALL	5H
+	LD	L,A	;for compatibility with CP/M 1.4
+;WARNING: Read Appendix F in User's Manual before changing this
+	PUBLIC	@patch
+@patch:
+	LD	H,B	;for compatibility with CP/M 1.4
+	NOP		;space for CP/M-compatible systems patch
+	POP	IX
+	POP	BC	;restore calling routine's stack frame ptr
+	OR	H	;set Z flag to reflect return value
+	RET
+;
+;Standard entry/exit routines to do housekeeping
+;
+;Entry which sets stack frame pointer, but does not save registers,
+; and does not allocate local space
+	PUBLIC	?en
+?en:	POP	DE	;get RET addr
+	PUSH	BC	;save stack frame pointer
+	PUSH	IX	; and index register
+	LD	HL,0	;no local space needed
+	ADD	HL,SP
+	LD	B,H	;set local stack frame pointer
+	LD	C,L
+	PUSH	BC
+	POP	IX	;set index register
+	EX	DE,HL
+	JP	(HL)	;return
+;
+;Entry which sets stack frame pointer, saves registers,
+; but does not allocate local space
+	PUBLIC	?enr
+?enr:	POP	DE	;get RET addr
+	PUSH	BC	;save stack frame pointer
+	PUSH	IX	; and index register
+	LD	HL,0	;no local space needed
+	ADD	HL,SP
+	LD	B,H	;set local stack frame
+	LD	C,L
+	PUSH	BC
+	POP	IX	;set index register
+	LD	HL,(r?1?) ;save Q/C "registers"
+	PUSH	HL
+	LD	HL,(r?2?)
+	PUSH	HL
+	LD	HL,(r?3?)
+	PUSH	HL
+	LD	HL,(r?4?)
+	PUSH	HL
+	LD	HL,(r?5?)
+	PUSH	HL
+	EX	DE,HL	;retrieve return address
+	JP	(HL)
+;
+;Entry which saves registers, sets stack frame pointer,
+; and allocates local space
+	PUBLIC	?ensr
+?ensr:	POP	HL	;get RET addr which contains local space needed
+	PUSH	BC	;save stack frame pointer
+	PUSH	IX	; and index register
+	LD	A,(HL)	;get local space needed
+	INC	HL
+	LD	D,H	;save return address
+	LD	E,L
+	LD	H,(HL)	;finish getting local space
+	LD	L,A
+	INC	DE	;skip over argument to this routine
+	ADD	HL,SP
+	LD	SP,HL	;reserve local space
+	LD	B,H	;set local stack frame
+	LD	C,L
+	PUSH	BC
+	POP	IX	;set index register
+	LD	HL,(r?1?) ;save Q/C "registers"
+	PUSH	HL
+	LD	HL,(r?2?)
+	PUSH	HL
+	LD	HL,(r?3?)
+	PUSH	HL
+	LD	HL,(r?4?)
+	PUSH	HL
+	LD	HL,(r?5?)
+	PUSH	HL
+	EX	DE,HL	;retrieve return address
+	JP	(HL)
+;
+;Entry which sets stack frame pointer, allocates local space,
+; but does not save registers
+	PUBLIC	?ens
+?ens:	POP	HL	;get RET addr
+	PUSH	BC	;save stack frame pointer
+	PUSH	IX	; and index register
+	LD	A,(HL)	;get local space needed
+	INC	HL
+	LD	D,H	;save return address
+	LD	E,L
+	LD	H,(HL)	;finish getting local space
+	LD	L,A
+	INC	DE	;skip over argument to this routine
+	ADD	HL,SP
+	LD	SP,HL	;reserve local space
+	LD	B,H	;set local stack frame
+	LD	C,L
+	PUSH	BC
+	POP	IX	;set index register
+	EX	DE,HL	;retrieve return address
+	JP	(HL)
+;
+;Exit which restores registers and stack frame pointer
+; but does not deallocate any local space
+	PUBLIC	?exr
+?exr:	EX	DE,HL	;save function's return value (if any)
+	POP	HL	;discard extra RET address
+	POP	HL	;restore registers
+	LD	(r?5?),HL
+	POP	HL
+	LD	(r?4?),HL
+	POP	HL
+	LD	(r?3?),HL
+	POP	HL
+	LD	(r?2?),HL
+	POP	HL
+	LD	(r?1?),HL
+	EX	DE,HL	;restore return value
+	POP	IX	;restore index register
+	POP	BC	; and stack frame pointer
+	RET		;return to original caller
+;
+;Exit which restores registers and stack frame pointer
+; and deallocates local space
+	PUBLIC	?exrs
+?exrs:	EX	DE,HL	;save function's return value (if any)
+	POP	BC	;RET addr = addr of local space to deallocate
+	POP	HL	;restore registers
+	LD	(r?5?),HL
+	POP	HL
+	LD	(r?4?),HL
+	POP	HL
+	LD	(r?3?),HL
+	POP	HL
+	LD	(r?2?),HL
+	POP	HL
+	LD	(r?1?),HL
+	LD	A,(BC)	;get amount of local space
+	LD	L,A
+	INC	BC
+	LD	A,(BC)
+	LD	H,A
+	ADD	HL,SP
+	LD	SP,HL	;deallocate local space
+	EX	DE,HL	;restore return value
+	POP	IX	;restore index register
+	POP	BC	; and stack frame pointer
+	RET
+;
+;Exit which restores stack frame pointer, deallocates local space
+; but does not restore registers
+	PUBLIC	?exs
+?exs:	EX	DE,HL	;save function's return value (if any)
+	POP	HL	;address of local space to deallocate
+	LD	A,(HL)	;get amount of local space
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	ADD	HL,SP
+	LD	SP,HL	;deallocate local space
+	EX	DE,HL	;restore return value
+	POP	IX	;restore index register
+	POP	BC	; and stack frame pointer
+	RET
+;Define C "register" variables
+;
+	DSEG
+	PUBLIC	r?1?,r?2?,r?3?,r?4?,r?5?
+r?1?:	DEFS	2
+r?2?:	DEFS	2
+r?3?:	DEFS	2
+r?4?:	DEFS	2
+r?5?:	DEFS	2
+;
+;Define end-of-memory symbols for M80 and RMAC linkers and
+;	Q/C memory allocation functions
+	PUBLIC	$MEMRY,?MEMRY,@free?
+$MEMRY:
+?MEMRY:
+@free?: DEFS	2
+
+	END
+
