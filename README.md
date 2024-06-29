@@ -5,6 +5,8 @@ The license for this repo applies to code I wrote for this repo including versio
 
 I do not own licensing for any of these tools. This repo is simply an aggregation of the tools to ease testing of my NTVCM CP/M 2.2 emulator.
 
+In some cases where required I've copied an assembler or linker that did not ship with a given compiler into folders so binaries can be produced. These tools belong to their respective owners.
+
 These tools are available for download from many sites on the internet. They are often in forms that make their extraction and/or use difficult. This repo simplifies the process.
 
 If you own the copyright to any of these tools and want me to take them down, please let me know and I'll do so ASAP. It's not my intention to pirate anyone's software.
@@ -27,7 +29,7 @@ To run the compilers on Windows, use the m.bat script in each folder, e.g.:
   * m e
   * m ttt
 
-On Linux or MacOS copy m.bat to m.sh, change % to $, use dos2unix to remove CR/LF, and chmod to enable execution. If you do this, feel free to submit a pull request :)
+On Linux or MacOS copy m.bat to m.sh, change % to $, use dos2unix to remove CR/LF, and chmod to enable execution. If you do this, feel free to submit a pull request. Also be sure to put ntvcm in your path.
 
 If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them.
 
