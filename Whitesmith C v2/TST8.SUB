@@ -1,0 +1,5 @@
+an -o echo.r echo.8
+ld80 chdr.r clib.a echo.r clib.a mlib.a
+xeq echo program successfully built!
+essfully built!
+

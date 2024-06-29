@@ -1,0 +1,61 @@
+Files on disk 1 (this disk):
+----------------------------
+
+an.com          The A-Natural assembler
+ld80.com        The loader
+lib.com         The librarian
+pp.com          The C preprocessor (compiler first pass)
+p1.com          The C parser (compiler second pass)
+p2.com          The C code generator (compiler third pass)
+rel.com         Utility to examine .r files produced by A-Natural
+
+buildc.sub      Script to rebuild a broken compiler
+c.sub           C driver script
+ld.sub          Loader driver script
+rebld.sub       Script to rebuild broken C utilities
+tst8.sub        A-Natural test script
+tstc.sub        C test script
+
+disk.doc        This file
+
+Files on disk 2:
+----------------
+
+an.a            A-Natural in relocatable form
+anat.a          The A-Natural translator in relocatable form
+clib.a          The C library
+ld80.a          The loader in relocatable form
+mlib.a          The C machine dependent library
+p0lib.a         The C preprocessor in relocatable form
+p1lib.a         The C parser in relocatable form
+p2lib.a         The C code generator in relocatable form
+chdr.r          The C runtime startup module (see ld.sub)
+lib.r           The librarian in relocatable form
+rel.r           The rel utility in relocatable form
+std.h           The standard #include header
+cpm.h           The CP/M interface header
+echo.c          Sample C program for use with tstc.sub
+echo.8          Sample A-Natural program for use with tst8.sub
+
+
+BACK UP THE DELIVERY MEDIA!
+
+Before using any of the CP/M submit scripts, read the script and
+transfer any files mentioned, along with the script itself, to
+drive A.
+
+A minimal C system disk should probably contain:
+(your text editor), submit.com
+pp.com, p1.com, p2.com, an.com, ld80.com, c.sub, ld.sub
+std.h, clib.a, mlib.a, chdr.r
+
+See the C Users Manual and the 8080 Interface Manual for use of the
+above commands.  The C language itself, and the contents of the C
+library, are specified in the C Users Manual.  A good tutorial on C,
+as well as the most complete reference, can be found in "The C
+Programming Language" by Kernighan and Ritchie (Prentice Hall)
+(also available from Morrow Designs).
+
+n be found in "The C
+Programming Language" by Kernighan and Ritchie (Prentice Hall)
+(

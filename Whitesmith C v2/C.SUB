@@ -1,0 +1,8 @@
+pp -x -i a: -o $1.tm1 $1.c
+p1 -o $1.tm2 $1.tm1
+era $1.tm1
+p2 -o $1.tm3 $1.tm2
+era $1.tm2
+an -o $1.r $1.tm3
+era $1.tm3
+

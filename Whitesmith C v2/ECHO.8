@@ -1,0 +1,107 @@
+.:=.data
+.31:
+012,0
+.11:
+040,0
+public lenstr.
+public write.
+public main.
+.:=.text
+main.:
+call c.ents
+hl=&06+de
+a=*hl+02->*hl=*(hl+1)+^0->*hl
+hl=&04+de
+a=*hl-0401->*hl=*(hl+1)-^0->*hl
+hl-1
+a-a-*hl=0-^*(hl+1)
+jm .6
+bc=01
+jmp .01
+.6:
+bc=0
+.01:
+a=c|b
+jz .1
+bc=01
+jmp c.rets
+.1: /056
+hl=&06+de
+hl=a^hl
+bc=^hl=>sp
+call lenstr.
+af<=sp
+hl=bc
+hl->c.r2
+hl=c.r2=>sp
+hl=&06+de
+hl=a^hl
+bc=^hl=>sp
+hl=&01=>sp
+call write.
+af<=sp<=sp<=sp
+hl=bc
+hl->c.r3
+.5: / 0142
+hl=&06+de
+a=*hl+02->*hl=*(hl+1)+^0->*hl
+hl=&04+de
+a=*hl-0401->*hl=*(hl+1)-^0->*hl
+hl-1
+a=*hl|*(hl+1)
+jz .7
+hl=&06+de
+hl=a^hl
+bc=^hl=>sp
+call lenstr.
+af<=sp
+hl=bc
+hl->c.r4
+hl=c.r2
+sp<=hl
+hl=c.r4+(bc=&01)
+hl<>*sp;bc<=sp
+hl+bc
+hl->c.r2
+hl=&01=>sp
+hl=&.11
+sp<=hl
+hl=&01=>sp
+call write.
+af<=sp<=sp<=sp
+hl=c.r3
+hl+bc
+hl->c.r3
+hl=c.r4=>sp
+hl=&06+de
+hl=a^hl
+bc=^hl=>sp
+hl=&01=>sp
+call write.
+af<=sp<=sp<=sp
+hl=c.r3
+hl+bc
+hl->c.r3
+jmp .5
+.7: /0342
+hl=&01=>sp
+hl=&.31
+sp<=hl
+hl=&01=>sp
+call write.
+af<=sp<=sp<=sp
+hl=c.r3
+hl+bc
+hl->c.r3
+hl=c.r2+(bc=&01)
+a=c.r3::l jnz .41=c.r3[01]::h
+.41:
+jnz .21
+bc=01
+jmp .61
+.21:
+bc=0
+.61:
+jmp c.rets
+/fn size = 277
+
