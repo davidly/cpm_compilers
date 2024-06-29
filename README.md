@@ -24,6 +24,8 @@ The benchmarks include:
 
 If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them.
 
+The emulator is available here: [NTVCM](https://github.com/davidly/ntvcm/)
+
 Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by NTVCM:
 
 ![chart](https://github.com/davidly/cpm_compilers/assets/1497921/a664bb1e-18e8-4b1a-953b-feafc5087382)
