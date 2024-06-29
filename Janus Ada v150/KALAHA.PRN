@@ -1,0 +1,508 @@
+    1:  0000  With Util;
+    2:  0000  package body kalaha is
+    3:  08EF  
+    4:  08EF  -- kalaha game. marcus wagner
+    5:  08EF  -- translation PASCAL -> Janus (Subset of Ada) 30.6.1982.
+    6:  08EF  -- revision of type player (introducing variable other) and
+    7:  08EF  --          implementation of a short summary with node counts 1.7.1982.
+    8:  08EF  -- Converted to separate compilation version 1.4.5 Janus 20.8.1982
+    9:  08EF  -- Changed I/O to use line buffered.
+   10:  08EF  -- Conditional compiled debugging information
+   11:  08EF  -- Added instructions and game scoring.
+   12:  08EF  --            R.L.Brukardt - RR Software
+   13:  08EF  
+   14:  08EF     Use Util;
+   15:  08EF  
+   16:  08EF     pragma arithcheck(off); pragma debug(off);
+   17:  08EF     pragma enumtab(off);    pragma rangecheck(off);
+   18:  08EF  @   Pragma arithcheck(On); Pragma debug(on);
+   19:  08EF  @   Pragma enumtab(On);    Pragma rangecheck(On);
+   20:  08EF  
+   21:  08EF  -- constants.
+   22:  08EF  
+   23:  08EF     maximum : constant := 9999;
+   24:  08EF     infimum : constant := 11000;
+   25:  08EF  
+   26:  08EF  -- types.
+   27:  08EF  
+   28:  08EF     type player is (machine,man);
+   29:  08EF  
+   30:  08EF     subtype field is integer range 0..7;
+   31:  08EF  
+   32:  08EF     type movekind is (normal,kalaha,winn,lost);
+   33:  08EF  
+   34:  08EF     type halfboard is
+   35:  08EF        record
+   36:  08EF           total : integer;  -- assert total = sum of hole(all fields).
+   37:  08EF           hole  : array (field) of integer;
+   38:  08EF        end record;
+   39:  08EF  
+   40:  08EF     type board is array (player) of halfboard;
+   41:  08EF  
+   42:  08EF  -- variables.
+   43:  08EF  
+   44:  08EF     depth : integer;
+   45:  08EF     value : integer;
+   46:  08EF     ch : character;
+   47:  08EF     place : field;
+   48:  08EF     kind : movekind;
+   49:  08EF     result : movekind;
+   50:  08EF     a : board;
+   51:  08EF     tab : array (0..72) of integer; -- for easier evaluation, contains
+   52:  08EF                                     -- predefined values.
+   53:  08EF     other : array (player) of player; -- to determine other side.
+   54:  08EF     nodes : integer;                  -- node count.
+   55:  08EF     evcount : integer;               -- count for static evaluations.
+   56:  08EF  
+   57:  08EF     games,iwon : Integer := 0;
+   58:  08F8  
+   59:  08F8  procedure check_break is
+   60:  0909  
+   61:  0909     begin
+   62:  0909        if ch = character'val(3) then -- Control c -> abort.
+   63:  0914           new_line;
+   64:  091A           put("Kalaha aborted, it is a pity that you don't want to continue");
+   65:  0927           halt;
+   66:  092A        end if;
+   67:  092A     end check_break;
+   68:  092E  
+   69:  092E  procedure init_board (a: out board) is
+   70:  0947  
+   71:  0947     begin
+   72:  0947        for j in machine..man loop
+   73:  0961           for i in 1..6 loop
+   74:  098F              a(j).hole(i) := 6;
+   75:  09C5           end loop;
+   76:  09C5           a(j).hole(7) := 0;
+   77:  09EF           a(j).total := 36;
+   78:  0A16        end loop;
+   79:  0A16     end init_board;
+   80:  0A23  
+   81:  0A23  procedure init_other is  -- can be replaced by an aggregate, then
+   82:  0A34                           -- this procedure is superfluous and the
+   83:  0A34                           -- variable other becomes a structured constant.
+   84:  0A34  
+   85:  0A34     begin
+   86:  0A34        other(machine) := man;
+   87:  0A39        other(man) := machine;
+   88:  0A3E     end init_other;        
+   89:  0A42  
+   90:  0A42  procedure print_board (a: in board) is
+   91:  0A5B  
+   92:  0A5B     begin
+   93:  0A5B        put("    ");
+   94:  0A68        for i in reverse 1..7 loop
+   95:  0A93           put(a(machine).hole(i),4);
+   96:  0AC4        end loop;
+   97:  0AC4        new_line;
+   98:  0ACA        put("        ");
+   99:  0AD7        for i in 1..7 loop
+  100:  0B02           put(a(man).hole(i),4);
+  101:  0B33        end loop;
+  102:  0B33        new_line;
+  103:  0B39     end print_board;
+  104:  0B49  
+  105:  0B49  procedure instructions is
+  106:  0B5A     -- print intstructions
+  107:  0B5A     begin
+  108:  0B5A        Put("Welcome to Kalaha"); New_Line;
+  109:  0B6D        New_Line;
+  110:  0B73        Put("The object of the game is to collect more stones than your");
+  111:  0B80        New_Line;
+  112:  0B86        Put("opponent (the computer).  Collecting 37 stones is enough to win.")
+  113:  0B93        ;  New_Line;
+  114:  0B99        Put("The board looks like this:"); New_Line;
+  115:  0BAC        New_Line;
+  116:  0BB2        Put("           Computer's Holes"); New_Line;
+  117:  0BC5        Put("       E   6   5   4   3   2   1"); New_Line;
+  118:  0BD8        Put("           1   2   3   4   5   6   E"); New_Line;
+  119:  0BEB        Put("           Your Holes"); New_Line;
+  120:  0BFE        New_Line;
+  121:  0C04        Put("The object of the game is to collect stones in the 'E' hole.");
+  122:  0C11        New_Line;
+  123:  0C17        Put("The game is very simple.  A move consists of picking up a pile");
+  124:  0C24        New_Line;
+  125:  0C2A        Put("of stones from one of your holes, and distributing them");
+  126:  0C37        New_Line;
+  127:  0C3D        Put("counter-clockwise, one in each hole until they run out.  You");
+  128:  0C4A        New_Line;
+  129:  0C50        Put("Must put one in your 'E' hole, but cannot put one in your");
+  130:  0C5D        New_Line;
+  131:  0C63        Put("opponent's 'E' hole.  Three added rules make the game")
+  132:  0C70        ; New_line;
+  133:  0C76        Put("interesting.  First, if the last stone you place is put into");
+  134:  0C83        New_Line;
+  135:  0C89        Put("your 'E' hole, it is called a 'Kalaha Move' and you may make");
+  136:  0C96        New_Line;
+  137:  0C9C        Put("another move.  If the next move is also a Kalaha Move, you may");
+  138:  0CA9        New_Line;
+  139:  0CAF        New_Line;
+  140:  0CB5        Put("Type return to continue"); Get(ch); Skip_Line;
+  141:  0CD5  
+  142:  0CD5        Put("make yet another move, and so on.  This rule fills the game");
+  143:  0CE2        New_Line;
+  144:  0CE8        Put("with surprises.  The second rule is that of capture.  If the");
+  145:  0CF5        New_Line;
+  146:  0CFB        Put("last stone placed is placed in an empty hole on your side of");
+  147:  0D08        New_Line;
+  148:  0D0E        Put("the board, a capture occurs.  You may then pick you all of your");
+  149:  0D1B        New_Line;
+  150:  0D21        Put("opponent's stones in the hole opposite the capture hole, and");
+  151:  0D2E        New_Line;
+  152:  0D34        Put("the capturing stone, and place them directly in your 'E' hole.");
+  153:  0D41        New_Line;
+  154:  0D47        Put("This is the easy way to win!  The last rule is that you lose if");
+  155:  0D54        New_Line;
+  156:  0D5A        Put("there are no stones on your side of the board (Holes 1..6).");
+  157:  0D67        New_Line;
+  158:  0D6D        New_Line;
+  159:  0D73        Put("If you are stumped for a move, you may ask the machine for its");
+  160:  0D80        New_Line;
+  161:  0D86        Put("advice by typing a question mark ('?')"); New_Line;
+  162:  0D99        New_Line;
+  163:  0D9F        Put("How good a player the computer is, and how long a game will");
+  164:  0DAC        New_Line;
+  165:  0DB2        Put("take, is determined by the strength factor you enter at the");
+  166:  0DBF        New_Line;
+  167:  0DC5        Put("start of the game.  1 is the weakest, 6 is the strongest");
+  168:  0DD2        New_Line;
+  169:  0DD8        New_Line;
+  170:  0DDE        Put("Have Fun!"); New_Line;
+  171:  0DF1        New_Line;
+  172:  0DF7        Put("Type Return to Continue"); Get(ch); Skip_Line;
+  173:  0E17     end instructions;
+  174:  0E1B  
+  175:  0E1B  function score (a : in board; jj : in player) return integer is
+  176:  0E34  
+  177:  0E34     n, k, s : integer;
+  178:  0E34     q : array(player) of integer;
+  179:  0E34  
+  180:  0E34     begin
+  181:  0E34        evcount := evcount + 1;
+  182:  0E3B        for j in machine..man loop
+  183:  0E61           s := 0;
+  184:  0E6C           for i in 1..6 loop
+  185:  0EA3              n := a(j).hole(i);
+  186:  0EE4              if n > 0 then
+  187:  0EF8                 k := n + i - 7;
+  188:  0F1E                 if k < 0 then
+  189:  0F30                    s := s + n + 7;
+  190:  0F53                 else
+  191:  0F53                    s := s + tab(k) - i;
+  192:  0F8E                 end if;
+  193:  0F8E              end if;
+  194:  0F8E           end loop;
+  195:  0F8E           q(j) := s * a(j).hole(7);
+  196:  0FE0        end loop;
+  197:  0FE0        return q(jj) - q(other(jj));
+  198:  1027     end score;
+  199:  103C  
+  200:  103C  procedure make_move (a : in board;
+  201:  103C                       b : in out board;
+  202:  103C                       jj : in player;
+  203:  103C                       iii : in field) is
+  204:  1055  
+  205:  1055     n : integer;
+  206:  1055     i,lim,ii,i1 : integer;
+  207:  1055     j,j1 : player;
+  208:  1055     extra : integer;
+  209:  1055  
+  210:  1055     begin
+  211:  1055        ii := iii;
+  212:  106C        b := a;
+  213:  108E        n := b(jj).hole(ii);
+  214:  10CB        b(jj).hole(ii) := 0;
+  215:  1105        b(jj).total := b(jj).total - n;
+  216:  115D        j := other(jj);
+  217:  1176        lim := 6;
+  218:  1185        while n > 0 loop
+  219:  1195           i := ii;
+  220:  11AC           j := other(j);
+  221:  11C5           lim := 13 - lim;
+  222:  11E6           i1 := i + n;
+  223:  1204           if i1 > lim then
+  224:  121F              i1 := lim;
+  225:  1234           end if;
+  226:  1234           n := n - i1 + i;
+  227:  1262           b(j).total := b(j).total + i1 - i;
+  228:  12CB           while i < i1 loop
+  229:  12E6              i := i + 1;
+  230:  12FE              b(j).hole(i) := b(j).hole(i) + 1;
+  231:  136E           end loop;
+  232:  136E           ii := 0;
+  233:  1380        end loop;
+  234:  1380        if i = 7 then
+  235:  1394           kind := kalaha;
+  236:  139C        else
+  237:  139C           kind := normal;
+  238:  13A1           if j = jj and then b(j).hole(i) = 1 and then
+  239:  13F8              b(other(j)).hole(7-i) /= 0 then  -- capture move.
+  240:  1449              extra := b(other(j)).hole(7-i);
+  241:  149D              b(j).hole(7) := b(j).hole(7) + extra + 1;
+  242:  1501              b(j).total := b(j).total + extra;
+  243:  1558              b(j).hole(i) := 0;
+  244:  1592              b(other(j)).total := b(other(j)).total - extra;
+  245:  1600              b(other(j)).hole(7-i) := 0;
+  246:  164D           end if;
+  247:  164D        end if;
+  248:  164D        if b(jj).hole(7) > 36 then
+  249:  167F           kind := winn;
+  250:  1687        elsif b(other(jj)).hole(7) > 36 then
+  251:  16C2           kind := lost;
+  252:  16CA        elsif b(jj).total = b(jj).hole(7) then
+  253:  171F           kind := lost;
+  254:  1727        elsif b(other(jj)).total = b(other(jj)).hole(7) then
+  255:  178E           kind := winn;
+  256:  1793        end if;
+  257:  1793     end make_move;
+  258:  17A0  
+  259:  17A0  procedure analysis (a : in board;
+  260:  17A0                      j : in player;
+  261:  17A0                      depth : in integer;
+  262:  17A0                      value : out integer;
+  263:  17A0                      place : out field;
+  264:  17A0                      alpha, beta : in integer) is
+  265:  17B9  
+  266:  17B9     m, t, v : integer;
+  267:  17B9     p : field;
+  268:  17B9     b : board;
+  269:  17B9  
+  270:  17B9     begin
+  271:  17B9        m := alpha;
+  272:  17D0        for i in 1..6 loop
+  273:  1807           if a(j).hole(i) /= 0 then  -- can move from this field.
+  274:  1845              nodes := nodes + 1;
+  275:  184C              make_move(a,b,j,i);
+  276:  187D              case kind is
+  277:  18B4                 when normal =>
+  278:  18B4                    if depth = 1 then -- terminal node, evaluate statically.
+  279:  18C8                       t := score (b,j);
+  280:  18EA                    else              -- nonterminal, recursive evaluation.
+  281:  18EA                       analysis(b,other(j),depth-1,t,p,-beta,-m);
+  282:  1950                       t := -t;
+  283:  196D                    end if;
+  284:  196D                 when kalaha =>
+  285:  196D                    analysis(b,j,depth,t,p,m,beta);
+  286:  19BE                                      -- try next move for this side.
+  287:  19BE                 when winn =>
+  288:  19BE                    t := maximum+depth;
+  289:  19DB                 when lost =>
+  290:  19DB                    t := - maximum-depth;
+  291:  19FD              end case;
+  292:  19FD              if t > m then           -- new best.
+  293:  1A18                 m := t;
+  294:  1A2D                 place := i;
+  295:  1A49              end if;
+  296:  1A49              exit when m >= beta;    -- alpha - beta cutoff.
+  297:  1A69           end if;
+  298:  1A69        end loop;
+  299:  1A69        value := m;                   -- the value of our position.
+  300:  1A85     end analysis;
+  301:  1A92  
+  302:  1A92  procedure iteration (a : in board;
+  303:  1A92                       j : in player;
+  304:  1A92                       d : in integer;
+  305:  1A92                       oldval : in integer) is
+  306:  1AAB  
+  307:  1AAB     alpha, beta : integer;
+  308:  1AAB  
+  309:  1AAB     begin
+  310:  1AAB        alpha := oldval - 30;
+  311:  1AC4        beta := oldval + 30;
+  312:  1ADB        if alpha < -infimum then
+  313:  1AED           alpha := -infimum;
+  314:  1AFA        end if;
+  315:  1AFA        if beta > infimum then
+  316:  1B0A           beta := infimum;
+  317:  1B15        end if;
+  318:  1B15        loop
+  319:  1B15           analysis(a,j,d,value,place,alpha,beta);
+  320:  1B5B  @        put("Alpha ");
+  321:  1B5B  @        put(alpha,6);
+  322:  1B5B  @        put(" Beta ");
+  323:  1B5B  @        put(beta,6);
+  324:  1B5B  @        put("valuation  ");
+  325:  1B5B  @        put(value,6);
+  326:  1B5B  @        new_line;
+  327:  1B5B           exit when value > alpha and value < beta;
+  328:  1B80  @        put("alpha-beta window too small -> new iteration");
+  329:  1B80  @        new_line;
+  330:  1B80           if value <= alpha then
+  331:  1B93              alpha := -infimum;
+  332:  1BA0           end if;
+  333:  1BA0           if value >= beta then
+  334:  1BB1              beta := infimum;
+  335:  1BBF           end if;
+  336:  1BBF        end loop;
+  337:  1BBF     end iteration;
+  338:  1BD2  
+  339:  1BD2  @procedure summary is
+  340:  1BD2  @  -- Print summary of Alpha-Beta Search
+  341:  1BD2  @  begin
+  342:  1BD2  @    put(" valuation              "); put(value,6); new_line;
+  343:  1BD2  @    put(" valuated positions     "); put(evcount,6); new_line;
+  344:  1BD2  @    put(" investigated positions "); put(nodes,6); new_line;
+  345:  1BD2  @  end summary;
+  346:  1BD2  
+  347:  1BD2  procedure man_move is
+  348:  1BEB  
+  349:  1BEB     d : integer;
+  350:  1BEB  
+  351:  1BEB     begin
+  352:  1BEB        loop
+  353:  1BEB           loop
+  354:  1BEB              put("What is your choice (1..6)?");
+  355:  1BF8              get(ch);
+  356:  1C05              check_break;
+  357:  1C08              skip_line;  -- Toss input line (console input is line buffered
+  358:  1C0E                          -- in Janus/Ada)
+  359:  1C0E              new_line;
+  360:  1C14              if ch = '?' then     -- make a proposal for depth d.
+  361:  1C1F                 nodes := 0;
+  362:  1C25                 evcount := 0;
+  363:  1C2B                 iteration(a,man,depth,score(a,man));
+  364:  1C44                 put("Proposed move ");
+  365:  1C51                 put(place,1);
+  366:  1C60                 new_line;
+  367:  1C69  @              summary;
+  368:  1C69              else
+  369:  1C69                 d := character'pos(ch) - character'pos('0');
+  370:  1C7B                 If d in 1..6 Then -- Valid move
+  371:  1C8A                    place := d; -- Can't do this until move is valid
+  372:  1C94                    exit when a(man).hole(place) /= 0;
+  373:  1CAA                 End If;
+  374:  1CAA                 put("invalid move ");
+  375:  1CB7                 new_line;
+  376:  1CC0              end if;
+  377:  1CC0           end loop;
+  378:  1CC0           make_move(a,a,man,place);
+  379:  1CD6           print_board(a);
+  380:  1CDD           exit when kind /= kalaha;   -- now other side moves.
+  381:  1CE8           put("Kalaha move");
+  382:  1CF5           new_line;
+  383:  1CFE        end loop;
+  384:  1CFE        if kind = winn then
+  385:  1D09           result := lost;
+  386:  1D11        else
+  387:  1D11           result := winn;
+  388:  1D16        end if;
+  389:  1D16     end man_move;
+  390:  1D23  
+  391:  1D23  procedure machine_move is
+  392:  1D3C  
+  393:  1D3C     oldval : integer;
+  394:  1D3C  
+  395:  1D3C     begin
+  396:  1D3C        oldval := score(a,machine);
+  397:  1D4E        loop
+  398:  1D4E           nodes := 0;
+  399:  1D54           evcount := 0;
+  400:  1D5A           iteration(a,machine,depth,oldval);
+  401:  1D70           put("I choose ");
+  402:  1D7D           put(place,1);
+  403:  1D8C           new_line;
+  404:  1D92  @        summary;
+  405:  1D92           make_move(a,a,machine,place);
+  406:  1DA8           print_board(a);
+  407:  1DAF           exit when kind /= kalaha;
+  408:  1DBA           oldval := value;
+  409:  1DC5           put("Kalaha move");
+  410:  1DD2           new_line;
+  411:  1DDB        end loop;
+  412:  1DDB        result := kind;
+  413:  1DE1     end machine_move;
+  414:  1DEE  
+  415:  1DEE  procedure init_table is
+  416:  1E07  
+  417:  1E07     begin
+  418:  1E07        for k in 0..72 loop
+  419:  1E32           tab(k) := abs(6 - k mod 13) + 7;
+  420:  1E6E        end loop;
+  421:  1E6E     end init_table;
+  422:  1E7B  
+  423:  1E7B  begin  -- main program.
+  424:  1E7B  
+  425:  1E7B     init_table;
+  426:  1E7E     init_other;
+  427:  1E81     put("Do you need instructions? ");
+  428:  1E8E     Get(ch);
+  429:  1E9B     Skip_Line;
+  430:  1EA1     New_Line;
+  431:  1EA7     If (ch /= 'N') and (ch /= 'n') Then
+  432:  1EBE         instructions;
+  433:  1EC1     End If;
+  434:  1EC1     loop
+  435:  1EC1        init_board(a);
+  436:  1EC9        put("Start Position ");
+  437:  1ED6        new_line;
+  438:  1EDC        new_line;
+  439:  1EE2        print_board(a);
+  440:  1EE9        loop
+  441:  1EE9           put("Machine Strength (1..6)? ");
+  442:  1EF6           get(ch);
+  443:  1F03           check_break;
+  444:  1F06           skip_line;        -- Toss input line - console input is line buffered
+  445:  1F0C                             -- in Janus/Ada
+  446:  1F0C           new_line;
+  447:  1F12           depth := character'pos(ch) - character'pos('0');
+  448:  1F1F           exit when depth in 1..6;
+  449:  1F2A           put("Illegal Strength");
+  450:  1F37           new_line;
+  451:  1F40        end loop;
+  452:  1F40        loop
+  453:  1F40           put("Who shall start ?");
+  454:  1F4D           new_line;
+  455:  1F53           put("man = M or computer = C ");
+  456:  1F60           get(ch);
+  457:  1F6D           check_break;
+  458:  1F70           skip_line;
+  459:  1F76           new_line;
+  460:  1F7C           exit when ch = 'M' or ch = 'm' or ch = 'C' or ch = 'c';
+  461:  1FAB           put("Must be M or C");
+  462:  1FB8           new_line;
+  463:  1FC1        end loop;
+  464:  1FC1        if ch = 'C' or ch = 'c' then
+  465:  1FD8           machine_move;
+  466:  1FDB        end if;
+  467:  1FDB        loop
+  468:  1FDB           man_move;
+  469:  1FDE           if kind = normal then
+  470:  1FE9              machine_move;
+  471:  1FEC           end if;
+  472:  1FEC           exit when kind /= normal;
+  473:  1FFA        end loop;
+  474:  1FFA     
+  475:  1FFA        games := games + 1;
+  476:  2001        if result = lost then
+  477:  200C           put("Congradulations, you won.");
+  478:  2019           new_line;
+  479:  201F           If iwon + 1 > games Then
+  480:  202F              Put("That's the first game you won today.  Lucky!"); New_Line;
+  481:  2045           Elsif iwon < games/2 Then
+  482:  2058              Put("You really play well."); New_Line;
+  483:  206E           Else
+  484:  206E              Put("I want a re-match"); New_Line;
+  485:  2084           End If;            
+  486:  2084        else
+  487:  2084           put("Hurra!  I won.");
+  488:  2091           new_line;
+  489:  2097           iwon := iwon + 1;
+  490:  209E           If iwon = 1 And Then games > 2 Then
+  491:  20B6              Put("I finally beat you."); New_Line;
+  492:  20CC           Elsif iwon + 3 > games Then
+  493:  20DE              Put("You need more pratice."); New_Line;
+  494:  20F1           End If;
+  495:  20F1        end if;
+  496:  20F1  
+  497:  20F1        Put("I have won "); Put(iwon); Put(" games, out of ");
+  498:  2116        Put(games); Put(" games played"); New_Line;
+  499:  2134  
+  500:  2134        put("Do you want to play again? ");
+  501:  2141        get(ch);
+  502:  214E        Skip_line;
+  503:  2154        New_Line;
+  504:  215A        Exit When (ch = 'N') Or (ch = 'n');
+  505:  2174     end loop;
+  506:  2174  end kalaha;
+  507:  2174  
+
