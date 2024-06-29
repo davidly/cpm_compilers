@@ -22,10 +22,15 @@ The benchmarks include:
   * ttt: proves you can't win at tic-tac-toe if the opponent is competent
   * tm: test malloc. This calls malloc/calloc/free in the C runtime to measure performance. It's C only.
 
+To run the compilers on Windows, use the m.bat script in each folder, e.g.:
+  * m sieve
+  * m e
+  * m ttt
+
+On Linux or MacOS copy m.bat to m.sh, change % to $, use dos2unix to remove CR/LF, and chmod to enable execution. If you do this, feel free to submit a pull request :)
+
 If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them.
 
-The emulator is available here: [NTVCM](https://github.com/davidly/ntvcm/)
-
-Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by NTVCM:
+Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by  [NTVCM](https://github.com/davidly/ntvcm/)
 
 ![chart](https://github.com/davidly/cpm_compilers/assets/1497921/a664bb1e-18e8-4b1a-953b-feafc5087382)
