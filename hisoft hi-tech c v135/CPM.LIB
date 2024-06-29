@@ -1,0 +1,688 @@
+/* * * * * *      C P M . L I B       * * * * * */
+/*						*/
+/*	   Copyright (c) 1985 by HiSoft		*/
+/*		last changed 7 Feb 86		*/
+/*	- rename and unlink added 27Dec85	*/
+/*	- cpm_cmd_line tidied 7Feb86		*/
+/*						*/
+/* * * * * * * * * * * * * * * * * * * * * * * **/
+
+#list-
+
+
+
+
+
+
+
+
+
+
+
+/******      Parse CP/M Command Line      ******/
+
+
+/*	The following #define may be adjusted as required		*/
+
+#define CMD_NAME "HiSoft" /* simulated name of command/program		*/
+
+typedef char *char_ptr;
+
+
+
+void cpm_cmd_line(aargc, aargv, buffer)
+  int  *aargc;
+  char **aargv;
+  char *buffer;
+{
+  FAST char *tbuff;
+  FAST int  i;
+
+  tbuff = cast(char_ptr)0x80;	/* address of CP/M command line tail	*/
+  tbuff[*tbuff + 1] = NULL;	/* add trailing zero to make a C string	*/
+  *aargc = parse_args(tbuff + 1, buffer, buffer + MAXARGS*2);
+  *aargv = buffer;
+}
+
+
+int parse_args(s, argv, dest)
+  char *s;	/*  source string to parse = command tail	*/
+  char *argv[]; /*  array of pointers to argument strings	*/
+  char *dest;	/*  scratch area for argument strings		*/
+{
+  FAST int  c, argc;
+  FAST char *p;
+
+  argv[0] = CMD_NAME;	/* cannot get command name from CP/M */
+  argc = 1;
+  c = ' ';		/* prime the pump */
+
+  while (TRUE)		/*  scan arguments and copy to safe area  */
+    {
+	while (c == ' ') c = *s++;	/*  skip leading spaces  */
+	if ( ! c  ||  c == '\n') return argc;	/* return if end of line  */
+
+	p = dest;		/*  put new argument into vector  */
+	if (c == '"')
+	  {
+	    while ((c = *s++)  &&  c != '\n'  &&  c != '"')
+	      *p++ = c;
+	    if (c == '"') c = ' ';
+	  }
+	else
+	  {
+	    do *p++ = toupper(c);
+	    while ((c = *s++)  &&  c != '\n'  &&  c != ' ');
+	  }
+	*p++ = NULL;
+
+	/* now do redirection of stdin and stdout */
+
+	if      (*dest == '<')		freopen(dest+1, "r", stdin);
+	else if (*dest == '>')
+          {
+	    if (*(dest+1) == '>')	freopen(dest+2, "a", stdout);
+	    else			freopen(dest+1, "w", stdout);
+	  }
+	else /* genuine argument - not redirection */
+	  {
+	    argv[argc++] = dest;
+	    dest = p;
+          }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/******      Produce a Disk Directory      ******/
+
+
+cpm_dir(drive, user, afn, sp, width)
+  int drive, user, width;
+  char *afn, *sp;
+{
+  FAST char relpos, *format;
+  FAST int curr_drive, curr_user, search_code, name_width, column;
+  char filename[13];
+  char fcb[36];
+  char disk_buffer[128];
+
+printf("CPM.DIR in CPM.LIB says:\n\
+TAKE NOTE - YOU CANNOT USE THIS FUNCTION TO OUTPUT TO A DISC FILE.\n\
+CP/M gets confused about its DMA address when file accesses are\n\
+interleaved with directory searches.  You should use this function\n\
+to write to a string, then fprintf that string - the parameter list\n\
+is also changed. Please update your manual\n");
+exit(42);
+
+  cpm_bdos(26, disk_buffer); /* set dma address */
+  cpm_pfcb(fcb, afn);        /* make an fcb     */
+  if (fcb[0]) drive = fcb[0] - 1;
+  curr_drive = cpm_drive(drive);
+  curr_user  = cpm_user(user);
+
+  column = 0;
+  format = "%-15s";
+  name_width = 15;
+  if (width == 40)	/* squeeze more in on 40 column screens */
+    {
+      format = "%-13s";
+      name_width = 13;
+    }
+  search_code = 17;	/* search for first directory entry */
+
+  while ((relpos = cpm_bdos(search_code, fcb)) != 255)
+    {
+      search_code = 18;	/* search for next directory entry */
+
+      fcb_to_name(filename, disk_buffer + relpos * 32);
+
+      if ((column += name_width) > width)
+	{
+          if (sp) sprintf(sp++, "\n");
+	  column = name_width;
+	}
+
+      if (sp)
+	{
+	  sprintf(sp, format, filename);
+	  sp += name_width;
+	}
+    }
+  cpm_drive(curr_drive);
+  cpm_user(curr_user);
+}
+
+
+
+
+
+void fcb_to_name(filename, fcb)
+  char *filename, *fcb;
+{
+  int i,j;
+
+  j = 0;
+
+  strncpy(filename,   fcb+1, 8);
+  filename[8]  = '.';
+  strncpy(filename+9, fcb+9, 3);
+  filename[12] = 0;
+}
+
+
+
+
+
+
+
+
+
+/******      General BIOS 2.2 Function      ******/
+
+
+int cpm22_bios(func, bc_param, de_param)
+{
+  static int bios_entry_address;
+
+  if (func < 0  || func > 16) return ERROR;
+
+  inline(
+    LD_HL_from, 1,0,
+    LD_HL_into, &bios_entry_address);	/* get BIOS warm boot address */
+
+  bios_entry_address += 3*(func - 1);	/* convert to BIOS vector address */
+
+  reg_bc = bc_param;
+  reg_de = de_param;
+
+  inline(
+    LD_DE_with, 14,0,		/* set up return address from BIOS call */
+    CALL,	PC_TO_HL,
+    ADD_HL_DE,
+    PUSH_HL,
+
+    LD_BC_from, &reg_bc,	/* set up registers for BIOS call */
+    LD_DE_from, &reg_de,
+
+    LD_HL_from, &bios_entry_address,	/* do BIOS call */
+    JP_HL,
+
+    LD_HL_into, &reg_hl,	/* capture result of call */
+    LD_A_into,	&reg_a);
+
+  return (func == 9 || func == 16) ? reg_hl : reg_a;
+}
+
+
+
+
+
+
+
+/******      General CP/M 3 BIOS Function      ******/
+
+cpm3_bios(func, a_param, bc_param, de_param, hl_param)
+{
+  static int biospb[4];
+
+  biospb[0] = func + 256*a_param;
+  biospb[1] = bc_param;
+  biospb[2] = de_param;
+  biospb[3] = hl_param;
+
+  return cpm_bdos(50, biospb);
+}
+
+
+
+
+
+
+
+
+/******      BDOS  0 - System Reset      ******/
+/*
+  It is better not to use this function because most programs which try to
+  intercept it do so by trapping a jump to location 0 so the jump should
+  be used in preference.
+*/
+/******      BDOS  1 - Console Input      ******/
+/*
+  Normally it will be better to use rawin() or getchar() for console input.
+*/
+/******      BDOS  2 - Console Output      ******/
+/*
+  Normally it will be better to use rawout() or putchar() for console output
+*/
+/******      BDOS  3 - Reader Input      ******/
+/*
+  Input from the reader device can be done as from a normal file by using
+  fopen("RDR:", "r"); or fopen("RDR:", "rb");  which then allows fscanf(),
+  fgets() etc to be used in addition to getc();
+  but direct input can be done using this function.
+*/
+
+
+int cpm_rdrin()
+{
+  return cpm_bdos(3, 0) & 0xFF;
+}
+
+
+/******      BDOS  4 - Punch Output      ******/
+/*
+  Output to the punch device can be done as to a normal file by using
+  fopen("PUN:", "w");  (or "wb")  which then allows fprintf(), fputs()
+  etc to be used in addition to putc()
+  but direct output can be done using the following function
+*/
+
+
+int cpm_punout(c)
+{
+  cpm_bdos(4, c);
+  return c;
+}
+
+
+/******      BDOS  5 - List Output      ******/
+/*
+  Output to the list device can be done as to a normal file by using
+  fopen("LST:", "w");  (or "wb")  which then allows fprintf(), fputs()
+  etc to be used in addition to putc()
+  but direct output can be done using the following function
+*/
+
+
+int cpm_lstout(c)
+{
+  cpm_bdos(5, c);
+  return c;
+}
+
+
+
+/******      BDOS  6 - Direct Console I/O      ******/
+/*
+  Direct console input and output using BDOS function 6 are available as
+  rawin() and rawout()
+*/
+
+/******      BDOS  7 - Get I/O Byte      ******/
+/******      BDOS  8 - Set I/O Byte      ******/
+/******      BDOS  9 - Print String      ******/
+/******      BDOS  10 - Read Console Buffer      ******/
+/******      BDOS  11 - Get Console Status      ******/
+/*
+  Console status is obtained by the built-in keyhit() using BDOS function 11
+*/
+/******      BDOS  12 - Return Version Number      ******/
+/*
+  Returns CP/M version number.  Possible values are:
+
+	Value	CP/M Version
+
+	0	before version 2 (eg 1.3, 1.4 - This is Lift Disk Head function)
+		and no random access is available on these versions
+	0x2n	2.n
+	0x28	Personal CP/M
+	0x31	CP/M 3 (ie CP/M Plus)
+	0x100	MP/M
+*/
+
+int cpm_version()
+{
+  return cpm_bdos(12, 0);
+}
+
+
+/******      BDOS  13 - Reset Disk System      ******/
+/******      BDOS  14 - Select Disk      ******/
+/*
+  The CP/M operations of selecting a drive and interrogating the current
+  drive number are combined in the function "cpm_drive".  The current drive
+  number is ascertained and returned after selecting the new drive passed as
+  argument.  Passing -1 as argument suppresses the selection and just returns
+  the current drive number.  The function can be used to select a drive
+  temporarily and then restore the original drive (see "cpm_dir()").
+*/
+
+
+int cpm_drive(new_drive)
+  int new_drive;
+{
+  FAST int old_drive;
+
+  old_drive = cpm_bdos(25, 0);
+  if (new_drive + 1) cpm_bdos(14, new_drive);
+  return old_drive;
+}
+
+/******      BDOS  15 - Open (Existing) File      ******/
+/******      BDOS  16 - Close File      ******/
+/******      BDOS  17 - Search for First (Directory Entry)      ******/
+/******      BDOS  18 - Search for Next (Directory Entry)      ******/
+
+
+
+
+/******      BDOS  19 - Delete File      ******/
+/*
+  unlink() is the standard Unix name for the ERASE or DELETE operation
+  It takes the name of a file and returns NULL (0) if deleted OK
+  or ERROR (-1) if some problem.
+  NB: IT MAY DELETE MORE THAN ONE FILE IF AN AFN IS USED
+*/
+
+
+int unlink(filename)
+  char *filename;
+{
+  char fcb[36];
+
+  cpm_pfcb(fcb, filename);
+  if (cpm_bdos(19, fcb) == 255) return ERROR;
+  else return NULL;
+}
+
+
+
+/******      BDOS  20 - Read Sequential      ******/
+/******      BDOS  21 - Write Sequential      ******/
+/******      BDOS  22 - Make (New) File      ******/
+
+
+
+
+
+
+
+/******      BDOS  23 - Rename File      ******/
+/*
+  rename() behaves as the Aztec-C function of the same name.
+  It returns NULL (0) if successful and ERROR (-1) if not.
+*/
+
+
+rename(oldname, newname)
+  char *oldname, *newname;
+{
+  char fcb[36];
+
+  cpm_pfcb(fcb,    oldname);
+  cpm_pfcb(fcb+16, newname);
+  if (cpm_bdos(23, fcb) == 255) return ERROR;
+  else return NULL;
+}
+
+
+
+
+/******      BDOS  24 - Return Login Vector      ******/
+/******      BDOS  25 - Return Current Disk      ******/
+/******      BDOS  26 - Set DMA Address      ******/
+/******      BDOS  27 - Get Address (of Disk Allocation Vector)      ******/
+/******      BDOS  28 - Write Protect Disk      ******/
+/******      BDOS  29 - Get Read-Only Vector      ******/
+/******      BDOS  30 - Set File Attributes      ******/
+/******      BDOS  31 - Get Address of DPB (Disk Parameter Block)      ******/
+/******      BDOS  32 - Set / Get User Number      ******/
+/*
+  This function both sets a new user number and returns the previous user
+  number.  This allows the old user number to be re-established later.
+*/
+
+
+int cpm_user(new_user)
+{
+  FAST int old_user;
+
+  old_user = cpm_bdos(32, 0xFF);
+  cpm_bdos(32, new_user);
+  return old_user;
+}
+
+
+/******      BDOS  33 - Read Random      ******/
+/******      BDOS  34 - Write Random      ******/
+/******      BDOS  35 - Compute File Size      ******/
+/******      BDOS  36 - Set Random Record Number      ******/
+
+
+
+
+
+
+
+/*  Construct a file-control-block given an ambiguous-file-name  */
+
+void cpm_pfcb(fcb, afn)
+  char *fcb, *afn;
+{
+  FAST int i, c;
+
+  /* disk drive number */
+
+  *fcb = 0;
+  if (afn[1] == ':')
+    {
+      *fcb = toupper(*afn) - ('A' -1);
+      afn += 2;
+    }
+
+
+  /* extent */
+
+  fcb[12] = 0;
+
+
+  /* filename and extension */
+
+  for (i=1; i <= 11; ++i) fcb[i] = ' ';
+  for (i=1;;)
+    {
+      c = toupper(*afn);
+      if (!c) return;
+      if (i > 8  ||  c == '.') break;
+      if (c == '*') fcb[i] = '?';
+      else { ++afn; fcb[i] = c; }
+      ++i;
+    }
+  while (c != '.')
+    {
+      if (!c) return;
+      c = *++afn;
+    }
+  ++afn;
+  for (i=9; i <= 11; ++i)
+    {
+      c = toupper(*afn);
+      if (!c) return;
+      if (c == '*') fcb[i] = '?';
+      else { ++afn; fcb[i] = c; }
+    }
+}
+
+
+
+
+
+
+
+
+
+/******      General CP/M BDOS Function      ******/
+
+
+int cpm_bdos(func, param)
+{
+  reg_bc = func;
+  reg_de = param;
+  inline(
+    PUSH_IX,
+    LD_BC_from, &reg_bc,
+    LD_DE_from, &reg_de,
+    CALL,       5,0,
+    /* LD_A_into,  &reg_a, */ /* for not-quite-CP/Ms */
+    POP_IX);
+  /* result is now in HL */
+}
+
+
+
+
+void fseek(stream, offset, mode)
+  FILE *stream;
+  long offset;
+{
+  seek(stream, offset, mode);
+}
+
+
+
+void seek(stream, offset, mode)
+  FILE *stream;
+{
+  FAST   int big_offset[2];
+  static int five_twelve[] = {512,0};
+
+  if (mode < 0  || mode > 5) return;
+
+  big_offset[0] = offset;
+  big_offset[1] = offset >= 0  ?  0  :  0xFFFF;
+
+  if (mode >= 3)
+    {
+      long_multiply(big_offset, big_offset, five_twelve);
+      mode -= 3;
+    }
+
+  _seek(stream, big_offset[1], big_offset[0], mode);
+}
+
+
+long ftell(stream)
+{
+  return _tell(stream);
+}
+
+
+tell32(stream, file_position)
+  FILE * stream;
+  int file_position[];
+{
+  _tell(stream);
+  inline(
+    LD_HL_into, &reg_hl,
+    LD_DE_into, &reg_de);
+  file_position[0] = reg_hl;
+  file_position[1] = reg_de;
+}
+
+
+char *instr(main_string, sub_string)
+  char *main_string, *sub_string;
+{
+  static int  length;
+
+  length = strlen(sub_string);
+
+  do  if ( ! strncmp(main_string, sub_string, length))  return main_string;
+  while (*++main_string);
+
+  return 0;  /*  == NULL  */
+}
+
+
+itob(n, string, precision)
+  char *string;
+{
+  static int i, c;
+  static char *s;
+
+  s = string;
+  for (i=precision; i; )
+    *s++ = n & (1 << --i)  ?  '1'  :  '0';
+  *s = 0;
+  return cast(int)string;
+}
+
+
+read_file(filename, address)
+  char *filename, *address;
+{
+  int  c;
+  FILE *file_pointer;
+
+  if ( ! (file_pointer = fopen(filename,"r")))
+  {
+    fprintf(stderr,"\nERROR - Cannot open file :%s:\n",filename);
+    return ERROR;
+  }
+  while ((c = getc(file_pointer)) != EOF)
+    *address++ = c;
+
+  fclose(file_pointer);
+  return TRUE;
+}
+
+
+char *strlower(string)
+  char *string;
+{
+  static char *s;
+  static int  c;
+
+  for (s = string; c = *s; ++s) *s = tolower(c);
+  return string;
+}
+
+
+char *strupper(string)
+  char *string;
+{
+  static char *s;
+  static int  c;
+
+  for (s = string; c = *s; ++s) *s = toupper(c);
+  return string;
+}
+
+
+write_file(filename, address, length)
+  char    *filename, *address;
+  unsigned length;
+{
+  FILE *file_pointer;
+
+  if ( ! (file_pointer = fopen(filename, "w")))
+    {
+      fprintf(stderr, "\nERROR - Cannot open file :%s:\n", filename);
+      return ERROR;
+    }
+
+  while (length--)
+    putc(*address++, file_pointer);
+
+  fclose(file_pointer);
+  return TRUE;
+}
+
+#list+
+
+/* * * * * *   E N D   O F   C P M . L I B   * * * * * */
+
+nter);
+
+  fclose(file_pointer);
+  return TRU√1:Õ˙:|µ ‹9Õê |µ¬©9Õ˝8!Î ÂÕ·N—> 2VÕ⁄8*VÂ*V& ÂÕW5——>2V!Î ÂÕ·N—Õê |µ Ÿ9> 2VÕ˝8√1:Õ:|µ :*V& ÂÕÃO—Õê |µ¬:!· ÂÕ·N—√
