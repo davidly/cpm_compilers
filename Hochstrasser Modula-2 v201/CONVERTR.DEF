@@ -1,0 +1,44 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                      DEFINITION MODULE ConvertReal			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                        Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Dec - 14 - 1984 pwh                                       *)
+(* last updated: Dec - 14 - 1984 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE ConvertReal;
+ 
+
+  EXPORT QUALIFIED
+	RealToStr, StrToReal;
+
+
+  PROCEDURE RealToStr( real       : REAL;
+		       width      : CARDINAL; (* width of field in chars *)
+		       decPlaces  : INTEGER;  (* neg  --> exp. notation *)
+					      (* zero --> no dec point  *)
+		       VAR str	   : ARRAY OF CHAR;
+		       VAR success : BOOLEAN );
+
+  PROCEDURE StrToReal(     str	   : ARRAY OF CHAR;
+		       VAR real	   : REAL;
+		       VAR success : BOOLEAN );
+
+END ConvertReal.
+

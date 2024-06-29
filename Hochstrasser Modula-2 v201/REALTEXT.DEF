@@ -1,0 +1,38 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                      DEFINITION MODULE RealTexts			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                    Modula-2 Standard Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                       Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(* created	Mar - 26 - 1985 pwh                                        *)
+(* updated	Mar - 26 - 1985 pwh                                        *)
+(***************************************************************************)
+DEFINITION MODULE RealTexts;
+ 
+
+  FROM Texts IMPORT
+	TEXT;
+
+  EXPORT QUALIFIED
+	ReadReal, WriteReal;
+
+  PROCEDURE ReadReal(VAR t: TEXT; VAR r: REAL);
+  PROCEDURE WriteReal(VAR t: TEXT; r: REAL; n: CARDINAL; digits: INTEGER);
+
+END RealTexts.
+

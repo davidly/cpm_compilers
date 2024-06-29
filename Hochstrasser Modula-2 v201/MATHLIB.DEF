@@ -1,0 +1,41 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                        DEFINITION MODULE MathLib			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Standard Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                        Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Dec - 11 - 1984 pwh                                       *)
+(* last updated: Apr -  2 - 1985 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE MathLib;
+
+  EXPORT QUALIFIED
+	sqrt, exp, ln, sin, cos, arctan, power, real, entier;
+
+ PROCEDURE sqrt(x: REAL): REAL;
+ PROCEDURE exp(x: REAL): REAL;
+ PROCEDURE ln(x: REAL): REAL;
+ PROCEDURE sin(x: REAL): REAL;
+ PROCEDURE cos(x: REAL): REAL;
+ PROCEDURE arctan(x: REAL): REAL;
+ PROCEDURE power(x,y: REAL): REAL;
+ PROCEDURE real(i: INTEGER): REAL;
+ PROCEDURE entier(x: REAL): INTEGER;
+
+END MathLib.
+

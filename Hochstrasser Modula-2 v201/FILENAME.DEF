@@ -1,0 +1,65 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                       DEFINITION MODULE FileNames			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                        Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(* created	Sep - 16 - 1984 pj                                         *)
+(* updated	Oct -  2 - 1984 pj                                         *)
+(*		Mar - 23 - 1985 pwh					   *)
+(***************************************************************************)
+DEFINITION MODULE FileNames;
+
+(* Does string to FCB file format conversion with error check
+   and wildcard expansion and the reverse. *)
+
+
+  FROM OpSys IMPORT
+	FCBFileName;
+
+  EXPORT QUALIFIED
+	NameState,
+	StrToFCB, FCBToStr;
+
+
+  TYPE
+    NameState = (NameOK, 	(* is unambigous file name *)
+		 WildOK, 	(* has '?' in FCB-format; '*' -> '?..' *)
+		 DeviceOK, 	(* CON:, KBD:, TRM:, LST:, RDR:, PUN: *)
+		 DriveError, 	(* wrong drive or device *)
+		 NoNameDefault, (* name = 8 blanks after checking *)
+		 IllegalChars); (* A..Z, a..z, 0..9, ?, $, *, ., : are ok. *)
+
+
+  PROCEDURE StrToFCB(    str: ARRAY OF CHAR;
+                     VAR FCBName: FCBFileName): NameState;
+
+(* String to FCB file format conversion with error checking and
+   wildcard expansion. FCBName's value is taken as the default value.
+   The devices CON:, KBD:, TRM:, LST:, RDR: and PUN: are supported *)
+
+PROCEDURE FCBToStr(    FCBName: FCBFileName; 
+		   VAR str: ARRAY OF CHAR;
+                       formatted: BOOLEAN);
+
+(* 'FCBFile' is expanded to a readable string (no checks are made)
+   and wildcards are expanded. If 'Formatted' is TRUE, the file
+   identification is printed in fixed field length format, in
+   minimum field length otherwise. *)
+
+
+END FileNames.
+

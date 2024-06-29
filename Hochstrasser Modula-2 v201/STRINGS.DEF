@@ -1,0 +1,101 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                        DEFINITION MODULE Strings			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                       Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Aug - 14 - 1984 pwh                                       *)
+(* last updated: Aug - 14 - 1984 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE Strings;
+ 
+
+  EXPORT QUALIFIED
+	STRING,
+	Assign, CompareStr, Concat, Copy, 
+        Delete, Insert, Length, Pos;
+
+
+  CONST
+    StringLength = 80;
+
+  TYPE 
+    STRING = ARRAY [0..StringLength-1] OF CHAR;
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Assign -- assign one string to another character   *)
+(* by character up to 0C. Fill rest with 0C.			*)
+(*--------------------------------------------------------------*)
+  PROCEDURE Assign(source: ARRAY OF CHAR; VAR dest: ARRAY OF CHAR);
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE CompareStr -- compare 'string1' and 'string2' and  *)
+(* return 							*)
+(*		0 if 'string1' = 'string2'			*)
+(*		1 if 'string1' > 'string2'			*)
+(*	       -1 if 'string1' < 'string2'			*)
+(*--------------------------------------------------------------*)
+  PROCEDURE CompareStr(string1, string2: ARRAY OF CHAR): INTEGER;
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Concat -- concatenate 'string1' and 'string2' into *)
+(* 'result'. Overflow is clipped off.				*)
+(*--------------------------------------------------------------*)
+  PROCEDURE Concat(string1, string2: ARRAY OF CHAR; 
+		   VAR result: ARRAY OF CHAR);
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Copy -- copy substring of 'string' starting at     *)
+(* 'inx' of length 'len' to 'result'.				*)
+(*--------------------------------------------------------------*)
+  PROCEDURE Copy(string: ARRAY OF CHAR; inx, len: CARDINAL; 
+		 VAR result: ARRAY OF CHAR);
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Delete - delete 'len' characters starting at 'inx' *)
+(* from 'string'. If the string end (0C) would be deleted, it 	*)
+(* is set to 'inx'.						*)
+(*--------------------------------------------------------------*)
+  PROCEDURE Delete(VAR string: ARRAY OF CHAR; inx, len: CARDINAL); 
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Insert -- insert 'subString' beginning at 'inx'    *)
+(* into 'string'. Adjusts length, clips if necessary.		*)
+(* Tests also if 'string' ends before 'inx' and does no work in	*)
+(* that case.							*)
+(*--------------------------------------------------------------*)
+  PROCEDURE Insert(subString: ARRAY OF CHAR; VAR string: ARRAY OF CHAR;
+		    inx: CARDINAL);
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Length -- find length of 'string'. Length is       *)
+(* either the index of the terminating 0C character or          *)
+(* 'StringLength'.                                              *)
+(*--------------------------------------------------------------*)
+  PROCEDURE Length(VAR string: ARRAY OF CHAR): CARDINAL;
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Pos -- find position of the first occurence of     *)
+(* 'subString' in 'string'. 'StringLength' is returned if there *)
+(* was no match or if 'subString' was empty.		        *)
+(*--------------------------------------------------------------*)
+  PROCEDURE Pos(subString, string: ARRAY OF CHAR): CARDINAL;
+
+END Strings.
+

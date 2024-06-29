@@ -1,0 +1,47 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                         DEFINITION MODULE MODLIB			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*									   *)
+(*                                                                         *)
+(*									   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                        Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Dec - 13 - 1984 pwh                                       *)
+(* last updated: Dec - 13 - 1984 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE MODLIB;
+ 
+
+  EXPORT QUALIFIED
+	SQRT, CALCR;
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE SQRT -- REAL square root function.                 *)
+(*--------------------------------------------------------------*)
+  PROCEDURE SQRT(x:REAL): REAL;
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE CALCR -- calculate a record position:		*)
+(* given: record size, record number on a "FILE OF RECORD"	*)
+(* result: recSize * recNum DIV 128, 24 bits wide.		*)
+(*--------------------------------------------------------------*)
+  PROCEDURE CALCR(VAR recHi, recLow: CARDINAL; recSize, recNum: CARDINAL);
+  
+
+END MODLIB.
+

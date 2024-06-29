@@ -1,0 +1,94 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                         DEFINITION MODULE Files			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                        Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(* created 	Nov -  1 - 1984 pwh                                        *)
+(* updated 	Nov -  1 - 1984 pwh                                        *)
+(*		Apr -  4 - 1985 pwh					   *)
+(***************************************************************************)
+DEFINITION MODULE Files;
+ 
+
+  FROM SYSTEM IMPORT
+	ADDRESS, WORD;
+
+  EXPORT QUALIFIED
+	FILE, EOF, FileState, FileHandler,
+	FileStatus, SetFileHandler, DummyHandler,
+	Open, Create, Close, Release, 
+	Rename, Delete,
+	FilePos, InitPos, FiniPos, 
+	SetPos, GetPos, GetEOF, (* SetEOF, *) 
+	CalcPos, AddPos,
+	Read, Write, ReadRec, WriteRec, ReadBytes, WriteBytes;
+
+
+  TYPE
+    FILE;
+    FilePos;
+
+    FileState = (FileOK, 
+	         NameError, 
+	         UseError, 
+	   	 StatusError, 
+		 DeviceError, 
+		 EndError );
+
+    FileHandler = PROCEDURE(VAR FILE);
+
+
+  PROCEDURE EOF(f: FILE): BOOLEAN;
+  PROCEDURE FileStatus(f: FILE): FileState;
+  
+  PROCEDURE DummyHandler(VAR f: FILE);
+  PROCEDURE SetFileHandler(f: FILE; h: FileHandler);
+  
+  PROCEDURE Open  (VAR f: FILE; name: ARRAY OF CHAR): FileState;
+  PROCEDURE Create(VAR f: FILE; name: ARRAY OF CHAR): FileState;
+  
+  PROCEDURE Close  (VAR f: FILE): FileState;
+  PROCEDURE Release(VAR f: FILE): FileState;
+
+  PROCEDURE Delete(name: ARRAY OF CHAR): FileState;
+  PROCEDURE Rename(current, new: ARRAY OF CHAR): FileState;
+
+  PROCEDURE InitPos(VAR pos: FilePos);
+  PROCEDURE FiniPos(VAR pos: FilePos);
+
+  PROCEDURE GetPos(f: FILE; VAR pos: FilePos);
+  PROCEDURE GetEOF(f: FILE; VAR pos: FilePos);
+  
+  PROCEDURE SetPos(f: FILE; pos: FilePos);
+(*--- CP/M 3.x only   
+  PROCEDURE SetEOF(f: FILE; pos: FilePos);
+---*)
+
+  PROCEDURE CalcPos(recNum, recSize: CARDINAL; VAR pos: FilePos);
+  PROCEDURE AddPos(position, offset: FilePos; VAR result: FilePos);
+
+
+  PROCEDURE Read(VAR f: FILE; VAR ch: CHAR);
+  PROCEDURE ReadRec(VAR f: FILE; VAR rec: ARRAY OF WORD);
+  PROCEDURE ReadBytes(VAR f: FILE; buf: ADDRESS; nBytes: CARDINAL): CARDINAL;
+
+  PROCEDURE Write(VAR f: FILE; ch: CHAR);
+  PROCEDURE WriteRec(VAR f: FILE; rec: ARRAY OF WORD);
+  PROCEDURE WriteBytes(VAR f: FILE; buf: ADDRESS; nBytes: CARDINAL): CARDINAL;
+
+END Files.
+

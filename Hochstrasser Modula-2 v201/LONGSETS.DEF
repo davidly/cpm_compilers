@@ -1,0 +1,53 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                        DEFINITION MODULE LongSets			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                       Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Sep - 12 - 1984 pwh                                       *)
+(* last updated: Sep - 14 - 1984 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE LongSets;
+ 
+
+  EXPORT QUALIFIED
+	LONGSET,
+	Init, Unite, Diff, InterSect, Xor,
+	Include, Exclude, Included;
+
+
+  CONST
+    LongBits = 256;		(* # of bits in long sets *)
+    BitsPerSet = 16;		(* bits in a BITSET *)
+
+  TYPE
+    LONGSET = ARRAY [ 0 .. (LongBits - 1) DIV BitsPerSet ] OF BITSET;
+
+
+  PROCEDURE Init     ( VAR set: LONGSET );
+  PROCEDURE Unite    ( s1, s2: LONGSET; VAR union: LONGSET );
+  PROCEDURE Diff     ( s1, s2: LONGSET; VAR difference: LONGSET );
+  PROCEDURE InterSect( s1, s2: LONGSET; VAR intersect: LONGSET );
+  PROCEDURE Xor	     ( s1, s2: LONGSET; VAR symSetDiff: LONGSET );
+  PROCEDURE Include  ( VAR set: LONGSET; bit: CARDINAL );
+  PROCEDURE InclRange( VAR set: LONGSET; start, end: CARDINAL );
+  PROCEDURE Exclude  ( VAR set: LONGSET; bit: CARDINAL );
+  PROCEDURE Included ( set: LONGSET; bit: CARDINAL ): BOOLEAN;
+
+END LongSets.
+

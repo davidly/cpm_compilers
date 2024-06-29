@@ -1,0 +1,179 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                         DEFINITION MODULE OpSys                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module                     *)
+(*                                                                         *)
+(*                                for the                                  *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M                      *)
+(*                                                                         *)
+(*                                   by                                    *)
+(*                                                                         *)
+(*                       Hochstrasser Computing AG                         *)
+(*                           Leonhardshalde 21                             *)
+(*                              8001 Zuerich                               *)
+(*                              Switzerland                                *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Aug - 24 - 1984 pwh                                       *)
+(* last updated: Oct - 17 - 1984 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE OpSys;
+ 
+
+  FROM SYSTEM IMPORT 
+        ADDRESS, WORD;
+
+  EXPORT QUALIFIED 
+        FCBFileName,
+        FCB, RndFCB,
+        CPMStringBuffer,
+        BdosFunctions,
+        Bdos, BdosHL,
+        DirEntry, DirBuf, DirBufPtr,
+        DPB, DPBptr, DPH, DPHptr,
+        BiosFunctions,
+        Bios, BiosHL;
+        
+
+(* WARNING -- this module is a potential danger to your system if you don't *)
+(*         now exactly what you're doing. So, if you don't have any expe-   *)
+(*         rience,                                                          *)
+(*                 K E E P   Y O U R   F I N G E R S   O F F   ! ! !        *)
+(*                                                                          *)
+(*         Thank You.                                                       *)
+
+
+  TYPE
+
+    FCBFileName = RECORD
+      CASE BOOLEAN OF
+        TRUE: disk: CHAR;
+              name: ARRAY[0..7] OF CHAR;
+              type: ARRAY[0..2] OF CHAR;
+      | FALSE:text: ARRAY[0..11] OF CHAR;
+      END;
+    END;
+
+    FCB = RECORD
+      name: FCBFileName;
+      CASE BOOLEAN OF
+        TRUE:  rest: ARRAY[ 0..20 ] OF CHAR; 
+      | FALSE: ex,                    (* extent *)
+               s1,s2,                 (* system data *)
+               rc: CHAR;              (* record count *)
+               d : ARRAY[ 0..15 ] OF CHAR;
+               cr: CHAR;              (* current record *)
+      END; 
+    END; (* FCB *)
+
+    RndFCB = RECORD
+      name: FCBFileName;
+      CASE BOOLEAN OF
+        TRUE:  rest: ARRAY[ 0..23 ] OF CHAR; 
+      | FALSE: ex,                    (* extent *)
+               s1,s2,                 (* system data *)
+               rc: CHAR;              (* record count *)
+               d : ARRAY[ 0..15 ] OF CHAR;
+               cr: CHAR;              (* current record *)
+               rec: CARDINAL;         (* rnd rec # *)
+               r2: CHAR;              (* rnd rec, hi part, ev. ovfl *)
+      END; 
+    END; (* RndFCB *)
+
+    CPMStringBuffer = RECORD
+                        maxLen: CHAR;
+                        curLen: CHAR;
+                        text: ARRAY[0..255] OF CHAR;
+                      END;
+
+    BdosFunctions = ( boot, crtIn, crtOut, rdrIn, punOut, 
+                      lstOut, dirIO, getIOB, setIOB, prtStr, 
+                      rdCBuf, crtSt, verNo, reset, selDsk, 
+                      openF, closeF, searchFst, searchNxt, deleteF, 
+                      readSeq, writeSeq, makeF, renameF, getLogin,
+                      retCDsk, setDMA, getAlloc, writeProt, getRO,
+                      setFA, getDPB, user, readRan, writeRan,
+                      compFSize, setRec, resDrv, dummy1, dummy2, 
+                      writeRanZF );
+                        
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Bdos -- BDOS call "the normal way":                *)
+(* Function # in C, input parameter in DE, result in A.         *)
+(*--------------------------------------------------------------*)
+  PROCEDURE Bdos( func, parm: WORD; VAR return: WORD );
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE BdosHL -- BDOS call "the other way around":        *)
+(* Function # in C, input parameter in DE, result in HL.        *)
+(*--------------------------------------------------------------*)
+  PROCEDURE BdosHL( func, parm: WORD; VAR return: WORD );
+
+
+  TYPE
+
+    DirEntry  = RECORD
+                  name  : FCBFileName;
+                  ex,
+                  s1,s2,
+                  rc    : CHAR;
+                  d     : ARRAY [0..15] OF CHAR;
+                END;
+    DirBufPtr = POINTER TO DirBuf;
+    DirBuf = ARRAY[ 0 .. 3 ] OF DirEntry;
+    
+    DPBptr = POINTER TO DPB;
+    DPB = RECORD
+            spt: CARDINAL;
+            bsh, 
+            blm,
+            exm: CHAR;
+            dsm: CARDINAL;
+            drm: CARDINAL;
+            al0,
+            al1: CHAR;
+            cks,
+            off: CARDINAL;
+          END;
+
+    DPHptr = POINTER TO DPH;
+    DPH = RECORD
+            xlt      : ADDRESS;
+            s0,s1,s2 : CARDINAL;
+            dirbuf   : DirBufPtr;
+            dpb      : DPBptr;
+            csv      : ADDRESS;
+            alv      : ADDRESS;
+          END;
+
+    BiosFunctions = ( wBoot, conSt, conIn, conOut, list, punch,
+                      reader, home, dskSel, trkSet, secSet, DmaSet, 
+                      read, write, listSt, tranSec );
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Bios -- call normal BIOS routine with BC-Parameter.*)
+(* The address is calculated as 3 * 'function'; you have the    *)
+(* responsibility to give an existing function number.          *)
+(* 'return' contains the value of the A-Reg upon return.        *)
+(*--------------------------------------------------------------*)
+  PROCEDURE Bios( routine, parm: WORD; VAR return: WORD );
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE BiosHL -- call a BIOS function that returns the    *)
+(* result in the HL register. There are two input parameters,   *)
+(* 'parmBC' and 'parmDE', which are loaded into the indicated   *)
+(* register pairs before the call.                              *)
+(*--------------------------------------------------------------*)
+  PROCEDURE BiosHL( routine, parmBC, parmDE: WORD; VAR return: WORD );
+
+
+END OpSys.
+

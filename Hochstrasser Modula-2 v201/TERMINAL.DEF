@@ -1,0 +1,48 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                        DEFINITION MODULE Terminal			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                    Modula-2 Standard Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                       Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Aug - 24 - 1984 pwh                                       *)
+(* last updated: Aug - 24 - 1984 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE Terminal;
+ 
+
+  EXPORT QUALIFIED
+	termCH,
+	Read, BusyRead, ReadAgain, ReadString, ReadLn,
+	Write, WriteString, WriteLn;
+
+  VAR
+    termCH: CHAR;	(* terminator of last read string operation *)
+
+
+  PROCEDURE Read       (VAR ch: CHAR);
+  PROCEDURE ReadString (VAR string: ARRAY OF CHAR);
+  PROCEDURE ReadLn     (VAR string: ARRAY OF CHAR);
+  PROCEDURE BusyRead   (VAR ch: CHAR);
+  PROCEDURE ReadAgain;
+
+  PROCEDURE Write      (ch: CHAR);
+  PROCEDURE WriteString(string: ARRAY OF CHAR);
+  PROCEDURE WriteLn;
+
+END Terminal.
+

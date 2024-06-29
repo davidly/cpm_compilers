@@ -1,0 +1,21 @@
+DEFINITION MODULE TERM1;		(* pK Jan 29, 1984	*)
+
+  EXPORT QUALIFIED 
+	Read, Write, WriteLn, WriteString, WriteCard;
+
+
+  PROCEDURE Read(VAR ch: CHAR);
+  (* read a char from console, no echo	*)
+
+  PROCEDURE Write(ch: CHAR);
+  (* write a char to console, expands ^I, checks for ^P & ^S	*)
+
+  PROCEDURE WriteLn;
+
+  PROCEDURE WriteString(s : ARRAY OF CHAR);
+  (* Outputs a string to console. Delimiter is a 0C.		*)
+
+  PROCEDURE WriteCard(card, n: CARDINAL);
+
+END TERM1.
+

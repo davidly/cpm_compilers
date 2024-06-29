@@ -1,0 +1,74 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                         DEFINITION MODULE SeqIO			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                    Modula-2 Standard Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                       Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(* created	Aug - 24 - 1984 pwh                                        *)
+(* updated	Mar - 23 - 1985 pwh                                        *)
+(***************************************************************************)
+DEFINITION MODULE SeqIO;
+
+  EXPORT QUALIFIED 
+    	FILE, FileState, FileUsage, FileHandler,
+	FileStatus, FileUse, SetFileHandler, DummyHandler, GetFileName,
+	Open, Create, SetBufferSize,
+	Close, Delete, Rename,
+       	Read, EOF, Write;
+
+
+  TYPE 
+    FILE;
+
+    FileState = (FileOK, 		(* all ok *)
+		 DirOpsOK,		(* ambigous file name; dir ops ok *)
+		 NameError, 		(* file- or device name erroneous *)
+		 DeviceError, 		(* "hardware" error *)
+		 EndError, 		(* read past End Of File *)
+		 UseError);		(* input device used for output *)
+					(* and vice versa *)
+
+    FileUsage = (ReadFile, 		(* read only file *)
+		 WriteFile, 		(* write only file *)
+		 ReadDev, 		(* read only device *)
+		 TextDev, 		(* read/write device (CON:) *)
+		 WriteDev);		(* write only device *)
+
+    FileHandler = PROCEDURE(VAR FILE);
+
+
+  PROCEDURE Open(VAR f:FILE; name: ARRAY OF CHAR): FileState;
+  PROCEDURE Create(VAR f:FILE; name: ARRAY OF CHAR): FileState;
+  PROCEDURE SetBufferSize(sectors: CARDINAL);
+
+  PROCEDURE Delete(name: ARRAY OF CHAR): FileState;
+  PROCEDURE Rename(old, new: ARRAY OF CHAR): FileState;
+  PROCEDURE Close(VAR f:FILE): FileState;
+  PROCEDURE Write(VAR f: FILE; info: CHAR);
+
+  PROCEDURE Read(VAR f: FILE; VAR info: CHAR);
+  PROCEDURE EOF(f: FILE): BOOLEAN;
+
+  PROCEDURE FileStatus(f: FILE): FileState;
+  PROCEDURE DummyHandler(VAR f: FILE);
+  PROCEDURE SetFileHandler(f: FILE; handler: FileHandler);
+  PROCEDURE GetFileName(f:FILE; VAR name: ARRAY OF CHAR);
+
+  PROCEDURE FileUse(f: FILE): FileUsage;
+
+END SeqIO.
+

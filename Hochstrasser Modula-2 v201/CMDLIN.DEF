@@ -1,0 +1,38 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                                                                         *)
+(*                         DEFINITION MODULE CmdLin			   *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                        Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Oct - 29 - 1984 pwh                                       *)
+(* last updated: Jan -  8 - 1985 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE CmdLin;
+
+  EXPORT QUALIFIED 
+	ReadCommandLine;
+
+
+  (*--------------------------------------------------------------*)
+  (* PROCEDURE ReadCommandLine -- read command line into STRING   *)
+  (* ComLin.							  *)
+  (*--------------------------------------------------------------*)
+  PROCEDURE ReadCommandLine(VAR ComLin: ARRAY OF CHAR);
+
+END CmdLin.
+

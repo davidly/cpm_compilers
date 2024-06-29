@@ -1,0 +1,74 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                         DEFINITION MODULE Texts                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Standard Library Module                    *)
+(*                                                                         *)
+(*                                for the                                  *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M                      *)
+(*                                                                         *)
+(*                                   by                                    *)
+(*                                                                         *)
+(*                        Hochstrasser Computing AG                        *)
+(*                           Leonhardshalde 21                             *)
+(*                              8001 Zuerich                               *)
+(*                              Switzerland                                *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(* created      Dec - 28 - 1984 pwh                                        *)
+(* updated      Mar - 25 - 1985 pwh                                        *)
+(***************************************************************************)
+DEFINITION MODULE Texts;
+ 
+  FROM SeqIO IMPORT FILE;
+
+  EXPORT QUALIFIED
+        TEXT, TextState, TextHandler, ReadMode,
+        input, output, console,
+        EOL, EOT,
+        TextStatus,
+        SetTextHandler, DummyTextHandler,
+        Connect, Disconnect,
+        Read, ReadInt, ReadCard, ReadLn, ReadAgain, Mode,
+        Write, WriteString, WriteInt, WriteCard, WriteLn;
+
+  TYPE
+    TEXT;
+
+    TextState = (TextOK, FormatError, FileError, ConnectError);
+
+    TextHandler = PROCEDURE(TextState);
+
+    ReadMode = (Line, Num, Real, Str);
+
+  VAR
+    input, output, console: TEXT;
+
+  PROCEDURE EOL(t: TEXT): BOOLEAN;
+  PROCEDURE EOT(t: TEXT): BOOLEAN;
+
+  PROCEDURE TextStatus(t: TEXT): TextState;
+  PROCEDURE SetTextHandler(t: TEXT; handler: TextHandler);
+  PROCEDURE DummyTextHandler(state: TextState);
+
+  PROCEDURE Connect     (VAR t: TEXT; f: FILE): TextState;
+  PROCEDURE Disconnect  (VAR t: TEXT): TextState;
+
+  PROCEDURE Read        (t: TEXT; VAR ch: CHAR);
+  PROCEDURE ReadInt     (t: TEXT; VAR i: INTEGER);
+  PROCEDURE ReadCard    (t: TEXT; VAR c: CARDINAL);
+  PROCEDURE ReadLn      (t: TEXT; VAR s: ARRAY OF CHAR);
+  PROCEDURE ReadAgain   (t: TEXT);
+  PROCEDURE Mode        (m: ReadMode);
+
+  PROCEDURE Write       (t: TEXT; ch: CHAR);
+  PROCEDURE WriteString (t: TEXT; s: ARRAY OF CHAR);
+  PROCEDURE WriteInt    (t: TEXT; i: INTEGER; n: CARDINAL);
+  PROCEDURE WriteCard   (t: TEXT; c,n: CARDINAL);
+  PROCEDURE WriteLn     (t: TEXT);
+
+END Texts.
+

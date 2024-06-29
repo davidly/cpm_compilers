@@ -1,0 +1,46 @@
+DEFINITION MODULE Conversions;               (* Jan - 31 - 1985 pwh *)
+ 
+  FROM SYSTEM IMPORT
+	WORD;
+
+
+  EXPORT QUALIFIED
+	NumToStr,  StrToNum,
+	IntToStr,  StrToInt,
+        CardToStr, StrToCard, 
+        HexToStr,  StrToHex;
+
+
+(* NOTE -- string arguments cannot have any leading or trailing blanks;	   *)
+(*	   result is TRUE upon successful conversion.			   *)
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE NumToStr -- convert 'c' into 'string' using 'base' *)
+(* as radix. Fold any characters > '9' to 'A'..'Z', the ones    *)
+(* > 'Z' to 'a'..'z'. This allows for a maximum base of 63.     *)
+(* Bases 0 and 1 aren't accepted.			        *)
+(*--------------------------------------------------------------*)
+    PROCEDURE NumToStr(num, base: CARDINAL; VAR str: ARRAY OF CHAR): BOOLEAN;
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE StrToNum -- convert contents of 'string'           *)
+(* to a 2-byte number using 'base' as radix for the conversion.	*)
+(* Accepted digits are:	'0'..'9', 'A'..'Z', 'a'..'z'.	        *)
+(* Assert 1 < base < 64!                                        *)
+(* error if: number too big, impossible bases, wrong digits.	*)
+(*--------------------------------------------------------------*)
+    PROCEDURE StrToNum(str: ARRAY OF CHAR; base: CARDINAL;
+			       VAR num: CARDINAL): BOOLEAN;
+
+  PROCEDURE IntToStr(int: INTEGER; VAR str: ARRAY OF CHAR): BOOLEAN;
+  PROCEDURE StrToInt(str: ARRAY OF CHAR; VAR int: INTEGER): BOOLEAN;
+
+  PROCEDURE CardToStr(card: CARDINAL; VAR str: ARRAY OF CHAR): BOOLEAN;
+  PROCEDURE StrToCard(str: ARRAY OF CHAR; VAR card: CARDINAL): BOOLEAN;
+
+  PROCEDURE HexToStr(hex: WORD; VAR str: ARRAY OF CHAR): BOOLEAN;
+  PROCEDURE StrToHex(str: ARRAY OF CHAR; VAR hex: WORD): BOOLEAN;
+
+END Conversions.
+

@@ -1,0 +1,145 @@
+(****************************************************************************)
+(*                                                                          *)
+(*     DEFINITION MODULE FileSys -- simple file system for the compiler	    *)
+(*                                                                          *)
+(*                                                                          *)
+(* This module allows buffered sequential file I/O.                         *)
+(*                                                                          *)
+(* Each file has to be created by 'AssignName'.                             *)
+(*                                                                          *)
+(* The module is optimized to use small space in memory.                    *)
+(*                                                                          *)
+(*                                                                          *)
+(*                                                                          *)
+(*                                                                          *)
+(*                                                                          *)
+(*                                                                          *)
+(*                                                                          *)
+(*                                                                          *)
+(*                                                                          *)
+(*                                                                          *)
+(* created     : Jan - 15 - 1984 pwh                                        *)
+(* last updated: Oct - 16 - 1984 pwh                                        *)
+(****************************************************************************)
+DEFINITION MODULE FileSys;
+
+
+  FROM OpSys IMPORT
+	FCBFileName;
+
+
+  EXPORT QUALIFIED
+        File, PathType,
+        result, 
+	SetSearchPath,
+	MakeFile, UsesFile,
+        AssignName, 
+	CreateFile, OpenFile,
+	ReadByte, EOF, WriteByte,
+	CloseFile, DisposeFile,
+	Delete, DeleteFile,
+	Rename, RenameFile;
+
+
+  CONST
+    searchPathLength = 6;		(* max. 6 drives to search *) 
+
+  TYPE 
+
+    File;
+    PathType = ARRAY [0..searchPathLength-1] OF CHAR;
+
+
+  VAR 
+    result: CARDINAL;	(* CP/M return value. *)
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE SetSearchPath -- set search path for 'OpenFile'.   *)
+(*--------------------------------------------------------------*)
+  PROCEDURE SetSearchPath( newSearchPath: PathType );
+
+
+(*------------------------------------------------------*)
+(* PROCEDURE AssignName -- assign a name to a file and  *)
+(* prepare its FCB for opening.                         *)
+(*------------------------------------------------------*)
+  PROCEDURE AssignName( VAR f: File; fname: FCBFileName );
+
+(*------------------------------------------------------*)
+(* PROCEDURE CreateFile -- create a file, deleting an   *)
+(* an existing old version first. FCB must be prepared  *)
+(* by Assign, i.e. name is assigned, rest cleared.      *)
+(*------------------------------------------------------*)
+  PROCEDURE CreateFile( f: File );
+
+(*------------------------------------------------------*)
+(* PROCEDURE OpenFile -- open an existing file for read *)
+(* FCB has to be prepared by Assign, i.e. name is       *)
+(* assigned, rest cleared.                              *)
+(*------------------------------------------------------*)
+  PROCEDURE OpenFile( f: File );
+
+(*------------------------------------------------------*)
+(* PROCEDURE CloseFile -- flush a file's buffer and     *)
+(* close it.                                            *)
+(*------------------------------------------------------*)
+  PROCEDURE CloseFile( f: File );
+
+(*------------------------------------------------------*)
+(* PROCEDURE Delete - delete file 'delfil'.             *)
+(*------------------------------------------------------*)
+  PROCEDURE Delete( delfil: FCBFileName );
+
+(*------------------------------------------------------*)
+(* PROCEDURE DeleteFile -- delete an assigned file.     *)
+(* This also disposes the file descriptor.		*)
+(*------------------------------------------------------*)
+  PROCEDURE DeleteFile( VAR f: File );
+
+(*------------------------------------------------------*)
+(* PROCEDURE Rename -- rename 'old' to 'new'.           *)
+(*------------------------------------------------------*)
+  PROCEDURE Rename( old, new: FCBFileName );
+
+(*------------------------------------------------------*)
+(* PROCEDURE RenameFile -- rename an assigned file.     *)
+(*------------------------------------------------------*)
+  PROCEDURE RenameFile( oldFile: File; newName: FCBFileName );
+
+(*------------------------------------------------------*)
+(* PROCEDURE ReadByte -- read byte.                     *)
+(*------------------------------------------------------*)
+  PROCEDURE ReadByte( f: File; VAR ch: CHAR );
+
+(*------------------------------------------------------*)
+(* PROCEDURE EOF - test for end of file.                *)
+(*------------------------------------------------------*)
+  PROCEDURE EOF( f: File ): BOOLEAN;
+
+(*------------------------------------------------------*)
+(* PROCEDURE WriteByte -- write a byte to a specified   *)
+(* file.                                                *)
+(*------------------------------------------------------*)
+  PROCEDURE WriteByte( f: File; b: CHAR );
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE MakeFile -- create a file. Issue an error message  *)
+(* and abort if operation is unsuccessful.			*)
+(*--------------------------------------------------------------*)
+  PROCEDURE MakeFile( VAR f: File; n: FCBFileName );
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE UsesFile -- open an existing file. Issue an error  *)
+(* message and abort if operation is unsuccessful.		*)
+(*--------------------------------------------------------------*)
+  PROCEDURE UsesFile( VAR f: File; n: FCBFileName );
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE DisposeFile -- dispose a file descriptor after the *)
+(* file has been closed or if it is no longer needed.		*)
+(*--------------------------------------------------------------*)
+  PROCEDURE DisposeFile( VAR f: File );
+
+END FileSys.
+

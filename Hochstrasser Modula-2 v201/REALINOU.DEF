@@ -1,0 +1,62 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                       DEFINITION MODULE RealInOut			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                    Modula-2 Standard Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                       Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Dec -  6 - 1984 pwh                                       *)
+(* last updated: Jan -  2 - 1985 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE RealInOut;
+ 
+
+  EXPORT QUALIFIED
+	Done,
+	ReadReal, WriteReal;
+
+
+  VAR
+    Done: BOOLEAN;
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE ReadReal -- Read a REAL number x according to the  *)
+(* syntax:						 	*)
+(*								*)
+(*  RealNo   = Fraction Exponent.				*)
+(*  Fraction = sign number ['.' number].			*)
+(*  Exponent = ['E' sign number].				*)
+(*  sign     = ['+'|'-'].					*)
+(*  number   = digit {digit}.					*)
+(*  digit    = '0'| .. |'9'.					*)
+(*								*)
+(* Done := 'a number was read'.					*)
+(* At most 7 significant digits, leading zeroes not counting.   *)
+(* Exponent is in the range -38..38.				*)
+(* Input terminates with a blank or any control character.	*)
+(*--------------------------------------------------------------*)
+  PROCEDURE ReadReal(VAR x: REAL);
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE WriteReal -- write x using n characters. If fewer  *)
+(* than n characters are needed, leading blanks are inserted.	*)
+(*--------------------------------------------------------------*)
+  PROCEDURE WriteReal(x: REAL; n: CARDINAL);
+
+END RealInOut.
+

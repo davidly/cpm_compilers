@@ -1,0 +1,60 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                         DEFINITION MODULE Moves                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module                     *)
+(*                                                                         *)
+(*                                for the                                  *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M                      *)
+(*                                                                         *)
+(*                                   by                                    *)
+(*                                                                         *)
+(*                        Hochstrasser Computing AG                        *)
+(*                           Leonhardshalde 21                             *)
+(*                              8001 Zuerich                               *)
+(*                              Switzerland                                *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Aug - 24 - 1984 pwh                                       *)
+(* last updated: Aug - 24 - 1984 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE Moves;
+ 
+
+  FROM SYSTEM IMPORT 
+        ADDRESS;
+
+
+  EXPORT QUALIFIED
+        MoveLeft, MoveRight, Fill;
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE MoveLeft -- move 'length' bytes starting at        *)
+(* 'source' to 'destination'. Move from left to right. (LDIR)   *)
+(* Any length is allowed (incl. 0).                             *)
+(*--------------------------------------------------------------*)
+  PROCEDURE MoveLeft( source, destination: ADDRESS; length: CARDINAL );
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE MoveRight -- move 'length' bytes starting at       *)
+(* 'source' + 'length' - 1 to 'destination'. Move is done from  *)
+(* right to left (LDDR). Any length is allowed (incl. 0).       *)
+(*--------------------------------------------------------------*)
+  PROCEDURE MoveRight( source, destination: ADDRESS; length: CARDINAL );
+
+
+(*--------------------------------------------------------------*)
+(* PROCEDURE Fill -- fill 'length' bytes starting at 'start'    *)
+(* with 'ch'. Any length is allowed (incl. 0).                  *)
+(*--------------------------------------------------------------*)
+  PROCEDURE Fill( start: ADDRESS; length: CARDINAL; ch: CHAR );
+
+
+END Moves.
+

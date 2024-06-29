@@ -1,0 +1,33 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                                                                         *)
+(*                       DEFINITION MODULE Chaining			   *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                        Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Mar -  5 - 1984 pwh                                       *)
+(* last updated: Mar -  5 - 1985 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE Chaining;
+
+  EXPORT QUALIFIED
+	Chain;
+
+  PROCEDURE Chain(fileName: ARRAY OF CHAR);
+
+END Chaining.
+

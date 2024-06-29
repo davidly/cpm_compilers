@@ -1,0 +1,47 @@
+(***************************************************************************)
+(*                                                                         *)
+(*                        DEFINITION MODULE Controls			   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                     Modula-2 Utility Library Module			   *)
+(*                                                                         *)
+(*                                for the				   *)
+(*                                                                         *)
+(*                     Modula-2 System for Z80 / CP/M 			   *)
+(*                                                                         *)
+(*                                   by					   *)
+(*                                                                         *)
+(*                       Hochstrasser Computing AG			   *)
+(*                           Leonhardshalde 21				   *)
+(*                              8001 Zuerich				   *)
+(*                              Switzerland				   *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*                                                                         *)
+(*      created: Sep - 12 - 1984 pwh                                       *)
+(* last updated: Sep - 12 - 1984 pwh                                       *)
+(***************************************************************************)
+DEFINITION MODULE Controls;
+ 
+
+  EXPORT QUALIFIED
+	CtrlAt,CtrlA, CtrlB, CtrlC, CtrlD, CtrlE, CtrlF, CtrlG,
+	CtrlH, CtrlI, CtrlJ, CtrlK, CtrlL, CtrlM, CtrlN, CtrlO,
+	CtrlP, CtrlQ, CtrlR, CtrlS, CtrlT, CtrlU, CtrlV, CtrlW,
+	CtrlX, CtrlY, CtrlZ;
+
+
+  CONST	
+
+    CtrlAt= 00C; CtrlA = 01C; CtrlB = 02C; CtrlC = 03C; 
+    CtrlD = 04C; CtrlE = 05C; CtrlF = 06C; CtrlG = 07C;
+    CtrlH = 10C; CtrlI = 11C; CtrlJ = 12C; CtrlK = 13C;
+    CtrlL = 14C; CtrlM = 15C; CtrlN = 16C; CtrlO = 17C;
+    CtrlP = 20C; CtrlQ = 21C; CtrlR = 22C; CtrlS = 23C;
+    CtrlT = 24C; CtrlU = 25C; CtrlV = 26C; CtrlW = 27C;
+    CtrlX = 30C; CtrlY = 31C; CtrlZ = 32C;
+
+
+END Controls.
+
