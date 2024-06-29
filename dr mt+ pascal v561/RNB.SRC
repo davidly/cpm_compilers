@@ -1,0 +1,95 @@
+MODULE RNBMODULE;
+(*
+ * [PASLIB] @RNB - Read next buffer from file.
+ * Revisions:
+ * 9/17/80 Last update
+ *
+ *)
+
+(*$I fibdef.lib*)
+
+VAR
+  @LFB : 	EXTERNAL ^FIB;
+  RESULTIO:	EXTERNAL INTEGER;
+
+EXTERNAL FUNCTION @BDOS(FUNC:INTEGER; PARM:WORD):INTEGER;
+EXTERNAL PROCEDURE @DFLT;
+
+(*	PURPOSE:	READ n BYTES FROM A FILE POINTED TO BY @LFB 	*)
+(*			n IS SPECIFIED BY @LFB^.IOSIZE		    	*)
+(*	LAST UPDATE:	SEPTEMBER 17, 1980				*)
+
+PROCEDURE @RNB;
+VAR
+  DSTPTR: ^BYTE;
+  N,I : INTEGER;
+BEGIN
+  MOVE(@LFB^.FBUFADR,DSTPTR,2);		  (* SET DEST POINTER *)
+
+  IF @LFB^.OPTION = FCONIO THEN 	  (* CON:, DO AN ECHOING READ *)
+    BEGIN
+      DSTPTR^ := CHR(@BDOS(1,WRD(0)));	  (* GO READ A CHAR WITH ECHO *)
+      IF DSTPTR^ = $0D THEN	  	  (* ECHO CR WITH CRLF *)
+	I := @BDOS(2,WRD($0A))
+      ELSE IF DSTPTR^ = $08 THEN	  (* ECHO BS WITH SP/BS *)
+	BEGIN
+	  I := @BDOS(2,WRD(' '));
+	  I := @BDOS(2,WRD($08))
+	END;
+      EXIT
+    END
+  ELSE
+    IF @LFB^.OPTION = FTRMIO THEN 	  (* KBD: DO A NON-ECHO READ *)
+      BEGIN
+	REPEAT
+	  DSTPTR^ := CHR(@BDOS(6,WRD($FF))); (* GO READ A CHAR WITH NO ECHO *)
+	UNTIL DSTPTR^ <> 0;
+	EXIT
+      END
+    ELSE (* check for rdr: *)
+      IF @LFB^.OPTION = FAUXIO THEN (* RDR: *)
+        BEGIN
+	  DSTPTR^ := CHR(@BDOS(3,WRD(0))); (* GO READ RDR *)
+	END;
+
+  IF @LFB^.NOSECTRS THEN
+    BEGIN
+      @LFB^.FEOF := TRUE;
+      EXIT
+    END;
+
+  FOR N := 1 TO @LFB^.IOSIZE DO
+    BEGIN
+      WITH @LFB^ DO
+        BEGIN
+          IF FSECINX = 128 THEN (* TIME TO READ MORE *)
+            BEGIN
+	      FSECINX := 0;
+	      IF NOT NOSECTRS THEN
+	        BEGIN
+                  I := @BDOS(26,WRD(ADDR(FSECTOR)));
+	          RESULTIO := @BDOS(20,WRD(ADDR(FCB)));
+	          IF RESULTIO <> 0 THEN
+	            NOSECTRS := TRUE
+	        END
+            END;
+          IF NOSECTRS THEN
+	    BEGIN
+	      DSTPTR^ := CHR($FF);
+	      FEOF := TRUE;
+	      BUFIDX := 0;
+	      @DFLT;
+	      EXIT
+	    END
+          ELSE
+	    DSTPTR^ := FSECTOR[FSECINX];
+          FSECINX := FSECINX + 1
+        END; (* WITH *)
+      DSTPTR := DSTPTR + 1
+    END;
+  @LFB^.BUFIDX := 0;			(* SO GNB WORKS *)
+  @DFLT;		(* TO PROTECT USER DATA FROM I/O CLOBBER *)
+END;
+
+MODEND.
+

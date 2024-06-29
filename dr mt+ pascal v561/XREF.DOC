@@ -1,0 +1,23 @@
+The files XREF.SRC and XREF.COM are the source and object
+of a Pascal cross referencing program.  They are public
+domain and not specific to Pascal/MT+ (i.e. may be used
+to cross reference other Pascal programs).  They may 
+also be used to cross reference other languages if the
+keyword table is changed.
+
+To operate:
+
+1. Type XREF<cr>
+
+2. XREF asks: Input file? <you type: full file name (e.g. A.SRC)>
+
+3. XREF asks: Output file name? <you type: full file or device name:>
+				           <filename> or
+					   CON: or
+					   LST:
+
+4. XREF asks: Do you want a listing? (N means No, anything else means YES)
+
+And that's it!
+
+

@@ -1,0 +1,32 @@
+MODULE RDNXCH;
+(*
+ * [PASLIB] @RNC - Read next character from buffer.
+ * Revisions:
+ *
+ *
+ *)
+
+(*$I fibdef.lib*)
+
+VAR
+  @LFB:		EXTERNAL ^FIB;
+
+EXTERNAL PROCEDURE GET(VAR F:FIB; SZ:INTEGER);
+
+FUNCTION @RNC:CHAR;
+BEGIN
+  IF @LFB^.OPTION > FRANDOM THEN  (* DON'T GIVE BUFFER, BUT READ DIRECTLY *)
+				  (* IF CONSOLE/TERMINAL FILE		  *)
+    BEGIN
+      GET(@LFB^,@LFB^.BUFLEN);
+      @RNC := @LFB^.FBUFFER[0]
+    END
+  ELSE
+    BEGIN
+      @RNC := @LFB^.FBUFFER[0];		(* @RNC := F^ *)
+      GET(@LFB^,@LFB^.BUFLEN);		(* GET(F)     *)
+    END
+END;
+
+MODEND.
+

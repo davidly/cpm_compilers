@@ -1,0 +1,27 @@
+(* 5.5 *)
+MODULE IOERROR;
+
+(*$I 80rtp/fibdef.lib*)
+(*$M @IOERR*)
+(*$M **)
+
+VAR
+  @LFB : EXTERNAL ^FIB;
+  @TMP : ^FIB;	(* FOR SAVING @LFB *)
+
+PROCEDURE @IOERR(CPMFUNC:INTEGER);
+BEGIN
+  @TMP := @LFB;
+  CASE CPMFUNC OF
+
+    15 : WRITELN('Unable to open: ',@TMP^.FNAME);
+    16 : WRITELN('Unable to close: ',@TMP^.FNAME);
+    21 : WRITELN('Error writing to: ',@TMP^.FNAME);
+    22 : WRITELN('Unable to create: ',@TMP^.FNAME)
+
+  END; (* CASE *)
+  @LFB := @TMP
+END;
+
+MODEND.
+

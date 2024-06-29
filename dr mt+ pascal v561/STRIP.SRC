@@ -1,0 +1,165 @@
+PROGRAM STRIPIT;
+(*
+ * STRIP - Selectively remove Overlay Entry Points from an overlay file.
+ * MT+ overlays may have more than one entry point, and in general, the
+ * linker will include all external symbols in the Overlay Entry Point
+ * Table, located at the end of the overlay code.  This utility displays
+ * each of these symbols and prompts you to keep or delete the entry
+ * point.  It is provided for users who require overlay files to be as
+ * compact as possible.
+ *
+ * Usage:
+ *		STRIP filename
+ *
+ * If filename is omitted, the program will prompt for one.  filename
+ * must be an overlay file produced by LINKMT (i.e., one with a numeric
+ * extension).
+ *
+ * Revised from the 5.5 version for 5.6 (3/10/83 SP)
+ * Revisions:
+ *
+ *
+ *
+ *)
+
+CONST
+  maxFileSize = 150; (* Max. overlay file size in 128-byte sectors *)
+
+TYPE
+  ALPHA = PACKED ARRAY [1..8] OF CHAR;
+
+  NAMEREC = RECORD
+                NAME : ALPHA;
+                ADDR : INTEGER
+            END;
+  NAMEARR = ARRAY [0..0] OF NAMEREC;
+  SECTOR = ARRAY [0..127] OF BYTE;
+  pstr = ^string;
+
+VAR
+  NAMELIST : ^NAMEARR;
+  I : INTEGER;
+  BASE : INTEGER;
+  TITLE : STRING;
+  INFILE : FILE OF SECTOR;
+  COUNT : INTEGER;
+  INLINE : STRING[2];
+  NEWSIZE : INTEGER;
+  cmdline : pstr;
+  BUF : ARRAY [0..maxFileSize] OF SECTOR;	(* Overlay loading area *)
+
+(* PASLIB: *)
+external function @cmd: pstr; (* returns pointer to command line *)
+
+
+PROCEDURE KRUNCH(I:INTEGER);
+VAR
+  J : INTEGER;
+BEGIN
+  REPEAT
+    NAMELIST^[I] := NAMELIST^[I+1];
+    I := I + 1;
+  UNTIL ORD(NAMELIST^[I].NAME[1]) = 0
+END;
+
+
+PROCEDURE show_table;
+var
+  i : integer;
+begin
+  I := 0;
+  while namelist^[i].name[1] <> chr(0) do begin
+    if i mod 6 = 0 then writeln;
+    WRITE(NAMELIST^[I].NAME, '  ');
+    I := I + 1
+  end;
+  writeln;
+  writeln(i, ' entry points remain.');
+end;
+
+
+BEGIN (* main *)
+  writeln('STRIP 5.6');
+
+  cmdline := @cmd;
+  title := cmdline^;
+  while (title[1] <> ' ') and (length(title) > 0) do
+    delete(title, 1, 1);	(* Remove leading blanks *)
+  if length(title) = 0 then begin
+    write('Overlay file name? ');
+    readln(title);
+  end;
+
+  ASSIGN(INFILE, TITLE);
+  RESET(INFILE);
+  if ioresult = 255 then begin
+    writeln('Can''t open ', title);
+    exit;
+  end;
+
+  COUNT := 0;
+  WHILE IORESULT <> 1 DO BEGIN
+    if count = maxFileSize then begin
+      writeln('File exceeds ', maxFileSize, ' sectors; increase maxFileSize');
+      exit;
+    end;
+    COUNT := COUNT + 1;
+    BUF[COUNT-1] := INFILE^;
+    SEEKREAD(INFILE, COUNT);
+  END;
+  WRITELN(Count,' sectors read');
+  
+  WRITE('Base address for this overlay (hex)? ');
+  READHEX(INPUT, BASE, 2);
+
+  MOVE(BUF[0,1],I,2);	(* Get pointer to Overlay Entry Point Table *)
+  WRITE('Entry point table begins at '); WRITEHEX(OUTPUT,I-BASE,2); WRITELN;
+
+  NAMELIST := ORD(ADDR(BUF)) + (I-BASE);
+  show_table;
+
+  I := 0;
+  repeat
+    repeat
+      WRITE('Retain ', NAMELIST^[I].NAME,' (Y/N/Q)? ');
+      READLN(INLINE);
+    until inline[1] in ['Y','y','N','n','Q','q'];
+    IF inline[1] in ['N','n'] THEN
+      KRUNCH(I)
+    ELSE
+      I := I + 1;
+  until (NAMELIST^[I].NAME[1]=CHR(0)) OR (inline[1] in ['Q','q']);
+
+  if inline[1] in ['Q','q'] then	(* advance i to end of table *)
+    while namelist^[i].name[1] <> chr(0) do
+      i := i + 1;
+
+  (* Now write it out *)
+
+  show_table;
+
+  NEWSIZE := (ORD(ADDR(NAMELIST^[I].NAME))-ORD(ADDR(BUF)));
+  IF (NEWSIZE MOD 128) <> 0 THEN
+    NEWSIZE := NEWSIZE + 128;
+
+  WRITELN('New file size is ',NEWSIZE DIV 128,' sectors');
+  COUNT := NEWSIZE DIV 128;
+
+  repeat
+    write('Rewrite ', title, ' (Y/N)? ');
+    readln(inline);
+    if inline[1] in ['N','n'] then begin
+      writeln('File not rewritten.');
+      exit;
+    end;
+  until inline[1] in ['Y','y'];
+
+  ASSIGN(inFILE,TITLE);
+  REWRITE(inFILE);
+  FOR I := 0 TO COUNT-1 DO BEGIN
+    inFILE^ := BUF[I];
+    SEEKWRITE(inFILE,I)
+  END;
+  CLOSE(inFILE,I)
+END.
+

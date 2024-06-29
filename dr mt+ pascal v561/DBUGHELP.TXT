@@ -1,0 +1,23 @@
+Pascal/MT+ SYMBOLIC DEBUGGER        (c) 1983 by Digital Research, Inc.
+
+<parm> = <name>[^] or <num> with optional +/-<num> offset
+<num>  = <int> or $ <hexnum>
+<name> = <varname> or <procname> : <varname>
+
+Display commands:
+
+D? <parm> 	Where ? is one of:
+		I - INTEGER   C - CHAR      L - BOOLEAN   R - REAL
+		B - BYTE      W - WORD      S - STRING    X - EXTENDED
+		V - var by name
+PN     		Display procedure names
+VN <procname>	Display all var names associated with this procedure
+SB <procname>	Set breakpoint
+RB <procname>	Remove breakpoint
+E+		Entry/Exit display on
+E-		Entry/Exit display off
+BE		Begin execution at start of user program
+GO		Continue execution from breakpont
+TR		Execute one Pascal statement and return
+T<num> 		Execute <num> Pascal statements and return
+

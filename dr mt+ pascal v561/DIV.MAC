@@ -1,0 +1,325 @@
+;----------------------------------------------------------------------
+; [PASLIB] DIV.MAC: Signed and unsigned integer division and modulus.
+; @DIV, @MOD, @XDIVD, @UDV, @UMD
+; Revisions:
+; 11/14/81 Last MGL update.
+; 12/16/82 Fixed SPR problem in @MOD (CHW)
+;
+;
+;----------------------------------------------------------------------
+
+	PUBLIC	@DIV		;SIGNED   DIV
+	PUBLIC	@MOD		;SIGNED   MOD
+	PUBLIC	@UDV		;UNSIGNED DIV
+	PUBLIC	@UMD		;UNSIGNED MOD
+	PUBLIC	@XDIVD		;USED BY WRITE INTEGER
+	PUBLIC	@GZF		;GET DIVIDE BY ZERO BOOLEAN FLAG ROUTINE
+
+	EXTRN	@HLT
+	EXTRN	@WRS		;FOR ERROR MESSAGE
+	EXTRN	@LFB		;FOR ERROR MESSAGE
+	EXTRN	OUTPUT		;FOR ERROR MESSAGE
+
+	DSEG
+DIVZFLAG: DS	1		;= 1 IF PREV DIVIDE WAS DIVIDE BY 0
+modsign:  ds      1               ;= FF if result to be negative (12/16/82)
+	CSEG
+
+@GZF:
+	POP	H
+	LDA	DIVZFLAG	;PUT INTO CARRY
+	RAR			;AND PUSH IT (CARRY IS LOW ORDER BIT OF PSW)
+	PUSH	PSW		;PUT FLAG ON STACK
+	PCHL			;AND EXIT
+
+DIVPOS: 
+	XCHG
+	LXI	H,0
+
+;***************************************************
+;SUBR 	:DHLDEBYBC
+;PURP	:DIVIDE HLDE BY BC
+;ENTRY	:HL=DIVIDEND HIGH WORD,DE=DIVIDEND LOW WORD
+;	:BC=DIVISOR
+;EXIT	:HL=QUOTIENT,DE=REMAINDER
+;	:IF BC=0 THEN ERROR=ZERODIVISOR
+;	:NOTE THE QUOTIENT MUST BE BETWEEN 0,65535
+;	:  EXAMPLE: 70000/1 IS ILLEGAL BUT 70000/2 IS LEGAL
+;USED	:ALL
+;CALLS	:@DHLDEBYBC
+;MACROS:NEGBC
+;***************************************************
+@DHLDEBYBC:
+	XRA	A
+	STA	DIVZFLAG	;INITIALLY NO ERRORS
+
+	MOV	A,C
+	ORA	B
+	JNZ	CONT0	;JIF NOT ZERO
+			;ELSE ERROR EXIT
+	JMP	ZDIV1
+;
+CONT0:			;DIVISOR<>0
+	MOV	A,B
+	CMA
+	MOV	B,A
+	MOV	A,C
+	CMA
+	MOV	C,A
+	INX	B
+			;TAKE NEGATIVE OF BC SO DAD B WILL 
+			;SET HL=HL-BC
+	MVI	A,17	;16 BITS + 1
+NEXTBIT:
+	DCR	A
+	JNZ	CONT1	;JIF NOT DONE
+			;ELSE EXIT
+	XCHG		;HL=QOUTIENT,DE=REMAINDER
+	JMP	DIVXIT
+;
+;NOT DONE
+;SHIFT HL LEFT CY=BIT 15
+CONT1:	DAD	H
+	JC	DIV2	;JIF BIT 15=1
+;
+;SHIFT DE LEFT AND INTO HL (HL BIT0=DE BIT 15)
+	XCHG
+	DAD	H
+	XCHG		;DE SHIFTED CY=DE BIT 15
+
+	JNC	DIV0	;JIF BIT15=0 (HL BIT0=0 ALREADY)
+	INR	L	;ELSE SET IT TO 1
+;
+;IF ABS(BC)>=HL THEN HL=HL-ABS(BC) AND E=E+1
+;??
+DIV0:
+	PUSH	H	;SAVE HL
+	DAD	B
+	JC	DIV1	;JIF ABS(BC) >= HL
+			; ELSE GOTO NEXTBIT
+	POP	H	;DISCARD SUBSTRACTION
+	JMP	NEXTBIT
+
+;
+; WELL ABS(BC) < HL SO INR E AND SET HL=HL-ABS(BC)
+;
+DIV1:
+	INR	E
+	INX	SP
+	INX	SP	;DROP THE SAVED HL FROM THE STACK
+	JMP	NEXTBIT
+;
+;
+;ARRIVE HERE IF NEXTBIT=1
+DIV2:
+	XCHG
+	DAD	H
+	XCHG		;SHIFT DE LEFT
+	JNC	DIV3	;JIF BIT 15=0
+	INR	L	;ELSE SET BIT0 OF HL=1
+;
+;NOW HL=HL-ABS(BC) AND E=E+1
+DIV3:
+	DAD	B
+	INR	E
+	JMP	NEXTBIT	;CONTINUE ON
+;
+DIVXIT:	
+	XCHG
+	RET
+
+ZDIV1:
+	lxi	h,output	;make it portable!
+	shld	@lfb
+	lxi	h,div0msg
+	push	h
+	lxi	h,-1
+	push	h
+	push	h
+	call	@wrs
+;	MVI	C,9
+;	LXI	D,DIV0MSG
+;	CALL	5
+	CALL	@HLT
+
+DIV0MSG:
+	db	div0len
+	db	13,10,'Divide by zero',13,10
+div0len	equ	$-div0msg-1
+
+	RET
+
+@XDIVD:
+	XRA	A	
+	STA	DIVZFLAG
+	ORA	C
+	JNZ	Y10		;CHECK FIRST BYTE, IF NOT ZERO BRANCH
+	ORA	B
+	JZ	Y99		;IF NEXT BYTE 0 THEN DIVIDE BY 0
+	XRI	80H
+	JZ	Y99		;MAKE SURE ITS NOT 32768
+Y10:	MOV	A,B	
+	ANA	A
+	JM	Y50		;BR IF DENOMINATOR NEGATIVE, ILLEGAL
+Y20:	ORA	D	
+	JM	Y40		;BR IF NUMERATOR NEGATIVE
+Y30:	XCHG	
+	CALL	DIVPOS
+	RET
+Y40:				;COME HERE WHEN NUMERATOR IS NEGATIVE
+	MOV	A,L
+	CPI	1		;IF WE ARE ENTERED VIA MOD BRANCH
+	JZ	ISMOD
+
+	MOV     A,E     
+	CMA
+	MOV     L,A
+	MOV     A,D
+	CMA
+	MOV     H,A
+	INX	H		;TAKE TWOS COMPLEMENT OF NUMERATOR
+	CALL    DIVPOS
+	MOV     A,E
+	CMA
+	MOV     E,A
+	MOV     A,D
+	CMA
+	MOV     D,A
+	INX	D		;TAKE TWOS COMP OF QUOTIENT
+	RET
+
+ISMOD:
+;	LXI	H,0FFFFH	;SIGN EXTEND
+  mov     a,d
+  cma
+  mov     d,a
+  mov     a,e
+  cma
+  mov     e,a
+  inx     d
+  lxi     h,0
+	CALL	@DHLDEBYBC	;GO DO THE DIVIDE
+	RET			;AND EXIT
+
+Y50:	
+	XRA     A
+	SUB     C
+	MOV     C,A
+	MVI     A,00H   
+	SBB     B
+	MOV     B,A
+	MOV     A,D     
+	ANA     A
+	JM	Y80
+	JNZ	Y60
+	ORA	E
+	JZ	Y80	
+Y60:	XCHG	
+	CALL    DIVPOS  
+	MOV     A,E
+	CMA
+	MOV     E,A
+	MOV     A,D
+	CMA
+	MOV     D,A
+	INX	D
+Y70:
+	
+	MOV     A,L
+	SUB     C
+	MOV     L,A
+	MOV     A,H
+	SBB     B
+	MOV     H,A
+	INX     H
+	RET
+Y80:
+	XRA     A       
+	SUB     E
+	MOV     L,A
+	MVI     A,00H   
+	SBB     D
+	MOV     H,A
+	CALL    DIVPOS  
+	XRA     A
+	SUB     L
+	MOV     L,A
+	MVI     A,00H   
+	SBB     H
+	MOV     H,A
+	RET
+Y99:
+	JMP	ZDIV1
+
+	MVI	A,1
+	STA	DIVZFLAG
+
+	LXI	D,0FFFFH
+	LXI	H,0
+	RET
+
+
+
+@DIV:
+	POP	H	
+	POP     B       
+	POP     D       
+	PUSH	H	
+	MVI	L,0		;SIGNAL NOT MOD
+	CALL	@XDIVD
+	POP	H
+	PUSH	D
+	PCHL
+
+
+
+@MOD:
+	POP	H	
+	POP	B	
+	POP	D	
+	PUSH	H	
+  mvi     a,0
+  sta     modsign
+  mvi     a,128
+  ana     d
+  jz      mod1
+  mvi     a,255
+  sta     modsign
+mod1:
+	MVI	L,1		;SIGNAL MOD
+	CALL	@XDIVD
+  lda     modsign
+  cpi     255
+  jnz     mod2
+  mov     a,h
+  cma
+  mov     h,a
+  mov     a,l
+  cma
+  mov     l,a
+  inx     h
+mod2:
+	XTHL		
+	PCHL
+
+@UDV:			;UNSIGNED DIVIDE
+	POP	D	;RET ADR
+	POP	B	;DIVIDEND
+	POP	H	;DIVISOR
+	PUSH	D
+	CALL	DIVPOS
+	XCHG
+	XTHL
+	PCHL
+
+@UMD:			;UNSIGNED MOD
+	POP	D
+	POP	B
+	POP	H
+	PUSH	D
+	CALL	DIVPOS
+	XTHL
+	PCHL
+	END
+
+

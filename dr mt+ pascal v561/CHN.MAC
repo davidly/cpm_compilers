@@ -1,0 +1,72 @@
+;----------------------------------------------------------------------
+; [PASLIB] CHN.MAC: Load program and jump to it.
+; @CHN
+; NOTE: The body of this routine is actually executed at
+; 80H+SYSBASE.  This allows the routine to reside anywhere and to
+; be moved to 80H+SYSBASE just before execution.  @CHN also uses
+; the default file control block.
+; Revisions:
+; 8/15/80 Last MGL update
+;
+;
+;----------------------------------------------------------------------
+
+	PUBLIC @CHN
+
+	EXTRN @MVL
+
+	INCLUDE	BCONFIG.LIB
+
+SYSBASE	SET	0
+
+@CHN::
+RTPCHAIN:
+	POP	H
+	POP	D			;GET FCB ADDRESS
+	LXI	B,33
+	LXI	H,5CH+SYSBASE
+	PUSH	H
+	PUSH	D
+	PUSH	B
+	CALL	@MVL##		;MOVE FCB TO DEFAULT AREA
+	LXI	SP,100H
+
+	LXI	H,100H+SYSBASE
+	PUSH	H		;SAVE READ-IN LOCATION (ON THE NEW STACK)
+;
+;	NOW MOVE THE REAL WORKHORSE ROUTINE TO 80H
+;
+	LXI	D,RTPCHN1
+	LXI	H,80H
+	LXI	B,RTNLEN
+	PUSH	H
+	PUSH	D
+	PUSH	B
+	CALL	@MVL##
+	JMP	80H+SYSBASE	;AND GO FINISH IT OFF
+;
+;	NOTE: THIS CODE ACTUALLY IS MOVED TO 80H+SYSBASE
+;	PRIOR TO EXECUTION
+;
+
+RTPCHN1:
+	POP	D		;GET ADDR OF I/O BUFFER
+	PUSH	D		;SAVE IT AGAIN
+	MVI	C,26		;SETDMA CALL TO BDOS
+	CALL	BDOS		;
+	POP	H		;NOW BUMP IT BY 128
+	LXI	D,128		;
+	DAD	D		;
+	PUSH	H		;SAVE IT AGAIN
+	LXI	D,5CH+SYSBASE	;GET FCB ADDRESS
+	MVI	C,20		;REQUEST A READ
+	CALL	BDOS		;
+	CPI	1		;END OF FILE?
+	JNZ	80H+SYSBASE	;(RTPCHN1) RELOCATED
+	POP	H		;WHEN DONE FLUSH THE STACK
+	JMP	100H+SYSBASE	;AND OFF TO THE NEWLY LOADED PROGRAM
+
+RTNLEN	EQU	$-RTPCHN1
+
+	END
+

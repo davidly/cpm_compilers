@@ -1,0 +1,25 @@
+MODULE WRNXCH;
+(*
+ * [PASLIB] @WNC - Write next character.
+ * Revisions:
+ *
+ *
+ *)
+
+(*$I fibdef.lib*)
+
+VAR
+  @LFB:		EXTERNAL ^FIB;
+
+EXTERNAL PROCEDURE PUT(VAR F:FIB; SZ:INTEGER);
+
+PROCEDURE @WNC(CH:CHAR);
+BEGIN
+  @LFB^.FBUFFER[0] := CH;		(* F^ := CH *)
+  PUT(@LFB^,@LFB^.BUFLEN)		(* PUT(F)   *)
+END;
+
+MODEND.
+
+
+

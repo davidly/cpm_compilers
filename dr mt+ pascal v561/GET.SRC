@@ -1,0 +1,48 @@
+MODULE GETREC;
+(*
+ * [PASLIB] GET - Pascal GET operation.
+ * Revisions:
+ * 7/22/83 Added test for ftrmio to prevent interpretation of incoming
+ *         characters (SP)
+ *
+ *
+ *)
+
+(*$I fibdef.lib*)
+
+VAR
+  @LFB:		EXTERNAL ^FIB;
+
+EXTERNAL PROCEDURE @RNB;
+
+PROCEDURE GET(VAR F:FIB; SZ:INTEGER);
+VAR
+  IS_EOLN : BOOLEAN;
+BEGIN
+  F.FEOLN := FALSE;	(* DEFAULT IS THAT WE RESET IT *)
+
+  @LFB := ADDR(F);
+  IF F.FEOF THEN
+    BEGIN
+      F.FEOLN := TRUE;
+      EXIT
+    END;
+
+  @RNB;			(* GO READ FROM THE FILE/CONSOLE *)
+
+  IF (F.FTEXT) and (f.option<>ftrmio) THEN
+    (* TEXT FILE, EOLN/EOF MUST BE SET *)
+    BEGIN
+      F.FEOF := (F.FBUFFER[0] = CHR($1A)) OR (F.FEOF);
+      IS_EOLN := (F.FBUFFER[0] = CHR($0D));
+      IF (IS_EOLN) OR (F.FEOF) THEN
+        F.FEOLN := TRUE;
+      IF (IS_EOLN) AND (F.OPTION = FRDWR) THEN (* GOBBLE LF *)
+	@RNB;
+      IF F.FEOF OR F.FEOLN THEN
+	F.FBUFFER[0] := ' ';
+    END
+END;
+
+MODEND.
+

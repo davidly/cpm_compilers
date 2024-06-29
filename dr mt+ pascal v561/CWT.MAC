@@ -1,0 +1,56 @@
+;----------------------------------------------------------------------
+; [PASLIB] CWT.MAC: Wait for end-of-line character.
+; @CWT
+; Revisions:
+; 9/6/80 Last MGL update
+;
+;
+;----------------------------------------------------------------------
+
+	PUBLIC	@CWT		;WAIT FOR CR
+
+	EXTRN	@GETCHR
+	EXTRN	@LFB
+
+FEOLN	EQU	59		;BOOLEAN;
+FBUFFER	EQU	194		;ARRAY [0..0] OF BYTE
+OPTION	EQU	56		;(FREAD,FWRITE,...FLSTOUT)
+FCONIO	EQU	4		;USED BY THIS MODULE
+
+@CWT:
+	LHLD	@LFB
+	LXI	D,FEOLN
+	DAD	D
+	MOV	A,M
+	RAR
+	JC	ITSEOLN		;BR IF LAST THING WAS A CR
+
+	CALL	@GETCHR
+	POP	B		
+	JMP	@CWT
+
+ITSEOLN:
+	MVI	M,0		;TURN EOLN OFF
+	LHLD	@LFB
+	LXI	D,OPTION
+	DAD	D
+	MOV	A,M
+	CPI	FCONIO
+	RNC			;IF CONSOLE THEN WE ARE DONE
+
+	CALL	@GETCHR		;GOBBLE BLANK AND PUT LF IN BUFFER
+	POP	B
+
+	LHLD	@LFB
+	LXI	D,FBUFFER
+	DAD	D
+	MOV	A,M
+	CPI	0AH		;LF TO GOBBLE?
+	RNZ			;RETURN IF DONE
+
+	CALL	@GETCHR		;GOBBLE LF AND PUT NEXT CHAR IN BUFFER
+	POP	B
+	RET			
+
+	END
+
