@@ -1,0 +1,23 @@
+
+PROGRAM DEMO_SOFTBUS;
+TYPE 
+REC = RECORD
+I : INTEGER;
+B : BOOLEAN
+END
+VAR 
+REC1 : REC;
+BEGIN
+WITH REC2 DO
+BEGIN
+I = 2;
+B := TRUE;
+END;
+IF REC1.B THEN
+WRITELN('TRUE')
+ELSE
+WRITELN('FALSE')
+END.
+
+
+

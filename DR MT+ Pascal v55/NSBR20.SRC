@@ -1,0 +1,343 @@
+(*  VERSION 0060 *)
+(*  FOR ADDS - REGENT 20 TERMINAL *)
+(*$K0*)
+(*$K1*)
+(*$K2*)
+(*$K5*)
+(*$K6*)
+(*$K7*)
+(*$K8*)
+(*$K12*)
+(*$K13*)
+(*$K14*)
+(*$K15*)
+PROGRAM PASCAL_SPP;
+
+(*$I EDTYPES*)
+(*$I EDGLBLS*)
+
+TYPE
+CPMOPERATION = (COLDBOOT,WARMBOOT,CONSTAT,CONIN,CONOUT,LIST,
+                PUNOUT,RDRIN,HOME,SELDSK,SETTRK,SETSEC,SETDMA,
+                DSKREAD,DSKWRITE);
+
+FNAME =     ARRAY [1..8] OF CHAR;       (* CP/M FILE NAME *)
+
+EXTENSION = ARRAY [1..3] OF CHAR;       (* EXTENSION TO NAME *)
+
+FCB = RECORD
+        DSK  : BYTE;
+        FN   : FNAME;
+        EXT  : EXTENSION;
+        OTHER: ARRAY [12..36] OF BYTE
+      END;
+
+DIRENT = RECORD
+           ET   : BYTE;
+           FN   : FNAME;
+           EXT  : EXTENSION;
+           OTHR : ARRAY [12..31] OF BYTE
+         END;
+
+(*$I SBIFDEF.LIB*)
+
+
+
+VAR
+
+  DIRFILE:      FCB;    (* FOR DISPLAYING DIRECTORIES *)
+  DIRBUF:       ARRAY [0..3] OF DIRENT;
+
+  FSTRING:      STRING;
+  MEMORY:       ABSOLUTE [$0000] ARRAY[0..0] OF BYTE;
+  CMDCH:        CHAR;
+  @SFP:         EXTERNAL INTEGER;
+  BUFSTAT:      STATREC;
+  INTRFACE:     SB_INTERFACE;   (* USED TO COMMUNICATE BETWEEN PROGRAMS *)
+  SB_LAST_X,
+  SB_LAST_Y:    INTEGER; (* FOR SOFTWARE CLR TO EOL/ CLR TO EOS ROUTINES *)
+  YW:   INTEGER; (* FOR WORK IN CLEAR SCREEN ROUTINE *)
+  XZ:  INTEGER; (* TO POSITION BACK CURSOR *)
+  YZ:  INTEGER;
+
+
+EXTERNAL FUNCTION @BDOS(PARM,FUNC:INTEGER):INTEGER;
+
+EXTERNAL [1] PROCEDURE LOGWRITER; (* LOG WRITER OVERLAY *)
+EXTERNAL [2] PROCEDURE SPEED;     (* EDITOR OVERLAY *)
+EXTERNAL [3] PROCEDURE SYNCHECK;  (* SYNTAX CHECKER OVERLAY *)
+EXTERNAL [4] PROCEDURE VARCHECK;  (* UNDEF VAR CHECKER OVERLAY *)
+EXTERNAL [6] PROCEDURE MTRUN;     (* RUN PROGRAM OVERLAY *)
+EXTERNAL [7] PROCEDURE DISP_DIR;  (* DIRECTORY DISPLAY OVERLAY *)
+EXTERNAL [8] FUNCTION  GETFILE:BOOLEAN; (* GET EDITOR FILE NAME, ETC. *)
+EXTERNAL [8] PROCEDURE INIT;      (* EDITOR INIT *)
+EXTERNAL [9] PROCEDURE EDITWRITE; (* EDITOR WRITE BUFFER OVERLAY *)
+EXTERNAL[10] PROCEDURE PRETTY;    (* PROGRAM REFORMATER *)
+
+
+(*--------------------------------------------------------------*)
+(*      User modification area BEGINS here:                     *)
+(*--------------------------------------------------------------*)
+
+ 
+FUNCTION LINESZ : INTEGER;      (* SO USER CAN SET SIZE OF A LINE *)
+BEGIN
+  LINESZ := 79  (* 80 - 1 *)
+END;
+
+FUNCTION SCREENSZ : INTEGER;
+BEGIN
+  SCREENSZ := 22        (* NUMBER OF LINES ON PHYSICAL SCREEN - 2 *)
+END;
+
+FUNCTION STATUSROW : INTEGER;
+BEGIN
+  STATUSROW := SCREENSZ + 1
+END;
+
+PROCEDURE SB_OUT_CH(CH:CHAR);
+BEGIN
+  SB_BIOS_CALL(CONOUT,ORD(CH))
+END;
+
+FUNCTION  SB_GETCH:CHAR;
+VAR
+  CH : CHAR;
+BEGIN
+  SB_BIOS_CALL(CONIN,0);
+  INLINE("STA / CH);
+  SB_GETCH := CH
+END;
+
+PROCEDURE XYGOTO(X,Y:INTEGER);
+BEGIN
+  SB_OUT_CH(CHR(ESC));
+  SB_OUT_CH('Y');
+  SB_OUT_CH(CHR(Y+32));
+  SB_OUT_CH(CHR(X+32));
+  SB_LAST_X := X;
+  SB_LAST_Y := Y;       (* THESE ARE USED ONLY BY USER SOFTWARE  *)
+                        (* ROUTINES WHICH PERFORM CLR TO EOS AND *)
+                        (* CLR TO EOL                            *)
+END;
+
+PROCEDURE SB_CLR_SCRN;
+BEGIN
+  SB_OUT_CH(CHR(12));
+  SB_OUT_CH(CHR(0));
+END;
+
+PROCEDURE SB_CLR_EOS;
+BEGIN
+  YW:=SB_LAST_Y;
+  XZ:=SB_LAST_X;
+  YZ:=SB_LAST_Y;
+  WHILE YW <> 24   DO
+  BEGIN
+  XYGOTO(0,YW);
+  SB_CLR_LINE;
+  YW:=YW+1;
+  END;
+   XYGOTO(XZ,YZ);  (* POSITION BACK CURSOR *)
+END;
+
+
+PROCEDURE SB_CLR_LINE;
+BEGIN
+  SB_OUT_CH(CHR(ESC));
+  SB_OUT_CH('K');
+END;
+
+
+(*--------------------------------------------------------------*)
+(*      User modification area ENDS WITH SB_CLR_LINE            *)
+(*--------------------------------------------------------------*)
+
+
+PROCEDURE SB_FLUSH_BUF;
+VAR
+  CH : CHAR;
+BEGIN
+  IF NOT BUFSTAT.OCCUPIED THEN
+    EXIT;
+
+  REPEAT
+    PRNT_AT(20,1,'Buffer occupied');
+    PRNT_AT(21,1,'F)lush, U)pdate, W)rite & Flush, L)eave:');
+    CH := SB_UP_CASE(SB_GETCH);
+    SB_OUT_CH(CH);
+    IF CH = 'L' THEN
+      EXIT;
+
+    IF CH = 'F' THEN
+      BEGIN
+        IF NEWFILE THEN
+          PURGE(F);
+        BUFSTAT.OCCUPIED := FALSE;
+        EXIT
+      END;
+
+    IF CH = 'W' THEN
+      BEGIN
+        EDITWRITE;
+        LOGWRITER;
+        BUFSTAT.OCCUPIED := FALSE
+      END;
+
+    IF CH = 'U' THEN
+      BEGIN
+        EDITWRITE;        (* BUT LEAVE IT OCCUPIED *)
+        LOGWRITER
+      END
+  UNTIL (CH='U') or (CH='F') OR (CH='W');
+  NEWFILE:=FALSE;
+END;
+
+                
+PROCEDURE SB_BIOS_CALL(FUNC:CPMOPERATION; PARM:INTEGER);
+VAR
+  DISPATCH_LOC : INTEGER;
+BEGIN
+  DISPATCH_LOC := (MEMORY[1] + SWAP(MEMORY[2])) + (ORD(FUNC)*3) - 3;
+  INLINE("LHLD / PARM /
+         "MOV C,L /
+         "MOV B,H /
+         "LHLD / DISPATCH_LOC /
+         "PCHL);
+END;
+
+PROCEDURE PRNT_AT(ROW,COL:INTEGER; S:STRING);
+BEGIN
+  XYGOTO(COL,ROW);
+  WRITE([ADDR(SB_OUT_CH)],S)
+END;
+
+PROCEDURE MENU;
+BEGIN
+  SB_CLR_SCRN;
+  PRNT_AT(1,1,'SpeedProgramming Package V5.5');
+  PRNT_AT(3,1,'Options:           E)dit');
+  prnt_at(4,20,                  'R)eformat');
+  prnt_at(5,20,                  'S)yntax check');
+  prnt_at(6,20,                  'V)ariable check');
+  prnt_at(7,20,                  'X)eq');
+  prnt_at(8,20,                  'D)ir');
+  prnt_at(9,20,                  'F)ast compile');
+  prnt_at(10,20,                 'Q)uit');
+  prnt_at(22,1,'Command? ')
+END;
+
+FUNCTION  SB_UP_CASE(CH:CHAR):CHAR;
+BEGIN
+  IF (CH >= 'a') AND (CH <= 'z') THEN
+    SB_UP_CASE := CHR(CH & $DF)
+  ELSE
+    SB_UP_CASE := CH
+END;
+
+
+(*$E-*)
+FUNCTION GET_FILE_INTO_BUF:BOOLEAN;
+BEGIN
+  IF NOT BUFSTAT.OCCUPIED THEN
+    IF GETFILE THEN         (* GET FILE INTO BUFFER *)
+      INIT;
+  GET_FILE_INTO_BUF := BUFSTAT.OCCUPIED
+END;
+(*$E+*)
+
+
+
+BEGIN
+  BUFSZ := (@SFP - ADDR(BUF))-$100;     (* SET UP EDITOR BUFFER SIZE *)
+  BUFSTAT.OCCUPIED := FALSE;
+  NEWFILE := FALSE;
+  REPEAT
+    MENU;
+    INTRFACE.NEXT_CMD := ' ';             (* DEFAULT NO NEXT PROGRAM *)
+    INTRFACE.END_STAT := OK;
+    CMDCH := SB_UP_CASE(SB_GETCH);
+    SB_OUT_CH(CMDCH);                     (* ECHO IT *)
+    REPEAT
+      FSTRING := '';                      (* DEFAULT IS NO PROGRAM *)
+      CASE CMDCH OF
+        'D' : DISP_DIR;
+        'E' : BEGIN
+                IF (BUFSTAT.OCCUPIED) AND ((INTRFACE.PREV_CMD = 'S')
+                                        OR (INTRFACE.PREV_CMD = 'R'))THEN
+                  (* DO NOTHING *)
+                ELSE
+                  SB_FLUSH_BUF;        (* MAKE SURE USER WANTS TO DO THIS *)
+
+                IF NOT BUFSTAT.OCCUPIED THEN (* BUFFER IS EMPTY *)
+                  BEGIN
+                    IF GETFILE THEN          (* SEE IF HE WANTS A FILE *)
+                      BEGIN
+                        INIT;              (* CALL EDITOR *)
+                        IF BUFSTAT.OCCUPIED THEN
+                          SPEED
+                      END
+                  END
+                ELSE
+                  SPEED;                   (* BUFFER OCCUPIED, EDIT OLD *)
+                INTRFACE.PREV_CMD := ' ';
+                IF INTRFACE.NEXT_CMD = 'E' THEN
+                  INTRFACE.NEXT_CMD := ' ';
+              END;
+        'S' : BEGIN
+                IF GET_FILE_INTO_BUF THEN
+                  BEGIN
+                    INTRFACE.PREV_CMD := ' ';
+                    SYNCHECK;
+                    IF INTRFACE.END_STAT = SYNERR THEN
+                      INTRFACE.NEXT_CMD := 'E'
+                  END
+              END;
+        'V' : IF GET_FILE_INTO_BUF THEN
+                VARCHECK;
+        'R' : BEGIN
+                IF GET_FILE_INTO_BUF THEN
+                  BEGIN
+                    INTRFACE.PREV_CMD := 'R';
+                    PRETTY;
+                    INTRFACE.NEXT_CMD := 'E';
+                    SB_CLR_SCRN
+                  END
+              END;
+        'X' : BEGIN
+                SB_FLUSH_BUF;
+                FSTRING := '';
+                MTRUN
+              END;
+        'Q' : BEGIN
+                INTRFACE.PREV_CMD := ' ';
+                SB_FLUSH_BUF;
+                IF BUFSTAT.OCCUPIED THEN
+                  CMDCH := '@'
+                ELSE
+                  BEGIN
+                    SB_CLR_SCRN;
+                    EXIT
+                  END
+              END;
+        'L' : BEGIN
+                SB_FLUSH_BUF;
+                FSTRING := 'LINKMT';
+                MTRUN
+              END;
+        'F' : BEGIN
+                IF GET_FILE_INTO_BUF THEN
+                  BEGIN
+                    SB_FLUSH_BUF;
+                    FSTRING := 'FASTCOMP';
+                    MOVE(ENDFILE,MEMORY[ADDR(BUF)-2],2);(* SET UP INTEGER *)
+                    MOVE(NAME,MEMORY[ADDR(BUF)-83],81);
+                    MTRUN
+                  END
+              END
+      END;
+      CMDCH := INTRFACE.NEXT_CMD;
+    UNTIL (CMDCH = ' ') OR (CMDCH = INTRFACE.PREV_CMD);
+  UNTIL FALSE
+END.
+

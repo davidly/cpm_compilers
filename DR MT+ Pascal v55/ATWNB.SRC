@@ -1,0 +1,95 @@
+(* 5.5 version *)
+MODULE WRITEBYTES;
+
+(*	last update:	10/21/81	*)
+
+(*$M @WNB*)
+(*$M **)
+
+(*$I fibdef.lib*)
+
+VAR
+  @LFB : 	EXTERNAL ^FIB;
+  RESULTIO:	EXTERNAL INTEGER;
+
+EXTERNAL FUNCTION @BDOS(FUNC:INTEGER; PARM:WORD):INTEGER;
+EXTERNAL PROCEUDRE @DFLT;
+
+(*$E-*)
+PROCEDURE WRITEBYTE(CH:CHAR);
+VAR
+  I : INTEGER;
+BEGIN
+  WITH @LFB^ DO
+      BEGIN
+	IF FSECINX = 128 THEN (* TIME TO WRITE *)
+	  BEGIN
+	    RESULTIO := @BDOS(26,WRD(ADDR(FSECTOR)));
+	    RESULTIO := @BDOS(21,WRD(ADDR(FCB)));
+	    FSECINX := 0
+	  END;
+	FSECTOR[FSECINX] := CH;
+	FSECINX := FSECINX + 1
+      END (* WITH *)
+END; (* WRITEBYTE *)
+(*$E+*)
+
+
+PROCEDURE @WNB;
+LABEL 1;
+VAR
+  SRCADR : ^CHAR;
+  CH : CHAR;
+  N,I : INTEGER;
+  
+BEGIN
+  RESULTIO := 0;	(* DEFAULT *)
+  MOVE(@LFB^.FBUFADR,SRCADR,2);
+  IF @LFB^.OPTION > FRANDOM THEN	(* CONSOLE/TERM I/O *)
+    BEGIN
+      WITH @LFB^ DO
+        FOR N := 1 TO IOSIZE DO
+          BEGIN
+	    CH := SRCADR^;
+	    if (ch = chr($0a) and not ((option=ftrmio) or (option=fauxio)) then
+		goto 1;
+	    IF OPTION = FLSTOUT THEN
+	      BEGIN
+	        I := @BDOS(5,WRD(CH));	(* WRITE IT TO THE PRINTER *)
+	        IF CH = CHR($0D) THEN 	(* WE MUST ECHO LF *)
+	          I := @BDOS(5,WRD($0A))
+	      END
+            ELSE
+	      BEGIN
+		if option = fconio then
+		  i := @bdos(2,wrd(ch))
+		else if option = ftrmio then
+		  i := @bdos(6,wrd(ch))
+		else (* must be fauxio *)
+		  i := @bdos(4,wrd(ch));
+
+		IF OPTION = FCONIO THEN
+		  IF CH=CHR($0D) THEN
+		    (* WE MUST ECHO CR/LF FOR CR *)
+		    I := @BDOS(2,WRD($0A))
+	      END;
+1:	    SRCADR := SRCADR + 1
+	  END;
+      EXIT
+    END;
+
+  (* WE  GET HERE ONLY IF NON-CONSOLE I/O *)
+
+
+  FOR N := 1 TO @LFB^.IOSIZE DO
+    BEGIN
+      WRITEBYTE(SRCADR^);
+      SRCADR := SRCADR + 1
+    END;
+  @DFLT;
+
+END;
+
+MODEND.
+
+

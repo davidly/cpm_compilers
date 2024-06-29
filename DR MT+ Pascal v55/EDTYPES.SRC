@@ -1,0 +1,89 @@
+(*  VERSION 0008 *)
+
+(* LAST CHANGE - MARCH 16, 1981 *)
+
+CONST
+        XINSRT = 0;             XADJST = 1;             XCHINS= 2;
+        XSRCHSAME= 3;           XPGEFWD = 4;            XPGEBACK = 5;
+        XCBUFF = 6;             XSRCH = 7;              XRPLCE = 8;
+        XCUP = 9;               XCDOWN = 10;            XCRIGHT = 11;
+        XCLEFT = 12;            XINSLINE = 13;          XDCHR = 14;
+        XDLINE = 15;            XDTOEOL = 16;           XBEGEND = 17;
+        XTOPBOT = 18;           XTAB    = 19;           XWRDRIGHT = 20;
+        XWRDLEFT = 21;          XSUPERCMD = 22;         XDELWORD = 23;
+
+        LFTWORD = $01;   {A}
+        END_BEG = $02;   {B}
+        PGEFWD  = $03;   {C}
+        RTWORD  = $04;   {D}
+        SRCHSAME= $05;   {E}
+        INSRT   = $06;   {F}
+        DCHR    = $07;   {G}
+        CLEFT   = $08;   {H}
+        TAB_CHR = $09;   {I}
+        CDOWN   = $0A;   {J}
+        CUP     = $0B;   {K}
+        CRIGHT  = $0C;   {L}
+        CR      = $0D;   {M = CARRAIGE RETURN}
+        INSLINE = $0E;   {N}
+        DELWRD  = $0F;   {O}
+        D_TO_EOL= $10;   {P}
+        SUPER   = $11;   {Q}
+        PGEBACK = $12;   {R}
+        SRCH    = $13;   {S}
+        BOT_TOP = $14;   {T}
+        ADJST   = $15;   {U}
+        ACCEPT  = $16;   {V}
+        CBUFF   = $17;   {W}
+        RPLCE   = $18;   {X}
+        DLINE   = $19;   {Y}
+        CHINS   = $1A;   {Z}
+        ESC     = $1B;   {ESC}
+        QUIT    = $FE;   {SPECIAL CHARACTER FOR QUITTING}
+
+        CMDSZ = 23;      {UPPER BOUND ON COMMAND ARRAY}
+
+        LF = $0A;        {LINE FEED}
+        CNTRLZ = $1A;   
+        ESCAPE = $1B;
+        NOMATCH = -10;  {OUT OF RANGE OF BUFFER INDICATING NO MATCH }
+        HALFSCREEN = 11;{USED IN PAGING BACK AND FORWARD }
+
+        STATUSCOL = 0;  {START POSITION FOR STAT REPORTS }
+        FIRSTROW = 0;   {FIRST ROW OF SCREEN OR BUF }
+
+        FIRSTLINE = 0;  
+        STRLEN = 30;    {UPPER BOUND ON EDSTRING}
+
+        MAXLNSIZE = 255;        (* MAX ALLOWED SIZE OF LINESZ *)
+        
+        CPMLINESZ = 127;{FOR MT+ FILE NAMEING}
+
+        MAXCH = 79;
+        
+TYPE
+        FILENAME = STRING[127];         {FOR GETTING FILENAME}
+
+        DIRECTION = (RIGHT, BACKWARD);  {DIRECTION TO TRAVEL IN BUFFER}
+
+        CURSORPOS = (FIRSTCH,LASTCH,ZEROPOS,LASTPOS,XPOS);
+
+        SEARCHKIND = (EQUAL, NOTEQUAL);
+
+        EDSTRING = ARRAY[1..STRLEN] OF CHAR;
+     
+
+        RWFILE = (RESETT,REWRITTE);
+        (* FOR DOFILE, OPENING AND CREATING FILES*)
+
+        FYLE = FILE;                    {FOR FILES}
+
+        SSTRING = RECORD                {USED FOR SEARCH AND REPLACE}
+                    LEN : BYTE;
+                    DATA : ARRAY[1..MAXCH] OF CHAR;
+                  END;
+
+        STATREC = RECORD
+                    OCCUPIED : BOOLEAN; (* TRUE IF BUF CONTAINS TEXT *)
+                  END;
+

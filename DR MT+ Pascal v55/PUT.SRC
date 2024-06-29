@@ -1,0 +1,21 @@
+MODULE PUTREC;
+
+(*$M PUT*)
+(*$M **)
+
+(*$I 80rtp/fibdef.lib*)
+
+VAR
+  @LFB:		EXTERNAL ^FIB;
+
+EXTERNAL PROCEDURE @WNB;
+
+PROCEDURE PUT(VAR F:FIB; SZ:INTEGER);
+BEGIN
+  @LFB := ADDR(F);
+  @WNB				(* GO WRITE BUFFER OUT *)
+END;
+
+MODEND.
+
+

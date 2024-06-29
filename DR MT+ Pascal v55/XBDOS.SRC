@@ -1,0 +1,53 @@
+(* 5.5 *)
+MODULE BDOSFUNC;
+
+(*$M @BDOS*)
+(*$M @DFLT*)
+(*$M **)
+
+
+EXTERNAL PROCEDURE @IOERR(CPMFUNCNUM:INTEGER);
+
+FUNCTION @BDOS(FUNC:INTEGER; PARM:WORD):INTEGER;
+CONST
+  CPMENTRYPOINT = 5;
+VAR
+  RESULT : INTEGER;
+BEGIN
+
+   INLINE( "LHLD / FUNC /
+	   "MOV C,L /
+	   "LHLD / PARM /
+	   "XCHG /
+	   "CALL / CPMENTRYPOINT /
+	   "MOV L,A /
+	   "MVI H / 0 /
+	   "SHLD / RESULT );
+
+  @BDOS := RESULT;
+  IF FUNC < 15 THEN
+    EXIT;
+  IF FUNC = 26 THEN
+    EXIT;
+  IF (FUNC=15) OR (FUNC=16) OR (FUNC=22) THEN
+    BEGIN
+      IF RESULT = 255 THEN
+        @IOERR(FUNC)
+    END
+  ELSE
+    IF (FUNC = 21) THEN
+      IF RESULT <> 0 THEN
+         @IOERR(FUNC);
+END;
+
+PROCEDURE @DFLT;
+VAR
+  I : INTEGER;
+BEGIN
+  I := @BDOS(26,WRD($80));	(* DEFAULT DMA ADDRESS *)
+END;
+
+
+MODEND.
+
+

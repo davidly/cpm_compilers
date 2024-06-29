@@ -1,0 +1,49 @@
+  1  Error in type
+  2  Identifier
+  3  'PROGRAM'
+  4  ')'
+  5  ':'
+  6  Illegal symbol
+  7  Error in parm list
+  8  'OF'
+  9  '('
+ 10  Error in type
+ 11  '['
+ 12  ']'
+ 13  'END'
+ 14  ';'
+ 15  Integer
+ 16  '='
+ 17  'BEGIN'
+ 18  Error in declaration part
+ 19  error in <field-list>
+ 20  '.'
+ 21  '*'
+ 50  Error in constant
+ 51  ':='
+ 52  'THEN'
+ 53  'UNTIL'
+ 54  'DO'
+ 55  'TO' or 'DOWNTO'
+ 56  'IF'
+ 57  'FILE'
+ 58  Error in <factor>
+ 59  Error in variable
+ 99  MODEND
+105  sign not allowed
+106  Number expected
+108  File not allowed here
+174  Pascal function or procedure expected
+183  External declaration not allowed at this nesting level
+201  Error in real number - digit expected
+202  String constant must not exceed source line
+206  Illegal real number
+398  Implementation restriction
+399  Implementation restriction
+400  Illegal character in text
+403  Error in reading include file
+404  Error in writing list file, not enough room
+407  Name table exceeded memory, sorry.
+496  Invalid argument to INLINE pseudo procedure
+ 
+

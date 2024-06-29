@@ -1,0 +1,99 @@
+
+;---------------------------------------------------------------;
+;								;
+;	9511 SUBROUTINES FOR TRAN9511				;
+;								;
+;---------------------------------------------------------------;
+
+	PUBLIC	@AMD
+	EXTRN	@I95D	;DATA PORT INPUT
+	EXTRN	@O95D	;DATA PORT OUTPUT
+	EXTRN	@I95C	;CTRL PORT INPUT
+	EXTRN	@O95C	;CTRL PORT OUTPUT
+
+; PROCEDURE @AMD(FUNC:INTEGER; VAR R:REAL; VAR STAT:INTEGER);
+
+@AMD:
+	POP	H	;RET ADR
+	SHLD	RETADR
+	POP	H	;ADDR OF APU STAT
+	POP	D	;ADDR OF REAL
+	POP	B	;FUNCTION
+
+; ROUTINE FOR FLOATING POINT DERIVED FUNCTIONS
+;  ENTER WITH:
+;    BC = COMMAND
+;  M(DE) = FUNCTION( M(DE) )
+;  M(HL) = APU STAT
+	PUSH 	B
+	CALL 	PSHD		;PUSH ARGUMENT
+	POP 	B
+	MOV 	A,C		;ISSUE COMMAND
+	CALL 	APUCS
+	CALL 	POPSTAT		;GET DATA AND RETURN STATUS IN A-REG
+	MOV 	M,A		;STORE APU STATUS
+	INX	H
+	MVI	M,0		;ZERO HIGH BYTE
+	LHLD	RETADR
+	PCHL
+
+;---------------------------------------------------------------;
+;								;
+;	9511 UTILITY ROUTINES					;
+;	NOTE THESE CALL @IN95 AND @OUT95 IN AMDIO		;
+;								;
+;---------------------------------------------------------------;
+
+PSHD:	INX 	D		
+	INX 	D
+	INX 	D
+	MVI 	B,4
+
+PSD10:	LDAX 	D
+	CALL 	APUWS
+	DCX 	D
+	DCR 	B
+	JNZ 	PSD10
+	INX 	D
+	RET
+
+APULOOP:
+	PUSH PSW
+APUX2A:	CALL	@I95C
+	ORA	A	
+	JM	APUX2A	
+	POP	PSW
+	RET
+
+APURS:	CALL	APULOOP
+	CALL	@I95D
+	RET
+
+APUCS:	CALL	APULOOP	
+	CALL	@O95C
+	RET
+
+
+APUWS:	CALL 	APULOOP
+	CALL	@O95D
+	RET
+
+POPSTAT:
+	PUSH	D
+	MVI	B,4		
+PPS10:	CALL 	APURS
+	STAX	D
+	INX	D
+	DCR	B
+	JNZ	PPS10
+	POP	D
+RDSTAT:	CALL	@I95C
+	ORA	A
+	JM	RDSTAT
+	RET
+
+
+	DSEG
+RETADR:	DS	2
+	END
+

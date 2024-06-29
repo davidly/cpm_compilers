@@ -1,0 +1,471 @@
+;   VERSION 0018 AUTOMATICALLY UPDATED BY MODIFIED WORDMASTER
+
+;---------------------------------------------------------------;
+;								;
+;	Overlay Management Module for Pascal/MT+ 5.5   		;
+;								;
+;	Created:	March 18, 1981				;
+;	Updated:	November 16, 1981			;
+;								;
+;	Note: to properly operate this version of the OVLMGR	;
+;	module requires a @INI routine of Release >= 5.25.1 	;
+;---------------------------------------------------------------;
+
+
+
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++;
+;	equates for pertinant information			;
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++;
+
+ovlbase	equ	0105h	;base prefix for file name
+namelen equ	010Dh	;length of names (6 or 7 characters)
+TRUE	EQU	-1
+FALSE	EQU	0	;FOR CONDITIONAL ASSEMBLY
+
+RELOAD  EQU	FALSE	;NON-RELOADING OVERLAY CALLING
+
+
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++;
+;	MACRO DEFINITIONS					;
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++;
+
+
+MOVE	MACRO	SRC,DST,LEN
+	LOCAL	L1
+	LXI	H,SRC
+	LXI	D,DST
+	LXI	B,LEN
+L1:
+	MOV	A,M
+	INX	H
+	STAX	D
+	INX	D
+	DCX	B
+	MOV	A,B
+	ORA	C
+	JNZ	L1
+	ENDM
+
+
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++;
+;	PUBLIC AND EXTRN SYMBOLS				;
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++;
+
+	EXTRN	@XXXX1	;address of overlay area table
+			;set up by LINKMT >= 5.25.1
+	PUBLIC	@OVL	;OVERLAY LOADER
+	PUBLIC	@OVS	;OVERLAY DISK SET - (FOR OTHER THAN DEFAULT DISK)
+	
+
+;###############################################################;
+;								;
+;	MAIN ROUTINE - @OVL					;
+;	PURPOSE      - LOAD OVERLAY AND CALL PROCEDURE		;
+;---------------------------------------------------------------;
+;	ON ENTRY TO @OVL, RETURN ADDRESS POINTS TO OVERLAY CALL ;
+;	DATA BLOCK:						;
+;								;
+;	+0 : OVERLAY GROUP NUMBER --- 1 BYTE			;
+;	+1 : OVERLAY PROCEDURE NAME-- 8 BYTES			;
+;								;
+;###############################################################;
+
+
+@OVL:
+	POP	H
+	MOV	A,M
+	STA	OVLGNUM
+
+	INX	H
+	MVI	B,8
+	LXI	D,PROCNAME
+
+OVL1:
+	MOV	A,M
+	INX	H
+	STAX	D
+	INX	D
+	DCR	B
+	JNZ	OVL1
+
+	CALL	PSH$USR$RET	;SAVE USER'S RETURN ADDRESSES
+
+	CALL	LOAD$OVLY	;GO LOAD IT (IF NECESSARY)
+
+	CALL	FIND$PROC	;GO SEARCH FOR AND FIND PROCNAME
+				;DOES NOT RETURN IF PROC NOT FOUND
+
+
+	LXI	H,OUR$RET	;PUSH OUR RETURN ADDRESS ON THE STACK
+	PUSH	H
+
+	LHLD	PROCADR		;GET ADDRESS OF PROC WITHIN OVERLAY AREA
+	PCHL			;AND OFF TO USER ROUTINE
+
+OUR$RET:
+	CALL	POP$USR$RET	;MAY RELOAD OLD OVERLAY GROUP
+	PCHL			;AND BACK TO THE USER (SIMPLE CASE)
+
+
+
+;###############################################################;
+;								;
+;	MAIN ROUTINE - @OVS					;
+;	PURPOSE      - SET DRIVE NUMBER FOR A SPECIFIC OVERLAY	;
+;	INPUT	     - ON STACK : OVLNUM,DRIVE   		;
+;			OVLNUM : 1..50				;
+;			DRIVE   : '@'..'O'			;
+;								;
+;	PASCAL DEFINITION:					;
+;								;
+;	EXTERNAL PROCEDURE @OVS(OVNUM:INTEGER; DRNUM:CHAR);	;
+;								;
+;###############################################################;
+
+@OVS:
+	POP	H	;RET ADR
+	POP	B	;DRIVE NUMBER
+	POP	D	;OVERLAY NUMBER
+	PUSH	H
+
+	MOV	A,C
+	SUI	'@'	;MAKE 0..19
+
+	LXI	H,DRIVE$TAB
+	DAD	D
+	MOV	M,A
+	RET
+
+
+;===============================================================;
+;	SUBROUTINE: CALC$ADDR					;
+;	PURPOSE	  : CALC OVERLAY AREA ADDRESS BASED ON OVLGNUM	;
+;===============================================================;
+CALC$ADDR:
+	LDA	OVLGNUM		;GET REQUESTED GROUP NUMBER
+	DCR	A
+	RAR
+	RAR
+	RAR			;DIVIDE BY 8
+	ANI	1EH
+	MOV	E,A
+	MVI	D,0
+	LHLD	@XXXX1		;GET ADDR OF OVERLAY AREA TABLE
+	DAD	D		;POINT TO TABLE ENTRY
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG			;HL NOW POINTS TO OVERLAY AREA
+	SHLD	OVLAREA		;SAVE IT FOR LATER
+	RET
+
+
+
+;===============================================================;
+;	SUBROUTINE: PSH$USR$RET					;
+;	PURPOSE   : SAVE CONTENTS OF HL, OVERLAY AREA ADDR	;
+;		    AND OVERLAY GROUP NUMBER ON USR$RET STACK	;
+;===============================================================;
+	PUBLIC	PSH$USR$RET
+
+PSH$USR$RET:
+	PUSH	H
+	CALL	CALC$ADDR
+	MOV	B,H
+	MOV	C,L
+	POP	D
+
+	LHLD	USR$SP	;GET STACK POINTER
+	DCX	H
+	MOV	M,D	;STORE RET ADDR
+	DCX	H
+	MOV	M,E
+	DCX	H
+	MOV	M,B	;STORE OVERLAY AREA ADDR
+	DCX	H
+	MOV	M,C
+	DCX	H
+	LDAX	B	;GET OVERLAY NUMBER
+	MOV	M,A
+	SHLD	USR$SP
+	RET
+
+;===============================================================;
+;	SUBROUTINE: POP$USR$RET					;
+;	PURPOSE   : POP RET ADDR, OVERLAY AREA ADDR AND NUMBER	;
+;		    IF RELOAD IS SET TO TRUE THEN THIS ROUTINE  ;
+;		    WILL CALL LOAD$OVLY TO RE-LOAD PREVIOUS     ;
+;		    OVERLAY IF NECESSARY			;
+;===============================================================;
+	PUBLIC	POP$USR$RET
+
+POP$USR$RET:
+	LHLD	USR$SP
+	MOV	A,M
+	STA	OVLGNUM	;SAVE OVERLAY GROUP NUMBER
+	INX	H
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	INX	H	;DE NOW CONTAINS OVERLAY AREA ADDRESS
+	XCHG
+	SHLD	OVLAREA
+	XCHG
+	MOV	E,M
+	INX	H
+	MOV	D,M	;DE NOW CONTAINS CALLERS RETURN ADDRESS
+	INX	H
+	SHLD	USR$SP
+	XCHG		;PUT REAL ADDR INTO HL
+;----------------------------------------------------------------
+  IF RELOAD		; THEN RELOAD OLD OVERLAY IF NECESSARY
+	PUSH	H
+	LDA	OVLGNUM
+	ORA	A
+	CNZ	LOAD$OVLY ;ELSE GO LOAD IT IN AGAIN (IF NECESSARY)
+	POP	H	;GET RET ADDR BACK AGAIN
+  ENDIF
+;----------------------------------------------------------------
+	RET		;BACK TO MAIN @OVL ROUTINE
+
+
+;===============================================================;
+;	SUBROUTINE: LOAD$OVLY					;
+;	PURPOSE   : USING OVLADDR AND OVLBASE LOAD THE OVERLAY	;
+;===============================================================;
+
+LOAD$OVLY:
+	CALL	CALC$ADDR	;SETS OVLAREA AND HL-REG
+	LDA	OVLGNUM		;GET GROUP NUMBER BACK AGAIN
+	CMP	M		;IS REQUESTED OVERLAY IN THE AREA?
+	RZ			;RETURN IF ALREADY LOADED
+
+;
+;	IF NOT LOADED THEN CONSTRUCT NAME AND LOAD IT
+;
+
+	MOVE	OVLBASE,MYFCB+1,8
+
+	LDA	OVLGNUM
+	DCR	A
+	MOV	E,A
+	MVI	D,0
+	LXI	H,DRIVE$TAB
+	DAD	D
+	MOV	A,M		;GET DRIVE NUMBER FROM TABLE
+	STA	MYFCB		;FOR NOW DEFAULT DRIVE ONLY
+
+	MVI	A,'0'
+	STA	MYFCB+9
+	LDA	OVLGNUM
+	RAR
+	RAR
+	RAR
+	RAR
+	CALL	CV2HX		;CONVERT HIGH NIBBLE
+	STA	MYFCB+10
+	LDA	OVLGNUM
+	CALL	CV2HX		;CONVERT LOW NIBBLE
+	STA	MYFCB+11
+
+	LXI	H,MYFCB+12
+	MVI	B,23		;NUMBER OF EXTRA BYTES
+LO2:
+	MVI	M,0
+	INX	H
+	DCR	B
+	JNZ	LO2
+
+	LXI	D,80H		;SET DEFAULT DMA ADDRESS
+	MVI	C,26
+	CALL	5
+
+	LXI	D,MYFCB
+	MVI	C,15		;FILE OPEN
+	CALL	5		;GO OPEN THE FILE
+	CPI	255
+	JZ	NO$FILE		;BR IF FILE NOT FOUND
+
+;
+;	OK, NOW LOAD IT UNTIL EOF
+;
+	LHLD	OVLAREA		;GET OVERLAY AREA ADDRESS
+	SHLD	DMAPTR
+
+LO3:
+	LHLD	DMAPTR
+	XCHG
+	MVI	C,26
+	CALL	5		;SET DMA
+
+	LHLD	DMAPTR
+	LXI	D,128
+	DAD	D
+	SHLD	DMAPTR
+
+	LXI	D,MYFCB
+	MVI	C,20		;SEQUENTIAL READ
+	CALL	5
+
+	ORA	A
+	JZ	LO3		;IF MORE TO DO THEN GO-ON
+
+	RET			;ELSE ALL DONE, EXIT
+
+
+;
+;	INTERNAL ROUTINE - CV2HX
+;	LOW ORDER 4-BITS OF A-REG CONTAIN BINARY NUMBER
+;	RETURN ASCII CHAR IN A-REG
+;
+CV2HX:
+	ANI	0FH
+	ADI	'0'
+	CPI	03AH
+	RC		;RETURN IF A VAILD DIGIT
+	ADI	7
+	RET
+
+
+;===============================================================;
+;	SUBROUTINE:	FIND$PROC				;
+;	PURPOSE   :     GIVEN PROCEDURE NAME IN PROCNAME	;
+;			RETURN ADDRESS OF THIS PROCEDURE IN	;
+;			PROCADR					;
+;===============================================================;
+
+FIND$PROC:
+	
+	LHLD	OVLAREA		;GET ADDR OF OVERLAY AREA
+	INX	H
+	MOV	E,M
+	INX	H
+	MOV	D,M		;POINT TO TABLE
+	XCHG
+
+FP1:
+	MOV	A,M
+	ORA	A
+	JZ	NO$PROC
+
+	LXI	D,PROCNAME
+	LDA	NAMELEN
+	MOV	B,A
+	PUSH	H		;SAVE ADDR OF TABLE ENTRY
+
+FP2:
+	LDAX	D
+	CMP	M
+	JNZ	FP3		;BR IF NO MATCH
+
+	INX	H
+	INX	D
+	DCR	B
+	JNZ	FP2		;BR IF MORE TO COMPARE
+
+;
+;	WE FOUND IT......
+;
+	POP	H		;GET BASE ADDR OF TABLE ENTRY
+	LXI	D,8		;BYPASS NAME
+	DAD	D
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	SHLD	PROCADR
+	RET			;AND EXIT
+
+FP3:
+	POP	H
+	LXI	D,10
+	DAD	D
+	JMP	FP1
+
+;===============================================================;
+;	ERROR MESSAGE PRINTING ROUTINES				;
+;===============================================================;
+
+NO$FILE:				;***OVERLAY FILE NOT FOUND***
+
+	MOVE	MYFCB+1,NFMSG1+2,8	;MOVE IN NAME
+	MOVE	MYFCB+9,NFMSG1+11,3	;MOVE IN EXTENSION
+	LDA	MYFCB
+	ADI	'@'
+	STA	NFMSG1
+	LXI	D,NFMSG
+	CPI	'@'
+	JNZ	WMSG
+	LXI	H,'  '
+	SHLD	NFMSG1			;CHANGE "@:" TO "  "
+
+WMSG:	MVI	C,9		;PRINT STRING
+	CALL	5
+	MVI	C,0		;INITIALIZE
+	CALL	5
+
+NFMSG:
+	DB	13,10,'Unable to open overlay file: '
+NFMSG1:	DB	'@:        .   ',13,10,'$'
+
+
+NO$PROC:				;***PROCEDURE NAME NOT FOUND***
+
+	MOVE	MYFCB+1,NPMSG2+2,8	;MOVE IN NAME
+	MOVE	MYFCB+9,NPMSG2+11,3	;MOVE IN EXTENSION
+	LDA	MYFCB
+	ADI	'@'
+	STA	NPMSG2
+	CPI	'@'
+	JNZ	NP1
+	LXI	H,'  '
+	SHLD	NPMSG2
+NP1:
+	MOVE	PROCNAME,NPMSG1,8
+	LXI	D,NPMSG
+	JMP	WMSG
+
+NPMSG:
+	DB	13,10,'Procedure: "'
+NPMSG1:	DB	'        " not found in overlay: '
+NPMSG2:	DB	'@:        .   ',13,10,'$'
+
+
+;***************************************************************;
+;								;
+;	DATA AREA FOR OVERLAY MANAGER				;
+;								;
+;***************************************************************;
+
+;
+;	NOTE THIS TABLE MUST BE IN THE CSEG AREA BECAUSE IS MUST
+;	BE INITIALIZED VIA DB AND LINKMT WILL NOT SUPPORT INITIALIZED
+;	DATA IN THE DSEG
+;
+
+DRIVE$TAB:			;DRIVE TABLES FOR 50 OVERLAYS
+
+	REPT	50
+	DB	0
+	ENDM
+
+USR$SP:		DW	USR$RET		;USR$RET STACK POINTER
+					;THIS MUST ALSO BE IN CODE SEG
+	DSEG
+
+DMAPTR:		DS	2		;DMA ADDRESS FOR INPUT XFER
+PROCNAME: 	DS	8		;NAME OF PROCEDURE WHICH WE ARE CALLING
+OVLGNUM: 	DS	1		;OVERLAY NUMBER
+PROCADR: 	DS	2		;PROCEDURE ADDRESS
+MYFCB:		DS	36		;FCB FOR FILE OPENING
+;
+;	USR$RET STACK CONTAINS RETURN ADDRESS AND
+;	SAVED OVERLAY AREA ADDRESS
+;	AND OVERLAY GROUP NUMBER	;(MAX NESTING 25
+
+		DS	129		;SAVED RETURN ADDRESSES
+USR$RET:
+OVLAREA:	DS	2		;LOC OF MOST RECENT OVL AREA
+	END
+
+
