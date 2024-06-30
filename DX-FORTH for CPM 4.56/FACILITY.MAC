@@ -1,0 +1,205 @@
+;
+;  FACILITY.MAC - Facility Functions
+;
+;  (MS)  (BEEP)  MS  SOUND  BEEP  AT-XY  cls  NORMAL  BOLD
+;  CLEAR-LINE  INSERT-LINE  DELETE-LINE  INIT-VIDEO  EXIT-VIDEO
+;
+
+;	(MS)  ( ms -- )
+
+	hdr	x,'(MS)'
+ms0:	pop	de
+ms01:	ld	a,e
+	or	d
+	jp	z,next
+	ld	hl,(speed)
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+ms02:	ex	(sp),hl		; 19T
+	ex	(sp),hl		; 19T
+	ex	(sp),hl		; 19T
+	ex	(sp),hl		; 19T
+	push	hl		; 11T
+	pop	hl		; 10T
+	dec	hl		; 6T
+	ld	a,0		; 7T
+	ld	a,l		; 4T
+	or	h		; 4T
+	jp	nz,ms02		; 10T
+	dec	de
+	jp	ms01
+
+;	(BEEP)  ( -- )		7 emit 75 ms
+
+	hdr	x,'(BEEP)'
+beep0:	call	docol
+	dw	clit
+	db	7
+	dw	emit
+	dw	clit
+	db	75
+	dw	ms
+	dw	exit
+
+;	MS  ( ms -- )
+
+	hdr	1,'MS'
+ms:	call	aexec
+	dw	ms0
+
+;	SOUND  ( freq ms -- )
+
+	hdr	1,'SOUND'
+sound:	call	aexec
+	dw	tdrop
+
+;	BEEP  ( -- )
+
+	hdr	1,'BEEP'
+beep:	call	aexec
+	dw	beep0
+
+	cseg
+
+cpbuf:	ds	16
+
+dectab:	db	100,10,1
+
+insno:	ld	hl,cpbuf	; insert number
+	ld	b,0
+	add	hl,bc
+	ex	de,hl
+	ld	hl,tisbin
+	inc	(hl)
+	dec	(hl)
+	jp	z,insno1
+	ld	(de),a
+	ret
+
+insno1:	dec	de		; insert ascii
+	dec	de
+	ld	hl,dectab-1
+	ld	b,3		; assume 3 digits
+insno2:	inc	hl
+	ld	c,'0'-1
+insno3:	inc	c
+	sub	(hl)
+	jp	nc,insno3
+	add	a,(hl)
+	push	af
+	ld	a,c
+	cp	'0'
+	jp	z,insno4	; handle 2 or 3 digit field
+	ld	(de),a
+insno4:	inc	de
+	pop	af
+	dec	b
+	jp	nz,insno2
+	ret
+
+;	AT-XY  ( u1 u2 -- )	position cursor at col u1, row u2
+
+	hdr	1,'AT-XY'
+atxy:	pop	de
+	pop	hl
+	ld	d,l
+	ld	hl,tgxy
+	ld	a,(hl)
+	or	a
+	jp	z,next		; not implemented
+	push	bc
+	push	de
+	ld	de,cpbuf
+	ld	a,16
+	call	amovd
+	pop	de
+	ld	a,(txpos)
+	ld	c,a
+	ld	a,(txofs)
+	add	a,d
+	push	de
+	call	insno
+	pop	de
+	ld	a,(typos)
+	ld	c,a
+	ld	a,(tyofs)
+	add	a,e
+	call	insno
+	pop	bc
+	ld	de,tgxyd
+	ld	hl,cpbuf
+atxy1:	push	de
+	push	hl
+atxy2:	call	docol
+	dw	count,tuck
+	dw	zero		; send string
+	dw	xqdo,atxy4
+atxy3:	dw	count,bcono	; bios
+	dw	xloop,atxy3
+atxy4:	dw	drop
+	dw	zneq
+	dw	swap,at		; word
+	dw	andd,ms		; delay only if string not empty
+	dw	exit
+
+;	cls  ( -- )		home cursor and clear-screen sequence
+
+	cseg
+
+cls:	call	docol
+	dw	lit,tceold
+	dw	lit,thome
+	dw	atxy2
+	dw	lit,tclsd
+	dw	lit,tcls
+	dw	atxy2
+	dw	exit
+
+;	NORMAL  ( -- )
+
+	hdr	1,'NORMAL'
+vnorm:	ld	hl,tlovid
+vnorm1:	ld	de,tceold
+	jp	atxy1
+
+;	BOLD  ( -- )
+
+	hdr	1,'BOLD'
+vbold:	ld	hl,thivid
+	jp	vnorm1
+
+;	CLEAR-LINE  ( -- )
+
+	hdr	1,'CLEAR-LINE'
+cleol:	ld	hl,tceol
+	jp	vnorm1
+
+;	INSERT-LINE  ( -- )
+
+	hdr	1,'INSERT-LINE'
+insln:	ld	hl,tinsln
+insln1:	ld	de,tclsd
+	jp	atxy1
+
+;	DELETE-LINE  ( -- )
+
+	hdr	1,'DELETE-LINE'
+delln:	ld	hl,tdelln
+	jp	insln1
+
+;	INIT-VIDEO  ( -- )
+
+	hdr	1,'INIT-VIDEO'
+invid:	ld	hl,tinit
+	jp	insln1
+
+;	EXIT-VIDEO  ( -- )
+
+	hdr	1,'EXIT-VIDEO'
+exvid:	ld	hl,texit
+	jp	insln1
+
+;	end
+
+

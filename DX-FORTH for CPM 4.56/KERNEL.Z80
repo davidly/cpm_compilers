@@ -1,0 +1,2937 @@
+;
+;			DX-FORTH
+;
+; A direct-threaded 8080 Forth compiler for CP/M 2.x and 3.x
+;
+;
+; Assemble to COM file using Microsoft M80 or compatible
+; assembler (SLR180+ if insufficient memory):
+;
+;	M80 =KERNEL.Z80
+;	L80 KERNEL,KERNEL/N/E
+;
+; Compress the executable by saving itself:
+;
+;	KERNEL.COM - SAVE KERNEL BYE
+;
+; The address for the compiler and SYSTEM dictionary is set
+; by the equate:
+;
+;	sm	equ	7000h
+;
+; If your system has sufficient TPA memory this value may be
+; increased permitting larger applications to be developed.
+; Systems with low TPA should decrease the value e.g. 6000h.
+;
+
+	.z80			; required for M80 assembler
+
+no	equ	0
+yes	equ	not no
+
+; Date last revised
+
+date	macro
+	db	'2024-05-10'
+	endm
+
+; Modification level
+
+rel	equ	4	; release #
+rev	equ	56	; revision #
+beta	equ	no	; beta release
+
+; Equates for conditional assembly
+
+debug	equ	no	; debugging messages
+ucase	equ	yes	; forth names case insensitive
+cfs	equ	no	; control flow stack extensions
+wopt	equ	yes	; warning options
+fpx	equ	no	; extra f/p functions
+uscr	equ	yes	; allow underscore in numbers
+
+;
+
+x	equ	no	; show hidden words
+;fstack	equ	yes	; separate floating point stack
+float	equ	yes	; floating point
+nfd	equ	6	; max open source files (min = 2)
+retro	equ	no	; classic forth behaviours
+
+; Memory sizes
+
+sm	equ	7000h	; start of system memory
+
+cw	equ	2	; cell size (bytes)
+fw	equ	4	; float size (bytes)
+
+; Buffer sizes
+
+us	equ	128		; user variable space
+rts	equ	256		; return stack space
+
+tibsiz	equ	80		; TIB buffer size
+bufsiz	equ	10*128		; max block size (multiple of 128)
+fhsiz	equ	6+36		; file handle size (keep even)
+pfsiz	equ	16+1		; max path/filename size
+wbsiz	equ	31+5		; min WORD buffer size
+pssiz	equ	255		; max parsed string buffer size
+fdsiz	equ	pfsiz+(4*cw)	; file descriptor size
+pno	equ	68		; pictured numeric buffer size
+
+; DOS and memory equates
+
+dosfcb	equ	005Ch		; default file control block
+dosbuf	equ	0080h		; default DTA and command-line buffer
+tpa	equ	0100h		; program start
+recsiz	equ	128		; CP/M record size
+
+; Equates
+
+fhno	equ	10	; max open handles
+
+init	defl	noop	; INIT
+ident	defl	noop	; IDENT
+fnu	defl	false	; FNUMBER
+fnum	defl	0	; fp-stack items
+fps	defl	0	; fp-stack size
+
+toppru	defl	0	; top prunes
+
+	 if	float
+
+maxsig	equ	7	; max significant digits
+
+init	defl	fpini
+ident	defl	fiden
+fnu	defl	fnumb
+;	 if	fstack
+;fnum	defl	6
+;fps	defl	(fnum+5)*fw ; allow extra for fp display etc
+;	 endif
+
+toppru	defl	fprun1
+
+	 endif
+
+; ASCII characters
+
+bel	equ	07h	; bell
+bs	equ	08h	; backspace
+tab	equ	09h	; tab
+lf	equ	0ah	; line feed
+ff	equ	0ch	; form feed
+cr	equ	0dh	; carriage return
+can	equ	18h	; ctl-x
+ctlz	equ	1ah	; ctl-z
+escape	equ	1bh	; escape
+del	equ	7fh	; delete
+
+;
+; Forth Registers
+;
+;	FORTH	8080	Forth preservation rules
+;	-----	----	------------------------
+;	IP	BC	Interpretive pointer. Should be preserved across
+;			forth words.
+;	SP	SP	Data stack pointer. Should be used only as data
+;			stack across forth words. May be used within forth
+;			words if restored before NEXT.
+;		DE	Input only when DPUSH called.
+;		HL	Input only when HPUSH called.
+;
+;	comment conventions:
+;
+;	a	=	address
+;	c	=	8b character
+;	u	=	16b unsigned number
+;	n	=	16b signed number
+;	x	=	16b signed or unsigned number
+;	d	=	32b signed double number
+;	ud	=	32b unsigned double number
+;	xd	=	32b signed or unsigned number
+;	cfa,xt	=	addr of code field (execution token)
+;	lfa	=	addr of link field
+;	nfa	=	addr of name field
+;	pfa	=	addr of parameter field (body)
+;
+;	non Forth 83 Standard word definitions:
+;
+;	FIG	Fig-FORTH model
+;	ANS	ANS FORTH Standard (document dpANS-6, June 1993)
+
+;
+; Memory allocation
+;
+; The memory above LIMIT is used only by the interpreter.  This space
+; is not wasted for turnkey applications as LIMIT, user variables and
+; stacks are relocated to EM giving applications more free ram (as
+; indicated by UNUSED).
+;
+; EM	|-------------	end of memory
+;	|
+; DPS	|-------------
+; DPH	|
+;	|		word headers & system dictionary
+; HM	|-------------
+;	|		interpretive string buffer
+;	|-------------
+;	|		terminal input buffer
+; TIB	|-------------
+;	|		file descriptor blocks
+; FDB	|-------------
+;	|		block buffer
+; LIMIT	|-------------
+;	|		handle r/w buffer
+; HBUF	|-------------
+;	|		file handles
+;	|-------------
+;	|		user variables
+; R0	|-------------
+;	|		return stack
+; S0	|-------------
+;	|		data stack
+; PAD	|-------------
+;	|		word and number conversion area
+; DP	|-------------
+;	|		application dictionary
+; 0100h	|-------------
+;
+
+;
+; Macro for generating word header
+;
+
+lastl	defl	0		; initial link pointer (end of chain)
+
+hdr	 macro	en,str,im,fl,axt
+	local	@a,@b
+				;; en  = enable hdr  0=disable
+				;; str = name string
+				;; im  = immediate
+				;; fl  = system or deferred header
+				;; axt = xt
+
+	 if	en		;; if header enable
+
+	cseg
+cfadr	defl	$		;; code field address
+
+	aseg			;; put heads in system dictionary
+lnk	defl	$		;; link address for next word
+
+bits	defl	0
+
+	 ifnb	<im>
+bits	defl	bits+40h	;; set immediate bit
+	 endif
+
+	 ifnb	<axt>		;; if xt
+cfadr	defl	axt		;; set cfa
+	 ifb	<fl>		;; if alias
+bits	defl	bits+80h	;; set bit
+	 endif
+	 endif
+
+	db	@a		;; generate count byte
+@b	defl	$
+	db	str		;; generate name
+@a	defl	$-@b+bits
+	dw	lastl		;; generate link field
+				;; generate pointer to code field
+	 ifb	<axt>		;; if not xt and system
+	 ifnb	<fl>
+	dw	$+2		;; system
+	 else
+	dw	cfadr		;; application
+	 endif
+	 else
+	dw	cfadr		;; alias or deferred header
+	 endif
+
+lastl	defl	lnk
+
+	 endif
+
+	cseg			;; switch to system or application
+	 ifb	<axt>
+	 ifnb	<fl>
+	aseg
+	 endif
+	 endif
+
+	 endm
+
+; Macro to generate counted string
+
+dcs	 macro	s1,s2,s3,s4	;; allow comma separated
+	local	@a,@b
+
+	db	@a		;; generate count byte
+@b:	db	s1
+	 ifnb	<s2>
+	db	s2
+	 ifnb	<s3>
+	db	s3
+	 ifnb	<s4>
+	db	s4
+	 endif
+	 endif
+	 endif
+@a	defl	$-@b
+	 endm
+
+; Macro for JP NEXT
+
+nextt	 macro
+	jp	next
+	 endm
+
+; Macro to ignore next 1 bytes
+
+ignore1	 macro
+	db	0feh	;; cp n
+	 endm
+
+; Macro to ignore next 2 bytes
+
+ignore2	 macro
+	db	21h	;; ld hl,nn
+	 endm
+
+; Macro to generate fdb table
+
+gfdb	 macro
+	local	@a
+@a	defl	fdbs
+	 rept	nfd
+	dw	@a
+@a	defl	@a+fdsiz
+	 endm
+	 endm
+
+;
+; System segment
+;
+	aseg
+
+	org	sm
+
+sfb:	ds	bufsiz		; screen block buffer
+fdbs:	ds	fdsiz*nfd	; source file descriptor blocks
+tib:	ds	tibsiz		; TIB
+psb:
+	 if	retro
+	ds	pssiz+1		; buffer S"
+	 else
+	ds	pssiz+1+wbsiz	; buffer S" WORD
+	 endif
+
+hm	equ	$		; system definitions and header memory
+dnfa:	db	0		; dummy nfa - don't remove!
+
+;
+; Application segment
+;
+	cseg
+
+;	jp	cldd		; DO NOT INCLUDE - this statement is
+;				; automatically inserted by the linker
+
+	db	'Z3ENV'		; Z-System signature		0103
+	db	1		; external environment		0108
+z3eadr:	dw	0		; ZENV address			0109
+
+; The following 5 bytes are reserved exclusively for user applications
+
+	db	0,0,0,0,0	; user patch bytes		010B
+
+; If the following byte is non-zero, a warm boot is NOT performed on
+; exit to CP/M.  Non-zero values reserve that number of pages at top
+; of TPA.
+
+noboot:	db	0		; no warm boot			0110
+
+; Identification and version
+
+	dw	4683h		; id  ('DXF' in radix 36)	0111
+dxver:	db	rel		; release			0113
+	db	rev		; revision			0114
+
+;
+	ds	cw		; reserved		NEXT-8	0115
+upp:	ds	cw		; user area pointer	NEXT-6	0117
+rpp:	ds	cw		; return stack pointer	NEXT-4	0119
+
+dpush:	push	de		; 11T			NEXT-2	011B
+hpush:	push	hl		; 11T			NEXT-1	011C
+
+;	NOOP  ( -- )
+
+	hdr	1,'NOOP'
+noop	equ	$
+
+;	NEXT  -  Forth Address Interpreter
+
+next:	ld	a,(bc)		; 7T			NEXT	011D
+	ld	l,a		; 4T
+	inc	bc		; 6T
+	ld	a,(bc)		; 7T
+	ld	h,a		; 4T
+	inc	bc		; 6T
+	jp	(hl)		; 4T
+
+; CPU speed (TURBO PASCAL compatible)
+
+speed:	dw	4		; 1-8191 MHz 			0124
+
+; Boot up variables used by COLD, must be in same order as USER variables
+
+initu	equ	$		; <<< beginning data
+	ds	3*cw		; reserved for multitasking
+is0:	ds	cw		; s0
+ir0:	ds	cw		; r0
+idp:	dw	initdp		; dp
+idps:	dw	initdps		; dps
+idph	equ	idps		; dph
+ivoc:	dw	forth2		; voc-link
+ifs0:	ds	cw		; fs0
+	ds	cw		; reserved
+initu2	equ	$		; <<< end data
+
+stack:	ds	cw		; CP/M stack pointer
+esm:	ds	cw		; end of memory pointer
+iboot:	ds	cw		; initial boot value
+defdrv:	ds	1		; default drive
+defusr:	ds	1		; default user
+scaps:	ds	1		; COMPARE SEARCH case flag
+cmdf:	ds	1		; command line flag
+dosv:	ds	cw		; CP/M version
+ulimit:	ds	cw		; LIMIT for turnkey
+	ds	6		; spare
+
+; Backspace key code
+
+bsin:	db	bs		; input backspace		014E
+
+; Arrow key codes (default = Wordstar style)
+
+	db	'E'-40h		; up arrow			014F
+	db	'X'-40h		; down arrow			0150
+	db	'D'-40h		; right arrow			0151
+	db	'S'-40h		; left arrow			0152
+
+; Terminal install area (TURBO PASCAL compatible)
+
+termn:	db	20			; terminal name		0153
+	db	'Televideo 912/920/92'
+tcols:	db	80			; max cols		0168
+trows:	db	24			; max rows		0169
+	db	0			; reserved		016A
+tinit:	db	0,0,0,0,0,0,0,0		; terminal init	seq.	016B
+	db	0,0,0,0,0,0,0,0
+texit:	db	0,0,0,0,0,0,0,0		; terminal exit seq.	017B
+	db	0,0,0,0,0,0,0,0
+tgxy:	db	4,27,'=',0,0,0,0,0	; cursor position	018B
+	db	0,0,0,0,0,0,0,0
+tisbin:	db	1			; decimal=0 binary=1	019B
+txofs:	db	32			; offset added to col	019C
+tyofs:	db	32			; offset added to row	019D
+txpos:	db	4			; pos insert column	019E
+typos:	db	3			; pos insert row	019F
+tgxyd:	dw	0			; cursor pos delay 	01A0
+tcls:	db	1,26,0,0,0,0		; clear screen		01A2
+thome:	db	0,0,0,0,0,0		; home cursor		01A8
+tinsln:	db	2,27,'E',0,0,0		; insert line		01AE
+tdelln:	db	2,27,'R',0,0,0		; delete line		01B4
+tclsd:	dw	0			; clear screen delay 	01BA
+tceol:	db	2,27,'T',0,0,0		; clear line		01BC
+thivid:	db	2,27,'(',0,0,0		; highlight/reverse	01C2
+tlovid:	db	2,27,')',0,0,0		; normal video		01C8
+tceold:	dw	0			; clear line delay 	01CE
+
+; Temporary filename/fcb buffers
+
+zbsiz	equ	pfsiz+1+36	; allow for trailing null + fcb
+
+zb1:	 rept	zbsiz
+	db	0
+	 endm
+
+zb2:	 rept	zbsiz
+	db	0
+	 endm
+
+tmpstk	equ	$-cw		; temp stack for startup
+
+; Temporary variables
+
+t1:	ds	cw
+t2:	ds	cw
+t3:	ds	cw
+t4:	ds	cw
+
+; Misc. subroutines - BC is preserved
+
+subd:	ex	de,hl	; subtract  hl <- de - hl
+ssub:	ld	a,l	; subtract  hl <- hl - de
+	sub	e
+	ld	l,a
+	ld	a,h
+	sbc	a,d
+	ld	h,a
+	ret
+
+cmpu:	ld	a,h	; unsigned compare - C if hl < de
+	cp	d	;                  - Z if hl = de
+	ret	nz
+	ld	a,l
+	cp	e
+	ret
+
+cmps:	ld	a,h	; signed compare - C if hl < de
+	xor	d
+	jp	p,cmpu
+	ld	a,h
+	or	a
+	ret	p
+	scf
+	ret
+
+upc:	cp	'a'	; make uppercase a
+	ret	c
+	cp	'z'+1
+	ret	nc
+	xor	20h
+	ret
+
+gdrv:	ld	a,25	; get current drive a
+	jp	bdoss
+
+gusr:	ld	a,0ffh	; get current user a
+
+susr:	ld	e,a	; set current user a
+	ld	a,32
+
+bdoss:	push	bc	; call bdos a
+	ld	c,a
+	call	0005h
+	pop	bc
+	ret
+
+; Misc. subroutines - BC is affected
+
+;	move block upwards  HL = src, DE = dest, BC = cnt
+
+bmovu:	add	hl,bc
+	ex	de,hl
+	add	hl,bc
+	ex	de,hl
+bmovu1:	ld	a,c
+	or	b
+	ret	z
+	dec	hl
+	dec	de
+	ld	a,(hl)
+	ld	(de),a
+	dec	bc
+	jp	bmovu1
+
+;	move block up/down  HL = src, DE = dest, BC = cnt
+
+bmove:	call	cmpu
+	ret	z		; dest=src
+	jp	c,bmovu
+;	jp	bmovd
+
+;	move block downwards  HL = src, DE = dest, BC = cnt
+
+bmovd:	ld	a,c
+	or	b
+	ret	z
+	ld	a,(hl)
+	ld	(de),a
+	inc	hl
+	inc	de
+	dec	bc
+	jp	bmovd
+
+;	move block downwards  HL = src, DE = dest, A = cnt
+
+amovd:	push	bc
+	ld	c,a
+	ld	b,0
+	call	bmovd
+	pop	bc
+	ret
+
+;	return stack address before DO LOOP parameters
+
+rbase:	ld	hl,(rpp)
+	ld	de,cw*2
+	add	hl,de
+	ret
+
+;	push inline string
+
+strr:	pop	de
+	ld	a,(bc)
+	ld	l,a
+	ld	h,0
+	inc	bc
+	push	bc
+	push	hl
+	add	hl,bc
+	ld	c,l
+	ld	b,h
+	ex	de,hl
+	jp	(hl)
+
+;	runtime for colon definitions
+
+docol:	ld	hl,(rpp)	; push IP onto return stack
+	dec	hl
+	ld	(hl),b
+	dec	hl
+	ld	(hl),c
+	ld	(rpp),hl
+	pop	bc		; get new IP from 'call'
+	nextt
+
+;	runtime for user variables
+
+douse:	pop	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	hl,(upp)
+	add	hl,de
+	jp	hpush
+
+;	UNNEST  ( -- )
+
+	hdr	1,'UNNEST'
+unnest:	ld	hl,(rpp)
+	inc	hl
+	inc	hl
+	ld	(rpp),hl
+	nextt
+
+;	EXIT  ( -- )		exit colon definition
+
+	hdr	1,'EXIT'
+exit:	ld	bc,next
+
+;	EXIT1			exit colon to code
+
+exit1:	push	bc
+	ld	hl,(rpp)
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	ld	(rpp),hl
+
+;	EXECUTE  ( xt -- )
+
+	hdr	1,'EXECUTE'
+exec:	ret
+
+;	@EXECUTE  ( a-addr -- )
+
+	hdr	1,'@EXECUTE'
+aexec:	pop	hl
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	or	h
+	jp	z,next
+	jp	(hl)
+
+;	clit  ( -- char )
+
+	hdr	x,'CLIT'	; FIG
+clit:	ld	a,(bc)
+	inc	bc
+
+;	push A register
+
+apush:	ld	l,a
+	ld	h,0
+	jp	hpush
+
+;	lit  ( -- n )
+
+	hdr	x,'LIT'		; FIG
+lit:	ld	a,(bc)
+	ld	l,a
+	inc	bc
+	ld	a,(bc)
+	ld	h,a
+	inc	bc
+	jp	hpush
+
+;	2lit  ( -- d )
+
+	hdr	x,'2LIT'
+tlit:	ld	a,(bc)
+	ld	l,a
+	inc	bc
+	ld	a,(bc)
+	ld	h,a
+	inc	bc
+	ld	a,(bc)
+	ld	e,a
+	inc	bc
+	ld	a,(bc)
+	ld	d,a
+	inc	bc
+	jp	dpush
+
+	cseg
+
+	include	STACK.MAC	; stack functions
+	include	MEMORY.MAC	; memory operations
+	include	ARITH.MAC	; arithmetic and logical
+	include COMPARE.MAC	; comparison
+	include	NUMBER.MAC	; numeric conversion
+	include	STRING.MAC	; string functions
+	include	CONTROL.MAC	; control structures
+
+docre	equ	next
+doval	equ	at
+docon	equ	at
+docco	equ	cat
+
+;
+;	Numeric Output
+;
+;  (UD.)  (U.)  (D.)  (.)  U.  D.  U.R  D.R  .R  ?  .
+;
+
+;	(UD.)  ( ud -- c-addr u )  <# #s #>
+
+	hdr	1,'(UD.)'
+puddo:	call	docol
+	dw	bdigs
+	dw	digs
+	dw	edigs
+	dw	exit
+
+;	(U.)  ( u -- c-addr u )  0 (d.)
+
+	hdr	1,'(U.)'
+pudot:	ld	hl,0
+	push	hl
+;	jp	pddot
+
+;	(D.)  ( d -- c-addr u )	 tuck dabs <# #s rot sign #>
+
+	hdr	1,'(D.)'
+pddot:	call	docol
+	dw	tuck
+	dw	dabs
+	dw	bdigs
+	dw	digs
+	dw	rot,sign
+	dw	edigs
+	dw	exit
+
+;	(.)  ( n -- c-addr u )	s>d (d.)
+
+	hdr	1,'(.)'
+pdot:	call	docol
+	dw	stod,pddot
+	dw	exit
+
+;	U.  ( u -- )		0 d.
+
+	hdr	1,'U.'
+udot:	ld	hl,0
+	push	hl
+;	jp	ddot
+
+;	D.  ( d -- )		(d.) type space
+
+	hdr	1,'D.'
+ddot:	call	docol
+	dw	pddot
+ddot1:	dw	typee,space
+	dw	exit
+
+;	U.R  ( u w -- )		0 swap d.r
+
+	hdr	1,'U.R'
+udotr:	ld	hl,0
+	ex	(sp),hl
+	push	hl
+;	jp	ddotr
+
+;	D.R  ( d w -- ) 	>r (d.) r> s.r
+
+	hdr	1,'D.R'
+ddotr:	call	docol
+	dw	tor
+	dw	pddot
+ddotr1:	dw	fromr
+	dw	sdotr
+	dw	exit
+
+;	.R  ( n w -- )		>r s>d r> d.r
+
+	hdr	1,'.R'
+dotr:	call	docol
+	dw	tor
+	dw	stod
+	dw	fromr,ddotr
+	dw	exit
+
+;	?  ( addr -- )		@ .
+
+	hdr	1,'?'
+ques:	pop	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	push	de
+;	jp	dot
+
+;	.  ( x -- )		decimal? if s>d d. end u.
+
+	hdr	1,'.'
+dot:	call	docol
+	dw	dcmq
+	dw	zbran,dot1
+	dw	stod,ddot
+	dw	exit
+dot1:	dw	udot
+	dw	exit
+
+;	(H.N)  ( u +n -- a2 u2 )	@base >r hex <# 0 tuck ?do # loop
+;					#> r> !base
+
+	hdr	1,'(H.N)'
+phdn:	call	docol
+	dw	atbas,tor
+	dw	hex
+	dw	bdigs
+	dw	zero,tuck
+	dw	xqdo,phdn2
+phdn1:	dw	dig
+	dw	xloop,phdn1
+phdn2:	dw	edigs
+	dw	fromr,stobas
+	dw	exit
+
+	include	DOS.MAC		; DOS functions
+	include FACILITY.MAC	; facility functions
+	include IO.MAC		; I/O functions
+
+;	UPCASE  ( char1 -- char2 )
+
+	hdr	1,'UPCASE'	; make char uppercase
+upcas:	pop	hl
+	ld	a,l
+	call	upc
+	jp	apush
+
+;	UPPER  ( c-addr u -- )
+
+	hdr	1,'UPPER'	; make string uppercase
+upper:	pop	de
+	pop	hl
+upper1:	ld	a,d
+	or	e
+	jp	z,next
+	ld	a,(hl)
+	call	upc
+	ld	(hl),a
+	inc	hl
+	dec	de
+	jp	upper1
+
+	include	COMPILE.MAC	; compiler functions
+
+;	Constants
+
+;	TRUE
+
+	hdr	1,'TRUE'
+true:	ld	hl,-1
+	jp	hpush
+
+;	FALSE
+
+	hdr	1,'FALSE'
+false:	ld	hl,0
+	jp	hpush
+
+;	-1  ( -- -1 )		aka true -1
+
+	hdr	1,'-1',,,true
+
+;	0  ( -- 0 )		aka false 0
+
+	hdr	1,'0',,,false
+zero	equ	false
+
+;	1  ( -- 1 )
+
+	hdr	1,'1'
+one:	call	docco
+	db	1
+
+;	2  ( -- 2 )
+
+	hdr	1,'2'
+two:	call	docco
+	db	2
+
+;	3  ( -- 3 )
+
+	hdr	1,'3'
+three:	call	docco
+	db	3
+
+;	BL  ( -- 32 )		ascii value for space character
+
+	hdr	1,'BL'
+bll:	call	docco
+	db	32
+
+;	B/BUF  ( -- u )		bytes per screen buffer
+
+	hdr	1,'B/BUF',,1	; FIG
+bbuf:	call	doval
+bbuf1:	dw	128*8		; default
+
+;	C/L  ( -- u )		chars per screen line
+
+	hdr	1,'C/L',,1	; FIG
+csll:	call	doval
+	dw	64		; default
+
+; For applications, LIMIT is the upper limit of available memory.
+; In forth, it is the beginning of the area which holds the screen file
+; buffer, word headers and system definitions.
+
+;	LIMIT  ( -- addr )
+
+	hdr	1,'LIMIT'	; FIG
+limit:	call	docon		; application word - used by BUF
+limit1:	ds	cw		; patched by COLD
+
+;	hbuf  ( -- addr )	handle r/w buffer
+
+	hdr	x,'HBUF'
+hbuf:	call	doval
+hbuf1:	ds	cw		; patched by COLD
+
+;	'NEXT  ( -- addr )	address of NEXT
+
+	hdr	1,"'NEXT"
+tnext:	call	docon
+tnext1:	dw	next
+
+;	SYS-VEC  ( -- addr )	system vector table
+
+	hdr	1,'SYS-VEC'
+sysvec:	call	docre
+
+vkeyq:	dw	qterm		;  0 KEY?
+vkey:	dw	conin		;  2 KEY
+vemit:	dw	conout		;  4 EMIT
+vcon:	dw	conout		;  6 CONSOLE out
+vlst:	dw	lstout		;  8 PRINTER out
+ainit:	dw	pinit		; 10 INIT patch
+aident:	dw	piden		; 12 IDENTIFY patch
+afnumb:	dw	pfnum		; 14 FNUMBER patch
+nfps:	dw	fps		; 16 fp-stack size (bytes)
+anumb:	dw	pnumb		; 18 NUMBER patch
+nfpm:	dw	fnum*fw		; 20 fp-stack min (bytes)
+nrts:	dw	rts		; 22 return stack (bytes)
+nus:	dw	us		; 24 user area (bytes)
+npno:	dw	pno		; 26 HOLD buffer size (bytes)
+nfh:	dw	fhno		; 28 file handles (CP/M only)
+	ds	2		; 30 reserved
+vstat:	dw	0		; 32 PROMPT 0=none
+
+;	Variables
+
+;	UP  ( -- addr )		user area pointer
+
+	hdr	1,'UP'
+up:	call	docon
+	dw	upp
+
+;	FSP  ( -- addr )	fp stack pointer
+
+	hdr	1,'FSP'
+fsp:	call	docre
+fspp:	ds	cw
+
+;	boot  ( -- addr )	boot word (holds forth/application xt)
+
+	hdr	x,'BOOT'
+boot:	call	docre
+boot1:	dw	0		; xt
+boot2:	dw	0		; 0=forth
+
+;	SYS  ( -- addr )	compile system or application
+
+	hdr	1,'SYS'
+sys:	call	docre		; application word - used by HERE, UNUSED
+sys1:	dw	0
+
+;	LAST	( -- addr )	occupies 2 cells
+
+	hdr	1,'LAST',,1
+last:	call	docre
+last1:	dw	topnfa		; latest nfa
+last2:	dw	topxt		; latest xt
+
+;	BLK
+
+	hdr	1,'BLK',,1
+blk:	call	docre
+blk1:	ds	cw
+
+;	>IN
+
+	hdr	1,'>IN',,1
+inn:	call	docre
+inn1:	ds	cw
+
+;	SCR			occupies 2 cells
+
+	hdr	1,'SCR',,1
+scr:	call	docre
+	ds	2*cw
+
+;	STATE
+
+	hdr	1,'STATE',,1
+state:	call	docre
+state1:	ds	cw
+
+;	'SOURCE			occupies 2 cells
+
+	hdr	1,"'SOURCE",,1
+tsourc:	call	docre
+tsour1:	ds	2*cw
+
+;	WARNING
+
+	hdr	1,'WARNING',,1	; FIG
+warnn:	call	docre
+warnn1:	ds	cw
+
+;	CSP  ( -- addr )	occupies 2 cells
+
+	hdr	1,'CSP',,1	; FIG
+cspp:	call	docre
+cspp1:	ds	cw		; current stack pointer
+
+;	CHECKING
+
+	hdr	1,'CHECKING',,1
+check:	call	docre
+check1:	ds	cw
+
+;	errmsg  ( -- addr )	message holder for abort"
+
+	hdr	x,'ERRMSG'
+errmsg:	call	docre
+	ds	2*cw
+
+;	CONTEXT  ( -- addr )
+
+	hdr	1,'CONTEXT',,1
+cont:	call	docre
+acont:	ds	cw		; context
+acurr:	ds	cw		; current
+	dw	forth1		; forth
+
+;	get-context  ( -- wid )
+
+	hdr	x,'GET-CONTEXT',,1
+getcon:	ld	hl,(acont)
+	jp	hpush
+
+;	GET-CURRENT  ( -- wid )
+
+	hdr	1,'GET-CURRENT',,1
+getcur:	ld	hl,(acurr)
+	jp	hpush
+
+;	SET-CURRENT  ( wid -- )
+
+	hdr	1,'SET-CURRENT',,1
+setcur:	ld	hl,acurr
+	jp	store1
+
+;	zbuf  ( -- addr )	filename buffer pointers
+
+	hdr	x,'ZBUF'
+zbuf:	call	docre
+zbuf1:	dw	zb1	; next buffer
+	dw	zb2	; last buffer
+
+;	User Variables
+
+; user variables 0, 2, 4 reserved for future expansion
+
+;	S0
+
+	hdr	1,'S0'		; FIG
+szero:	call	douse
+	dw	6
+
+;	R0
+
+	hdr	1,'R0'		; FIG
+rzero:	call	douse
+	dw	8
+
+;	DP			application dictionary pointer
+
+	hdr	1,'DP'		; FIG
+dpp:	call	douse
+	dw	10
+
+;	dps			system dictionary pointer
+
+	hdr	x,'DPS',,1	; must follow DP
+dps:	call	douse
+	dw	12
+
+dph	equ	dps
+
+;	VOC-LINK
+
+	hdr	1,'VOC-LINK',,1	; FIG
+vocl:	call	douse
+	dw	14
+
+;	FS0
+
+	hdr	1,'FS0'
+fszero:	call	douse
+	dw	16
+
+; user variable 18 reserved for future expansion
+
+; End of boot-up literals
+
+;	bytes 20-21		reserved for locals
+
+;	CATCHER
+
+	hdr	1,'CATCHER'
+catchr:	call	douse
+	dw	22
+
+;	BASE
+
+	hdr	1,'BASE'
+base:	call	douse
+	dw	24
+
+;	hld
+
+	hdr	x,'HLD'		; FIG
+hld:	call	douse
+	dw	26
+
+;	DPL
+
+	hdr	1,'DPL'		; FIG
+dpl:	call	douse
+	dw	28
+
+;	OUT
+
+	hdr	1,'OUT'		; FIG
+outt:	call	douse
+	dw	30
+
+; User area bytes #USER onwards are available for user applications
+
+;	#USER  ( -- +n )
+
+	hdr	1,'#USER',,1
+nusr:	call	doval
+	dw	32
+
+;	sys?  ( -- flag )	sys@ 0<>
+
+	hdr	x,'SYS?'
+sysq:	ld	hl,sys1
+sysq1:	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	push	de
+	jp	zneq
+
+;	state?  ( -- flag )	state @ 0<>
+
+	hdr	x,'STATE?',,1
+stateq:	ld	hl,state1
+	jp	sysq1
+
+;	check?  ( -- flag )	checking @ 0<>
+
+	hdr	x,'CHECK?',,1
+chkq:	ld	hl,check1
+	jp	sysq1
+
+;	APPLICATION  ( -- )	sys off
+
+	hdr	1,'APPLICATION'
+app:	ld	hl,sys1
+	jp	off1
+
+;	SYSTEM  ( -- )		sys on
+
+	hdr	1,'SYSTEM',,1
+system:	ld	hl,sys1
+	jp	on1
+
+;	h  ( -- addr )		sys@ if dps end dp
+
+	hdr	x,'H'
+hh:	ld	hl,(sys1)
+	ld	a,l
+	or	h
+	jp	z,dpp
+	jp	dps
+
+;	HERE  ( -- addr )	h @
+
+	hdr	1,'HERE'
+here:	call	docol
+	dw	hh,at
+	dw	exit
+
+;	ALLOT  ( u -- ) 	dup unused u> abort" no data space" h +!
+
+	hdr	1,'ALLOT'	; non-standard
+allot:	call	docol		; unsigned values only
+	dw	dupp
+	dw	unus,ugrea
+	dw	pabq
+	dcs	'no data space'
+allot1:	dw	hh,pstor
+	dw	exit
+
+;	RECOVER  ( u -- ) 	negate h +!
+
+	hdr	1,'RECOVER'
+recov:	call	docol
+	dw	negat
+	dw	bran,allot1
+
+;	RESERVE  ( u -- addr )	here swap allot
+
+	hdr	1,'RESERVE'
+resv:	call	docol
+	dw	here,swap,allot
+	dw	exit
+
+;	C,  ( char -- )		1 reserve c!
+
+	hdr	1,'C,'
+ccomm:	call	docol
+	dw	one,resv
+	dw	cstor
+	dw	exit
+
+;	,  ( x -- )		2 reserve !
+
+	hdr	1,','
+comma:	call	docol
+	dw	two,resv
+	dw	store
+	dw	exit
+
+;	>BODY  ( xt -- addr )	3 +
+
+	hdr	1,'>BODY'
+tbody:	ld	de,3
+	jp	plus1
+
+;	body>  ( addr -- xt )	3 -
+;
+;	hdr	x,'BODY>'
+;fbody:	ld	de,-3
+;	jp	plus1
+
+;	n>count  ( nfa -- h-addr len )	aka (name) n>count
+
+	hdr	x,'N>COUNT',,,pname
+ncnt	equ	pname
+
+;	n>link	( nfa -- lfa )		n>count +
+
+	hdr	x,'N>LINK',,1
+nlnk:	call	docol
+	dw	ncnt,plus
+	dw	exit
+
+;	N>NAME	( nfa1 -- nfa2 | 0 )	n>link @
+
+	hdr	1,'N>NAME',,1
+ntnam:	call	docol
+	dw	nlnk,at
+	dw	exit
+
+;	name>  ( nfa -- xt )		n>link cell+ @
+
+	hdr	x,'NAME>',,1
+namef:	call	docol
+	dw	nlnk,cellp
+	dw	at
+	dw	exit
+
+;	W>NAME  ( wid -- nfa | 0 )	aka @ w>name
+
+	hdr	1,'W>NAME',,,at
+wtnam	equ	at
+
+;	-alias  ( nfa -- nfa flag )	dup c@ $80 <
+
+	hdr	x,'-ALIAS',,1	; false if alias
+dalias:	pop	hl
+	push	hl
+	ld	a,(hl)
+	cp	80h
+	jp	zless2
+
+;	>NAME  ( xt -- nfa | 0 )
+;				voc-link begin @ dup while tuck cell- w>name
+;				begin ?dup while -alias if 2dup name> = if
+;				-rot 2drop end then n>name repeat swap
+;				repeat nip
+
+	hdr	1,'>NAME',,1
+tnam:	call	docol
+	dw	vocl
+tnam1:	dw	at
+	dw	dupp
+	dw	zbran,tnam5
+	dw	tuck
+	dw	cellm
+	dw	wtnam
+tnam2:	dw	qdup
+	dw	zbran,tnam4
+	dw	dalias		; skip if alias
+	dw	zbran,tnam3
+	dw	tdup,namef
+	dw	equal
+	dw	zbran,tnam3
+	dw	drot,tdrop
+	dw	exit
+tnam3:	dw	ntnam
+	dw	bran,tnam2
+tnam4:	dw	swap
+	dw	bran,tnam1
+tnam5:	dw	nip
+	dw	exit		; not found
+
+;	(NAME)  ( nfa -- c-addr u )	count 31 and
+
+	hdr	1,'(NAME)',,1
+pname:	pop	de
+	ld	a,(de)
+	inc	de
+	push	de
+	and	1fh
+	jp	apush
+
+;	.ID  ( nfa | 0 -- )		?dup if (name) type end
+;					." [noname]"
+
+	hdr	1,'.ID',,1
+dotid:	call	docol
+	dw	qdup
+	dw	zbran,dotid1
+	dw	pname
+	dw	typee
+	dw	exit
+dotid1:	dw	pdotq
+	dcs	'[noname]'
+	dw	exit
+
+;	.VOC  ( wid -- )	cell+ cell+ @ .id
+
+	hdr	1,'.VOC',,1
+dotvoc:	call	docol
+	dw	cellp,cellp
+	dw	at,dotid
+	dw	exit
+
+;	!CSP  ( -- )		sp@ csp !
+
+	hdr	1,'!CSP',,1	; FIG
+scsp:	ld	hl,0
+	add	hl,sp
+	ld	(cspp1),hl
+	nextt
+
+;	?CSP  ( -- )		sp@ csp @ - ?bal
+
+	hdr	1,'?CSP',,1	; FIG
+qcsp:	call	docol
+	dw	spat
+	dw	cspp,at
+	dw	subb
+	dw	qbal
+	dw	exit
+
+;	?COMP  ( -- )		state? 0= abort" compile only'
+
+	hdr	1,'?COMP',,1	; FIG
+qcomp:	call	docol
+	dw	stateq
+	dw	zequ
+	dw	pabq
+	dcs	'compile only'
+	dw	exit
+
+;	?EXEC  ( -- )		state? abort" execute only'
+
+	hdr	1,'?EXEC',,1	; FIG
+qexec:	call	docol
+	dw	stateq
+	dw	pabq
+	dcs	'execute only'
+	dw	exit
+
+;	?STACK	( -- )		sp@ s0 @ 1+ pad within abort" stack?"
+;				rp@ r0 @ 1+ fs0 @ within abort" r-stack?"
+;				fsp @ fs0 @ dup 1+ swap (nfpm) @ - within
+;				abort" f-stack?"
+
+	hdr	1,'?STACK',,1	; FIG
+qstac:	call	docol
+	dw	spat
+	dw	szero,at
+	dw	onep
+	dw	pad
+	dw	within
+	dw	pabq
+	dcs	'stack?'
+	dw	rpat
+	dw	rzero,at
+	dw	onep
+	dw	fszero,at	; = S0 if no float
+	dw	within
+	dw	pabq
+	dcs	'r-stack?'
+;	dw	fsp,at
+;	dw	fszero,at
+;	dw	dupp,onep,swap
+;	dw	lit,nfpm
+;	dw	at
+;	dw	subb
+;	dw	within
+;	dw	pabq
+;	dcs	'f-stack?'
+	dw	exit
+
+;	?defined  ( flag -- )	0= abort" ?"
+
+	hdr	x,'?DEFINED',,1
+qdef:	call	docol
+	dw	zequ
+	dw	pabq
+	dcs	'?'
+	dw	exit
+
+;	[ 			state off ;immediate
+
+	hdr	1,'[',1,1
+lbrac:	ld	hl,state1
+	jp	off1
+
+;	]			state on
+
+	hdr	1,']',,1
+rbrac:	ld	hl,state1	; must be -1 for INTERPRET to work
+	jp	on1
+
+;	COMPILE,  ( xt -- )	warning @ 0< if dup limit u< sys? d0= if
+;				dup >name .id ."  system " then then ,
+
+	hdr	1,'COMPILE,',,1
+comxt:	call	docol
+	dw	warnn,at
+	 if	wopt
+	dw	zless
+	 endif
+	dw	zbran,comxt1
+	dw	dupp,limit
+	dw	uless
+	dw	sysq
+	dw	dzequ
+	dw	zbran,comxt1
+	dw	dupp
+	dw	tnam,dotid
+	dw	pdotq
+	dcs	' system '
+comxt1:	dw	comma
+	dw	exit
+
+;	COMPILE  ( -- ) 	?comp r> dup cell+ >r @ compile,
+
+	hdr	1,'COMPILE',,1
+comp:	call	docol
+	dw	qcomp		; prevent crash if interpreting
+	dw	fromr
+	dw	dupp,cellp
+	dw	tor
+	dw	at
+	dw	comxt
+	dw	exit
+
+;	POSTPONE		defined ?dup if 0< if compile compile then
+;				else ?comp number dup >r execute r> then
+;				compile, ;immediate
+
+	hdr	1,'POSTPONE',1,1
+postp:	call	docol
+	dw	defined,qdup
+	dw	zbran,postp2
+	dw	zless
+	dw	zbran,postp1
+	dw	comp,comp
+postp1:	dw	bran,postp3
+postp2:	dw	qcomp
+	dw	numb
+	dw	dupp,tor
+	dw	exec		; create literal & compile
+	dw	fromr
+postp3:	dw	comxt
+	dw	exit
+
+;	(accept)  ( c-addr +n1 -- +n2 )
+;				0 begin key dup >r dup bl 255 between over
+;				127 <> and 2over - and if dup emit over 4
+;				pick + c! 1+ else 2dup dup 8 = over esc =
+;				or swap (bsin) c@ = or and if esc = if 0
+;				swap else 1- 1 then begin 8 dup emit space
+;				emit 1- dup 0= until then drop then r> 13
+;				= until nip nip
+
+	hdr	x,'(ACCEPT)'
+pacce:	call	docol
+	dw	zero
+pacce1:	dw	key
+	dw	dupp,tor
+	dw	dupp,bll	; not control chars
+	dw	clit
+	db	255
+	dw	betw
+	dw	over		; nor del
+	dw	clit
+	db	127
+	dw	nequ,andd
+	dw	tover,subb	; nor buffer end
+	dw	andd
+	dw	zbran,pacce2
+	dw	dupp,emit
+	dw	over
+	dw	clit
+	db	4
+	dw	pick
+	dw	plus
+	dw	cstor
+	dw	onep
+	dw	bran,pacce6
+pacce2:	dw	tdup
+	dw	dupp
+	dw	clit
+	db	bs		; backspace?
+	dw	equal,over
+	dw	clit
+	db	escape		; escape?
+	dw	equal,orr
+	dw	swap
+	dw	lit,bsin	; bsin?
+	dw	cat,equal,orr
+	dw	andd
+	dw	zbran,pacce5
+	dw	clit
+	db	escape		; escape?
+	dw	equal
+	dw	zbran,pacce3
+	dw	zero,swap
+	dw	bran,pacce4
+pacce3:	dw	onem,one
+pacce4:	dw	clit
+	db	bs
+	dw	dupp,emit
+	dw	space,emit
+	dw	onem
+	dw	dupp,zequ
+	dw	zbran,pacce4
+pacce5:	dw	drop
+pacce6:	dw	fromr
+	dw	clit
+	db	cr		; cr?
+	dw	equal
+	dw	zbran,pacce1
+	dw	nip,nip
+	dw	exit
+
+;	ACCEPT  ( c-addr +n1 -- +n2 )	defer accept
+
+	hdr	1,'ACCEPT'
+accept:	call	aexec
+	dw	pacce
+
+;	PAD  ( -- addr )	dp @ (npno) @ +
+
+	hdr	1,'PAD'
+pad:	call	docol
+	dw	dpp,at
+	dw	lit,npno
+	dw	at
+	dw	plus
+	dw	exit
+
+;	>PAD  ( c-addr u -- c-addr2 u )  pad 0 +string
+
+	hdr	1,'>PAD'
+tpad:	call	docol
+	dw	pad
+	dw	zero,pstr
+	dw	exit
+
+;	SOURCE  ( -- c-addr u )		'source 2@
+
+	hdr	1,'SOURCE',,1
+source:	ld	hl,tsour1
+	jp	tat1
+
+;	PARSE  ( char -- c-addr u )	0 (parse)
+
+	hdr	1,'PARSE',,1
+parse:	ld	hl,0		; do not change - keep at 4 bytes below (PARSE)
+	push	hl
+
+;	(parse)  ( char f -- c-addr u )	2>r source >in @ /string r> if tuck
+;					r@ skip over - >in +! then 2dup r>
+;					scan nip tuck - dup rot 0<> - >in +!
+
+ppars:	call	docol
+	dw	ttor
+	dw	source
+	dw	inn,at,sstr
+	dw	fromr
+	dw	zbran,ppars1
+	dw	tuck
+	dw	rat,skip
+	dw	rot,over,subb
+	dw	inn,pstor
+ppars1:	dw	tdup
+	dw	fromr
+	dw	scan,nip
+	dw	tuck
+	dw	subb,dupp
+	dw	rot,zneq
+	dw	subb
+	dw	inn,pstor
+	dw	exit
+
+	hdr	x,'(PARSE)',,1,ppars
+
+;	/esc  ( a u -- a2 u2 c f )	/char dup [char] \ =
+
+	hdr	x,'/ESC',,1
+sesc:	call	docol
+	dw	schr
+	dw	dupp
+	dw	clit
+	db	'\'
+	dw	equal
+	dw	exit
+
+;	>h  ( c -- x )		upcase 16 >digit 0= abort" bad quote"
+
+	hdr	x,'>H',,1
+toh:	call	docol
+	dw	upcas
+	dw	clit
+	db	16
+	dw	todig
+	dw	zequ
+	dw	pabq
+	dcs	"bad quote"
+	dw	exit
+
+;	/hb  ( a u -- a2 u2 x )		/esc if end >h 4 lshift >r /char
+;					>h r> or
+
+	hdr	x,'/HB',,1
+shb:	call	docol
+	dw	sesc
+	dw	zbran,shb1
+	dw	exit
+shb1:	dw	toh
+	dw	clit
+	db	4
+	dw	lsh
+	dw	tor
+	dw	schr
+	dw	toh
+	dw	fromr
+	dw	orr
+	dw	exit
+
+;	"  ( -- a u )		[char] " parse (psb) 0 begin 2>r dup 0>
+;				while /esc if drop /hb then 2r@ + c!
+;				2r> 1+ (pssiz) min repeat 2drop 2r>
+
+	hdr	x,'"',,1
+quote:	call	docol
+	dw	clit
+	db	'"'
+	dw	parse
+	dw	lit,psb
+	dw	zero
+quote1:	dw	ttor
+	dw	dupp
+	dw	zgrea		; required if no trailing "
+	dw	zbran,quote3
+	dw	sesc
+	dw	zbran,quote2
+	dw	drop,shb
+quote2:	dw	trat,plus
+	dw	cstor
+	dw	tfrom
+	dw	onep
+	dw	clit
+	db	pssiz
+	dw	min
+	dw	bran,quote1
+quote3:	dw	tdrop,tfrom
+	dw	exit
+
+;	pwa  ( -- adr )		parsed word address
+
+	hdr	x,'PWA',,1
+pwa:	call	doval
+	ds	cw
+
+;	wpack  ( c-addr1 u -- c-addr2 )
+;				(hm-5) over 31 max - dup to pwa pack
+;				bl affix
+
+	hdr	x,'WPACK',,1	; pack string into WORD's buffer
+wpack:	call	docol
+	 if	retro
+	dw	here
+	 else
+	dw	lit,hm-5	; allow for header fields
+	dw	over
+	dw	clit		; word buffer 31+5 chars min (F94)
+	db	31
+	dw	max
+	dw	subb
+	 endif
+	dw	dupp
+	dw	pto,pwa
+	dw	pack
+	dw	bll,affix	; trailing blank
+	dw	exit
+
+;	bl-word  ( -- c-addr )	bl word
+
+	hdr	x,'BL-WORD',,1
+blword:	ld	hl,20h
+	push	hl
+
+;	WORD  ( char -- c-addr )  true (parse) wpack
+
+wordd:	call	docol
+	dw	true,ppars
+	dw	wpack
+	dw	exit
+
+	hdr	1,'WORD',,1,wordd
+
+;	TOKEN  ( -- c-addr u )	bl-word count
+
+	hdr	1,'TOKEN',,1
+token:	call	docol
+	dw	blword,count
+	dw	exit
+
+;	defined  ( -- c-addr 0 | xt -1 | xt 1 )	bl-word find
+
+	hdr	x,'DEFINED',,1
+defined:call	docol
+	dw	blword,find
+	dw	exit
+
+;	'  ( -- addr )		defined ?defined
+
+	hdr	1,"'",,1
+tick:	call	docol
+	dw	defined
+	dw	qdef
+	dw	exit
+
+;	[UNDEFINED]  ( -- flag )  defined nip 0= ;immediate
+
+	hdr	1,'[UNDEFINED]',1,1
+budef:	call	docol
+	dw	defined
+	dw	nip
+	dw	zequ
+	dw	exit
+
+;	[DEFINED]  ( -- flag )	postpone [undefined] 0= ;immediate
+
+	hdr	1,'[DEFINED]',1,1
+bdef:	call	docol
+	dw	budef,zequ
+	dw	exit
+
+;	(  ( "ccc<delim>" )	[char] ) parse 2drop ;immediate
+
+	hdr	1,'(',1,1
+paren:	call	docol
+	dw	clit
+	db	')'
+	dw	parse,tdrop
+	dw	exit
+
+;	\  ( "ccc" -- )		source blk @ if c/l >in @ over / 1+ *
+;				min then >in ! drop ;immediate
+
+	hdr	1,'\',1,1
+bslas:	call	docol
+	dw	source
+	dw	blk,at
+	dw	zbran,bslas1
+	dw	csll		; works with any c/l - not just 2^n
+	dw	inn,at
+	dw	over,slash
+	dw	onep,star
+	dw	min
+bslas1:	dw	inn,store
+	dw	drop
+	dw	exit
+
+;	\\  ( "ccc" -- )	source >in ! drop ;immediate
+
+	hdr	1,'\\',1,1
+bslss:	call	docol
+	dw	source
+	dw	bran,bslas1
+
+;	LINK,  ( a -- )		here over @ , swap !
+
+	hdr	1,'LINK,'
+linkc:	call	docol
+	dw	here
+	dw	over,at
+	dw	comma
+	dw	swap,store
+	dw	exit
+
+;	WORDLIST  ( -- wid )	$2001 , here 0 , voc-link link, 0 ,
+
+	hdr	x,'WORDLIST',,1
+wlist:	call	docol
+	dw	lit,2001h
+	dw	comma
+	dw	here
+	dw	zero		; nfa of top word in vocabulary
+	dw	comma
+	dw	vocl,linkc	; link in wordlist
+	dw	zero,comma	; null name
+	dw	exit
+
+;	VOCABULARY  ( "name" )	sys? system wordlist create dup , last @
+;				swap cell+ cell+ ! sys ! does> @ context !
+
+	hdr	1,'VOCABULARY',,1
+vocab:	call	docol
+	dw	sysq
+	dw	system
+	dw	wlist
+	dw	creat
+	dw	dupp,comma
+	dw	last,at		; set name field in wordlist struct
+	dw	swap
+	dw	cellp,cellp
+	dw	store
+	dw	sys,store
+	dw	pscod
+dovoc:	call	docol
+	dw	at
+	dw	cont,store
+	dw	exit
+
+;	DEFINITIONS  ( -- )	get-context set-current
+
+	hdr	1,'DEFINITIONS',,1
+defin:	call	docol
+	dw	getcon
+	dw	setcur
+	dw	exit
+
+;	wordlist structure
+
+	aseg
+
+	dw	2001h		; dummy nfa for vocab chaining
+forth1:	dw	topnfa		; nfa of top word in vocabulary
+forth2:	dw	0		; previous vocabulary
+	dw	forth3		; vocab nfa
+
+;	FORTH			vocabulary forth
+
+	hdr	1,'FORTH',1,1
+forth:	call	dovoc
+	dw	forth1
+
+forth3	defl	lastl
+
+;	UNUSED	( -- u )	sys? if (esm) else s0 then @ here
+;				255 + 2dup u> -rot - and
+
+	hdr	1,'UNUSED'
+unus:	call	docol
+	dw	sysq
+	dw	zbran,unus1
+	dw	lit,esm
+	dw	bran,unus2
+unus1:	dw	szero
+unus2:	dw	at
+	dw	here
+	dw	clit		; allow margin
+	db	255
+	dw	plus
+	dw	tdup
+	dw	ugrea
+	dw	drot
+	dw	subb
+	dw	andd
+	dw	exit
+
+	aseg
+
+rtbl:	dw	decim
+	dw	hex
+	dw	bin
+
+;	number ( c-addr -- n|d|r xt )
+;				count <# begin dup while 1- 2dup + c@
+;				[char] _ of else hold then repeat #>
+;				@base >r over c@ [char] # - dup 3 u< if
+;				2* (rtbl) + @execute 1 /string else drop
+;				then 2dup number? if 2nip dpl @ 0< if
+;				drop ['] literal else ['] 2literal then
+;				true else fnumber then r> !base ?defined
+
+	hdr	x,'NUMBER',,1
+numb:	call	docol
+	 if	0		; 200x char literal 'c'
+	dw	dupp,tat
+	dw	swap
+	dw	lit,0ff00h
+	dw	andd
+	dw	tlit
+	dw	2700h,2703h
+	dw	dequ
+	dw	zbran,numb0
+	dw	twop,cat
+	dw	lit,liter
+	dw	exit
+numb0	=	$
+	 endif
+	dw	count
+	 if	uscr
+	dw	bdigs		; strip underscores
+numb1:	dw	dupp
+	dw	zbran,numb4
+	dw	onem
+	dw	tdup,plus
+	dw	cat
+	dw	clit
+	db	'_'
+	dw	pof,numb2
+	dw	bran,numb3
+numb2:	dw	hold
+numb3:	dw	bran,numb1
+numb4:	dw	edigs
+	 endif
+	dw	atbas,tor
+	dw	over,cat	; handle #$% prefix
+	dw	clit
+	db	'#'
+	dw	subb
+	dw	dupp
+	dw	three,uless
+	dw	zbran,numb5
+	dw	tstar
+	dw	lit,rtbl
+	dw	plus
+	dw	aexec
+	dw	one,sstr
+	dw	bran,numb6
+numb5:	dw	drop
+numb6:	dw	tdup
+pnumb	equ	$
+	dw	numq		; NUMBER patch
+	dw	zbran,numb9
+	dw	tnip
+	dw	dpl,at,zless
+	dw	zbran,numb7
+	dw	drop
+	dw	lit,liter
+	dw	bran,numb8
+numb7:	dw	lit,tlite
+numb8:	dw	true
+	dw	bran,numb10
+pfnum	equ	$
+numb9:	dw	fnu		; FNUMBER patch
+numb10:	dw	fromr,stobas
+	dw	qdef
+	dw	exit
+
+;	INTERPRET  ( -- )	begin bl-word dup c@ while find ?dup if
+;				state? = if compile, else execute then
+;				else number state? and ?dup if execute
+;				then then ?stack repeat drop
+
+	hdr	1,'INTERPRET',,1
+inte:	call	docol
+inte1:	dw	blword
+	dw	dupp,cat
+	dw	zbran,inte6	; while not end of input stream
+	dw	find
+	dw	qdup
+	dw	zbran,inte4	; if found
+	dw	stateq
+	dw	equal
+	dw	zbran,inte2	; if compiling and not immediate
+	dw	comxt
+	dw	bran,inte3
+inte2:	dw	exec
+inte3:	dw	bran,inte5
+inte4:	dw	numb
+	dw	stateq
+	dw	andd,qdup
+	dw	zbran,inte5
+	dw	exec
+inte5:	dw	qstac
+	dw	bran,inte1
+inte6:	dw	drop
+	dw	exit
+
+;	(eval)	( c-addr u blk -- )	blk @ >in @ 2>r source 2>r blk !
+;					'source 2! >in off interpret
+;					2r> 'source 2! 2r> >in ! blk !
+
+	hdr	x,'(EVAL)',,1		; does not restore block contents
+peval:	call	docol
+	dw	blk,at
+	dw	inn,at
+	dw	ttor
+	dw	source,ttor
+	dw	blk,store
+	dw	tsourc,tstor
+	dw	inn,off			; reset >IN
+	dw	inte
+	dw	tfrom
+	dw	tsourc,tstor
+	dw	tfrom
+	dw	inn,store
+	dw	blk,store
+	dw	exit
+
+;	?BLOCK	 ( -- )			blk @ dup if block then drop
+
+	hdr	1,'?BLOCK',,1		; reload block
+qblock:	call	docol
+	dw	blk,at
+	dw	dupp
+	dw	zbran,qblock1
+	dw	block
+qblock1:dw	drop
+	dw	exit
+
+;	EVALUATE  ( c-addr u -- )	0 (eval) ?block
+
+	hdr	1,'EVALUATE',,1
+eval:	call	docol
+	dw	zero,peval
+	dw	qblock
+	dw	exit
+
+;	(refill)  ( -- flag )	blk @ ?dup if 1+ dup #screens u< and dup
+;				while dup blk ! block b/buf else (tib)
+;				dup (tibsiz) accept space then 'source 2!
+;				>in off true then
+
+	hdr	x,'(REFILL)',,1		; doesn't correctly handle source
+prefil:	call	docol			; from EVALUATE
+	 if	debug
+	dw	pdotq
+	dcs	'(REFILL) '
+	 endif
+	dw	blk,at
+	dw	qdup
+	dw	zbran,prefil1
+	dw	onep,dupp
+	dw	nscr,uless
+	dw	andd,dupp
+	dw	zbran,prefil3
+	dw	dupp,blk,store
+	dw	block,bbuf
+	dw	bran,prefil2
+prefil1:dw	lit,tib
+	dw	dupp
+	dw	clit
+	db	tibsiz
+	dw	accept
+	dw	space
+prefil2:dw	tsourc,tstor
+	dw	inn,off
+	dw	true
+prefil3:dw	exit
+
+;	REFILL  ( -- flag )
+
+	hdr	1,'REFILL',,1
+refil:	call	aexec
+	dw	prefil
+
+;	reset  ( -- )		catcher off -caps bios-io console
+
+	hdr	x,'RESET'
+reset:	call	docol
+	dw	catchr,off	; reset error handler
+	dw	dcaps		; reset COMPARE/SEARCH caps
+	dw	biosio		; default i/o mode
+	dw	consol		; set EMIT vector
+	dw	exit
+
+;	/interpret  ( -- )	blk off >in off postpone [
+
+	hdr	x,'/INTERPRET',,1
+sinte:	ld	hl,0
+	ld	(blk1),hl
+	ld	(inn1),hl
+	jp	lbrac
+
+;	forth-reset  ( -- )	0 set-limit empty warning on checking
+;				on (fdbs) (fdsiz*nfd) erase empty-buffers
+;				/interpret 'source off bl-word drop !csp
+
+	hdr	x,'FORTH-RESET',,1
+freset:	call	docol
+	dw	zero		; flag to indicate default limit
+	dw	setlim
+	dw	empty		; reset vocabulary pointers
+	dw	warnn,on	; enable warnings
+	dw	check,on	; enable checking
+	dw	lit,fdbs	; clear files
+	dw	lit,fdsiz*nfd	;
+	dw	erase		;
+	dw	mtbuf		; mark screen buffer as empty
+	dw	sinte		; reset interpreter
+	dw	tsourc,off	; clear parsed word buffer
+	dw	blword,drop	;
+	 if	cfs
+	dw	scsp		; set CF stack base to safe value
+	 endif
+	dw	exit
+
+;	(quit)  ( -- )		r0 @ rp! reset normal /interpret begin
+;				cr (refill) drop interpret state? 0= if
+;				(vstat) @execute then again
+
+	hdr	x,'(QUIT)',,1
+pqui:	call	docol
+	dw	rzero,at
+	dw	rpsto
+	dw	reset
+	dw	vnorm
+	dw	sinte
+	 if	debug
+	dw	pdotq
+	dcs	' QUIT '
+	 endif
+pqui1:	dw	crr
+	dw	prefil,drop
+	dw	inte
+	dw	stateq
+	dw	zequ
+	dw	zbran,pqui2
+	dw	lit,vstat	; PROMPT
+	dw	aexec
+pqui2:	dw	bran,pqui1
+
+;	RETURN  ( x -- )	exit to DOS with return code x
+
+	hdr	1,'RETURN'
+retrn:	call	docol
+	dw	consol
+	dw	crr
+	dw	$+2
+	pop	bc
+	ld	hl,(z3eadr)	; for ZSYSTEM
+	ld	a,h
+	or	l
+	jp	z,retrn1
+	ld	de,34		; Z3MSG?
+	add	hl,de
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	or	h
+	jp	z,retrn1
+	ld	de,6		; offset to error byte
+	add	hl,de
+	ld	(hl),c
+retrn1:	ld	l,c
+	ld	h,b
+	ld	a,l
+	or	h
+	jp	z,retrn2
+	ld	a,l		; map 1..255 to $FF01..FF7F
+	and	7fh
+	ld	l,a
+	ld	d,0ffh
+retrn2:	ex	de,hl
+	ld	a,(dosv)
+	cp	31h		; CP/M 3.1 ?
+	ld	c,108
+	call	nc,0005h	; set program return code
+	ld	a,(defusr)	; restore default drive/user
+	call	susr
+	ld	a,(defdrv)
+	ld	e,a
+	ld	c,14
+retrn3:	call	0005h
+	ld	hl,(stack)	; return to CP/M
+	ld	a,h
+	or	l
+	jp	z,0000h		; CP/M warm boot
+	ld	sp,hl
+retrn4:	ld	de,dosbuf	; restore default DMA
+	ld	c,26
+	jp	0005h
+
+;	BYE  ( -- )		close-all console normal exit-video 0 return
+
+	hdr	1,'BYE',,1
+bye:	call	docol
+	dw	closa
+	dw	consol
+	dw	vnorm
+	dw	exvid		; terminal exit sequence
+	dw	zero,retrn
+
+;	boot?  ( -- bootword )	(iboot) @
+
+	hdr	x,'BOOT?'
+bootq:	ld	hl,(iboot)
+	jp	hpush
+
+;	QUIT	( i*x -- i*x )	0 ?return
+
+	hdr	1,'QUIT'
+quit:	ld	hl,0
+	push	hl
+;	jp	qret
+
+;	?return ( code -- )	boot? if return then drop (quit)
+
+	hdr	x,'?RETURN'
+qret:	call	docol
+	dw	bootq
+	dw	zbran,qret1
+	dw	retrn
+qret1:	dw	drop
+	dw	pqui
+
+;	(abort)  ( -- )		s0 @ sp! fs0 @ fsp ! 1 ?return
+
+	hdr	x,'(ABORT)'
+pabor:	call	docol
+	dw	szero,at
+	dw	spsto
+	dw	fszero,at
+	dw	fsp,store
+	 if	debug
+	dw	pdotq
+	dcs	' (ABORT) '
+	 endif
+	dw	one,qret
+
+;	.word  ( -- )		space pwa count 31 min type
+
+	hdr	x,'.WORD',,1
+dotwrd:	call	docol
+	dw	space
+	dw	pwa,count
+	dw	clit
+	db	31
+	dw	min
+	dw	typee
+	dw	exit
+
+;	.error  ( -- )		blk @ ?dup if screen? and if cr loadfile type
+;				>in @ 2- 0max blk @ 2dup scr 2! ."  Scrn " u.
+;				c/l / ." Line " . cr then then .word
+
+	hdr	x,'.ERROR',,1
+doterr:	call	docol
+	dw	blk,at
+	dw	qdup
+	dw	zbran,doterr1
+	dw	scrnq
+	dw	andd		; screen file open and loading from block?
+	dw	zbran,doterr1
+	dw	crr
+	dw	loadf,typee
+	dw	inn,at
+	dw	twom		; adjust pointer
+	dw	zmax
+	dw	blk,at
+	dw	tdup		; set error block, offset
+	dw	scr,tstor
+	dw	pdotq
+	dcs	' Scrn '
+	dw	udot
+	dw	csll
+	dw	slash
+	dw	pdotq
+	dcs	'Line '
+	dw	dot
+	dw	crr
+doterr1:dw	dotwrd
+	dw	exit
+
+;	error  ( n -- )		-1 of (abort) then -2 of boot cell+ @ 0= if
+;				.error then space errmsg 2@ type (abort) then
+;				."  error# " @base decimal swap . !base (abort)
+
+	hdr	x,'ERROR'
+error:	call	docol
+	dw	true		; -1
+	dw	pof,error1
+	dw	pabor
+error1:	dw	lit,-2
+	dw	pof,error3
+	dw	boot,cellp,at
+	dw	zequ
+	dw	zbran,error2
+	dw	doterr		; skipped by applications
+error2:	dw	space
+	dw	errmsg,tat
+	dw	typee
+	dw	pabor
+error3:	dw	pdotq
+	dcs	' error# '
+	dw	atbas
+	dw	decim
+	dw	swap,dot
+	dw	stobas
+	dw	pabor
+
+;	ABORT  ( -- )		-1 throw
+
+	hdr	1,'ABORT'
+abort:	ld	hl,-1
+	push	hl
+;	jp	throw
+
+;	THROW  ( n -- )		?dup if catcher @ ?dup 0= if error then rp!
+;				r> catcher ! 2r> fsp ! swap >r sp! drop r>
+;				then
+
+	hdr	1,'THROW'
+throw:	call	docol
+	dw	qdup
+	dw	zbran,throw2
+	dw	catchr,at
+	 if	debug
+	dw	pdotq
+	dcs	' THROW:'
+	dw	over,dot
+	dw	pdotq
+	dcs	'CATCHER:'
+	dw	dupp,udot
+	 endif
+	dw	qdup,zequ
+	dw	zbran,throw1
+	dw	error
+throw1:	dw	rpsto
+	dw	fromr,catchr,store
+	dw	tfrom,fsp,store
+	dw	swap,tor
+	dw	spsto
+	dw	drop
+	dw	fromr
+throw2:	dw	exit
+
+;	CATCH  ( xt -- n | 0 )	sp@ fsp @ 2>r catcher @ >r rp@ catcher
+;				! execute 0 r> catcher ! 2r> 2drop
+
+	hdr	1,'CATCH'
+catch:	call	docol
+	dw	spat
+	dw	fsp,at
+	dw	ttor
+	dw	catchr,at,tor
+	dw	rpat,catchr,store
+	dw	exec
+	dw	zero
+	dw	fromr,catchr,store
+	dw	tfrom
+catch1:	dw	tdrop
+	dw	exit
+
+;	(abort")  ( n -- )	r> count 2dup + >r ?abort
+
+	hdr	x,'(ABORT")'
+pabq:	call	strr
+;	jp	qabor
+
+;	?ABORT  ( n c-addr u -- )  rot if errmsg 2! -2 throw then 2drop
+
+	hdr	1,'?ABORT'
+qabor:	call	docol
+	dw	rot
+	dw	zbran,catch1
+	dw	errmsg,tstor	; only change msg on error
+	dw	lit,-2
+	dw	throw
+
+;	ABORT"			state? if postpone (abort") ," end
+;				postpone s" ?abort ;immediate
+
+	hdr	1,'ABORT"',1,1
+aborq:	call	docol
+	dw	stateq
+	dw	zbran,aborq1
+	dw	comp,pabq
+	dw	comq
+	dw	exit
+aborq1:	dw	squot
+	dw	qabor
+	dw	exit
+
+;	CMDTAIL  ( -- c-addr u )  (dosbuf) count 2dup >blanks -blanks
+
+	hdr	1,'CMDTAIL'
+cmdtail:call	docol
+	dw	clit
+	db	dosbuf
+	dw	count
+	dw	tdup,tblan
+	dw	dblan
+	dw	exit
+
+; Cold start from DOS
+
+	cseg
+
+;nodos:	db	'wrong DOS version',cr,lf,'$'
+noram:	db	'not enough RAM',cr,lf,'$'
+
+cldd:	call	gdrv			; save default drive and user
+	ld	(defdrv),a
+	call	gusr
+	ld	(defusr),a
+
+	ld	c,12			; get CP/M version
+	call	0005h
+	ld	(dosv),hl
+
+	ld	hl,(z3eadr)		; test for ZSYSTEM
+	push	hl
+	ld	de,27
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	pop	hl
+	call	ssub
+	ld	hl,0
+	jp	z,cldd1
+	ld	(z3eadr),hl		; not present or invalid z3eadr
+
+cldd1:	ld	(stack),hl		; hl=0
+
+	ld	a,(noboot)		; test noboot flag
+	or	a
+	ld	e,a
+	ld	a,(0005h+2)		; bdos base
+	jp	z,cldd2
+
+	add	hl,sp			; save old stack
+	ld	(stack),hl
+	sub	e			; skip over CCP
+
+cldd2:	ld	sp,tmpstk
+	ld	h,a
+	ld	l,0
+	ld	(esm),hl		; patch end of memory value
+	ex	de,hl
+
+	ld	hl,(boot1)		; get BOOT word
+	ld	(iboot),hl		; save it
+	ld	a,h
+	or	l
+	ld	l,a
+	ld	a,(boot2)
+	and	l
+	jp	z,cldd3			; need forth system
+
+	ld	hl,noop
+	ld	(pfres),hl		; patch out forth init
+	ld	hl,(ulimit)
+	ld	a,l
+	or	h
+	jp	nz,cldd5
+	ex	de,hl
+	jp	cldd5
+
+cldd3:	dec	a			; set command line flag
+	ld	(cmdf),a
+
+	ld	hl,(esm)		; check system memory
+	ex	de,hl
+	ld	hl,(idps)
+	call	cmpu
+	ld	de,noram
+	ld	c,9
+	jp	nc,retrn3
+
+	ld	de,hm			; move system segment into place
+	call	ssub
+cldd4:	ld	bc,0			; later patched to LD B,H LD C,L
+	ld	hl,(idp)
+	call	bmovu
+	ld	hl,sm
+
+cldd5:	ld	(limit1),hl		; patch LIMIT
+
+	db	0C3h			; 'jp'
+cldd6:	dw	movpat			; later patched to 'cold'
+
+;	COLD  ( -- )
+
+	hdr	1,'COLD'		; FIG
+cold:	ld	sp,tmpstk
+	ld	hl,(limit1)		; get LIMIT
+	ld	de,-recsiz		; file r/w buffer size
+	add	hl,de
+	ld	(hbuf1),hl		; patch HBUF
+	push	hl
+	ld	hl,(nfh)		; #fcb
+	ld	de,-fhsiz		; handle size
+	call	umstrr
+	pop	hl
+	add	hl,de
+	ex	de,hl
+	ld	hl,(nus)		; user area size
+	call	subd
+	ld	(upp),hl		; patch UP
+	ld	(ir0),hl		; patch R0
+	ld	(rpp),hl		; patch RP
+	ex	de,hl
+	ld	hl,(nrts)		; return stack size
+	call	subd
+	ld	(fspp),hl		; init fp stack
+	ld	(ifs0),hl		; patch FS0
+;	ex	de,hl
+;	ld	hl,(nfps)		; fp stack size
+;	call	subd
+	ld	sp,hl			; set cpu stack pointer
+	ld	(is0),hl		; patch S0
+	ld	hl,(upp)		; init boot up variables
+	ex	de,hl
+	ld	hl,initu
+	ld	bc,initu2-initu
+	call	bmovu
+
+	ld	hl,0			; patch PAUSE
+	ld	(pause1),hl
+
+	call	retrn4			; reset DOS DTA
+
+	call	docol
+	dw	zfh			; reset handles
+	dw	app			; default is APPLICATION
+	dw	decim			; default base
+	dw	reset			; general reset
+pfres	equ	$
+	dw	freset			; forth reset
+pinit	equ	$
+	dw	init			; run INIT eg. for float
+	dw	bootq
+	dw	dupp,boot,store		; restore BOOT
+	dw	qdup
+	dw	zbran,cold6
+	dw	exec			; run application
+	dw	zero,retrn		; exit to DOS
+
+	aseg				; run forth interpreter
+
+;				init-video normal cmdtail (cmdf) c@
+;				and tuck (tib) 0 +string 'source 2! 0
+;				(cmdf) c! if bl-word @ '-' - if >in off
+;				getfilename (open) then interpret else
+;				s" FORTH" r/w open drop then cr page
+
+cold6:	dw	invid			; terminal init sequence
+	dw	vnorm
+	dw	cmdtail			; process command-line
+	dw	lit,cmdf
+	dw	cat,andd
+	dw	tuck
+	dw	lit,tib			; copy to tib
+	dw	zero,pstr
+	dw	tsourc,tstor
+	dw	zero
+	dw	lit,cmdf		; disable
+	dw	cstor
+	dw	zbran,cold8
+	dw	blword			; parse first word
+	dw	at
+	dw	lit
+	db	1,'-'			; skips file open
+	dw	subb
+	dw	zbran,cold7
+	dw	inn,off
+	dw	getfn,popen
+cold7:	dw	inte			; interpret
+	dw	bran,cold9
+cold8:	dw	psqot
+	dcs	'FORTH'
+	dw	rsw,open,drop
+cold9:	dw	crr,pagee
+	dw	pdotq
+	db	elogo-$-1
+logo	equ	$
+	db	'DX-Forth '
+	db	'0'+rel,'.','0'+rev/10
+	db	'0'+rev mod 10
+	db	'  '
+	 if	beta
+	db	'beta'
+	 else
+	date
+	 endif
+	db	'  '
+elogo	equ	$
+	dw	lit,speed		; installed speed
+	dw	ques
+	dw	pdotq
+	dcs	'MHz  '
+	dw	lit,termn		; installed terminal name
+	dw	count,typee
+	dw	crr
+piden	equ	$
+	dw	ident			; run IDENTIFY
+	dw	crr
+	dw	scrnq
+	dw	zbran,cold10
+	dw	crr
+	dw	pdotq
+	dcs	'Using '
+	dw	loadf,typee
+	dw	crr
+cold10:	dw	pqui			; jump to interpreter
+
+;	SET-LIMIT  ( addr -- )	$fff0 and (ulimit) !
+
+	hdr	1,'SET-LIMIT',,1
+setlim:	pop	hl
+	ld	a,l
+	and	0f0h
+	ld	l,a
+	ld	(ulimit),hl
+	nextt
+
+	include	DICT.MAC	; dictionary support
+
+;	S,  ( c-addr u -- )	dup 1+ reserve place
+
+	hdr	1,'S,'
+scomm:	call	docol
+	dw	dupp,onep
+	dw	resv
+	dw	place
+	dw	exit
+
+;	,"  ( "ccc" -- )	" s,
+
+	hdr	1,',"',,1
+comq:	call	docol
+	dw	quote
+	dw	scomm
+	dw	exit
+
+;	(s")  ( -- c-addr u )	r> count 2dup + >r
+
+	hdr	x,'(S")'
+psqot:	call	strr
+	nextt
+
+;	SLITERAL  ( c-addr u -- )  postpone (s") s, ;immediate
+
+	hdr	1,'SLITERAL',1,1
+slite:	call	docol
+	dw	comp,psqot
+	dw	scomm
+	dw	exit
+
+;	S"  ( -- c-addr u )	" state? if postpone sliteral then
+;				;immediate
+
+	hdr	1,'S"',1,1	; state-smart
+squot:	call	docol
+	dw	quote
+	dw	stateq
+	dw	zbran,squot1
+	dw	slite
+squot1:	dw	exit
+
+	 if	0
+
+;	(c")  ( -- c-addr )	r> dup count + >r
+
+	hdr	x,'(C")'
+pcqot:	push	bc
+	ld	a,(bc)
+	ld	l,a
+	ld	h,0
+	inc	bc
+	add	hl,bc
+	ld	c,l
+	ld	b,h
+	nextt
+
+;	C"  ( -- c-addr )	postpone (c") ," ;immediate
+
+	hdr	1,'C"',1,1
+cquot:	call	docol
+	dw	comp,pcqot
+	dw	comq
+	dw	exit
+
+	 endif
+
+;	(.")			r> count 2dup + >r type
+
+	hdr	x,'(.")'
+pdotq:	call	strr
+	jp	typee
+
+;	."			state? if postpone (.") ," end
+;				" type ;immediate
+
+	hdr	1,'."',1,1	; state-smart
+dotq:	call	docol
+	dw	stateq
+	dw	zbran,dotq1
+	dw	comp,pdotq
+	dw	comq
+	dw	exit
+dotq1:	dw	quote
+	dw	typee
+	dw	exit
+
+;	CHAR?  ( x -- x flag )
+
+	hdr	x,'CHAR?',,1
+charq:	pop	hl
+	push	hl
+	ld	l,h
+	jp	zequ1
+
+;	LITERAL  ( n -- )	char? if postpone clit c, end
+;				postpone lit , ;immediate
+
+	hdr	1,'LITERAL',1,1
+liter:	call	docol
+	dw	charq
+	dw	zbran,liter1
+	dw	comp,clit
+	dw	ccomm
+	dw	exit
+liter1:	dw	comp,lit
+	dw	comma
+	dw	exit
+
+;	2LITERAL  ( x1 x2 -- )	postpone 2lit , , ;immediate
+
+	hdr	1,'2LITERAL',1,1
+tlite:	call	docol
+	dw	comp,tlit
+	dw	comma,comma
+	dw	exit
+
+;	[']			' [compile] literal  ;immediate
+
+	hdr	1,"[']",1,1
+btick:	call	docol
+	dw	tick
+	dw	liter
+	dw	exit
+
+;	[COMPILE]		' compile,  ;immediate
+
+	hdr	1,'[COMPILE]',1,1
+bcomp:	call	docol
+	dw	tick
+	dw	comxt
+	dw	exit
+
+;	RECURSE  ( -- ) 	last cell+ @ compile, ;immediate
+
+	hdr	1,'RECURSE',1,1
+recurs:	ld	hl,(last2)
+	push	hl
+	jp	comxt
+
+;	CHAR  ( -- char )	bl word 1+ c@
+
+	hdr	1,'CHAR',,1
+char:	call	docol
+	dw	bll,wordd
+	dw	onep,cat
+	dw	exit
+
+;	[CHAR]  ( -- char )	char [compile] literal
+
+	hdr	1,'[CHAR]',1,1
+pchar:	call	docol
+	dw	char
+	dw	liter
+	dw	exit
+
+;	.YN  ( flag -- )	if ." Y " end ." N "
+
+	hdr	1,'.YN'
+dyn:	call	docol
+	dw	zbran,dyn1
+	dw	pdotq
+	dcs	'Y '
+	dw	exit
+dyn1:	dw	pdotq
+	dcs	'N '
+	dw	exit
+
+;	Y/N  ( -- flag )	." N\08" key upcase [char] Y = dup .YN
+
+	hdr	1,'Y/N'
+yn:	call	docol
+	dw	pdotq
+	dcs	'N',bs
+	dw	key,upcas
+	dw	clit
+	db	'Y'
+	dw	equal
+	dw	dupp
+	dw	dyn
+	dw	exit
+
+;	HALT?  ( -- flag )	key? true of key bl of key then bl <> then
+
+	hdr	1,'HALT?'
+hltq:	call	docol
+	dw	keyq,true
+	dw	pof,hltq2
+	dw	key,bll
+	dw	pof,hltq1
+	dw	key
+hltq1:	dw	bll,nequ
+hltq2:	dw	exit
+
+;	CHAR+  ( c-addr1 -- c-addr2 )	aka 1+ char+
+
+	hdr	1,'CHAR+',,,onep
+charp	equ	onep
+
+;	CHARS  ( n1 -- n2 )		aka noop chars immediate
+
+	hdr	1,'CHARS',1,,noop
+chars	equ	next
+
+;	CELL+  ( addr1 -- addr2 )	aka 2+ cell+
+
+	hdr	1,'CELL+',,,twop
+cellp	equ	twop
+
+;	CELL-  ( addr1 -- addr2 )	aka 2- cell-
+
+	hdr	1,'CELL-',,,twom
+cellm	equ	twom
+
+;	CELLS  ( n1 -- n2 )		aka 2* cells
+
+	hdr	1,'CELLS',,,tstar
+cells	equ	tstar
+
+;	ALIGN  ( -- )			aka noop align immediate
+
+	hdr	1,'ALIGN',1,,noop
+alignn	equ	next
+
+;	ALIGNED  ( addr -- a-addr )	aka noop aligned immediate
+
+	hdr	1,'ALIGNED',1,,noop
+alignd	equ	next
+
+;	DXFORTH  ( -- minor major )
+
+	hdr	1,'DXFORTH'
+dxf:	ld	hl,(dxver)
+	jp	dosver1
+
+	include	DISK.MAC	; disk and screen i/o
+
+	 if	float
+	include	FLOAT.MAC	; floating point
+	 endif
+
+topnfa	equ	lnk		; nfa of top word in forth vocab
+topxt	equ	cfadr		; xt  of top word in forth vocab
+
+	cseg
+initdp	equ	$
+
+	aseg
+initdps	equ	$
+
+	cseg
+
+; Code is run once then disabled.
+
+;	MOVE-PATCH  ( -- )
+
+movpat:	ld	hl,4D44h	; change to LD B,H LD C,L
+	ld	(cldd4),hl
+	ld	hl,cold
+	ld	(cldd6),hl	; patch myself out
+	jp	(hl)
+
+	end	cldd		; start address
+
+;	End
+
+

@@ -1,0 +1,200 @@
+                          IMPORTANT CHANGES
+
+This document discusses changes to DX-Forth for CP/M that may adversely
+affect previously written programs.  It is recommended users update their
+programs to the latest DX-Forth version.  See WHATSNEW.TXT for a summary
+of other changes and additions.
+
+v4.56
+
+   INTEGER has replaced VALUE in the distribution and is the preferred
+   choice for future applications.  INTEGER works similarly to VALUE
+   with the exception a parameter is not used at creation.
+
+   CASE ENDOF ENDCASE VALUE are deprecated and moved to TOOLS.SCR.
+
+v4.56
+
+   DOSLIB: overhaul parsing
+   NEWAPP: alternate run-time for PARSFN
+
+v4.55
+
+   Rename -ALLOT to RECOVER
+
+   DOSLIB: overhaul strings, files, parsing
+
+v4.54
+
+   Floating-point output functions have been rationalized.  FE. FE.R G.
+   G.R are deleted and the functionality of G. G.R is included in F. F.R
+   respectively.  Programs requiring F. or F.R to maintain fixed-point
+   notation can use (F.) or redefine:
+
+     \ AKA G. F.
+     \ AKA G.R F.R
+     : F.R  >R (F.) R> S.R ;
+     : F.  -1 (F.) TYPE SPACE ;
+     \ : FE.R  >R (FE.) R> S.R ;
+     \ : FE.  -1 (FE.) TYPE SPACE ;
+
+   Control-flow stack operators (CS-ROLL et al) are disabled in the
+   kernel.  They are provided in CFSEXT.SCR if required.
+
+v4.53
+
+   Simplified NUMBER? with the side-effect S" ." is no longer rejected.
+
+   DOSLIB changes:
+
+     Rename ?BADOPTION /HEXNUM /NUMRANGE to ?BADOPT /HEX /NUM[].
+
+v4.50
+
+   /PARSE and the method of entering delimiter characters within a
+   string has been replaced with backslash '\xx' escapes.  See S" in
+   the glossary for further details.  Old code that used backslash '\'
+   within a quoted string will need to be replaced with '\\'.  Such
+   instances, however, are likely to be few.
+
+   Kernel C/STRING renamed to /CHAR
+
+v4.45
+
+   READ-LINE status changed from true|false result to a ternary value
+   (-1|0|1).  See DXFORTH.GLO for details.
+
+   ." is now state-smart allowing it to be used in interpret mode.
+   .( is deprecated and moved to TOOLS for backward compatibility.
+   Applications supplied in the DX-Forth distribution have been updated
+   to reflect the change.
+
+   MOVE is made smarter by copying nothing if source and destination
+   addresses are the same.  CMOVE and CMOVE> always copy.
+
+   DOSLIB changes:
+
+     C/STRING moved to kernel.  (D.R) (U.R) is removed as applications
+     can use new string function (S.R), or define:
+
+     : (D.R) ( d w -- a u )  >R (D.) R> (S.R) ;
+     : (U.R) ( u w -- a u )  0 SWAP (D.R) ;
+
+v4.44
+
+   #FCB is deleted and its function replaced by an entry in the SYS-VEC
+   table.  See #FCB in the glossary.
+
+   DOSLIB changes:
+
+     Renamed /INBUF /OUTBUF to #INBUF #OUTBUF
+
+v4.43
+
+   .NAME is deleted.  The direct equivalent is: >NAME .ID
+
+   Removed embedded string '(y/n)' from Y/N.
+
+   /NUMBER introduced in 4.42 is replaced with a new function.  Previous
+   usage should be replaced with:  0 0 2SWAP >NUMBER
+
+   >FLOAT reverts back to Forth-94 specification in respect of string
+   of blanks and empty string (see 4.42 below).
+
+   Mapping of CP/M 3 codes for RETURN is changed from $FF7F..FF00 to
+   $FF01..FF7F.
+
+   DOSLIB changes:
+
+     FINDALL now requires the attribute (usually 0) be provided as an
+     argument.
+
+     Renamed QSORT FREPOS REPOSINFILE REPOSOUTFILE INFILEPOS OUTFILEPOS
+     to SORT FSEEK SEEKINFILE SEEKOUTFILE POSINFILE POSOUTFILE
+     respectively.
+
+     /INTEGER /RAWNUM are deleted.  Kernel /NUMBER replaces /INTEGER.
+     /RAWNUM may be replaced by /NUMBER DROP.
+
+     >FID returns -1 to indicate handle closed (previously 0).
+
+v4.42
+
+   ALLOT and RESERVE no longer perform an ERASE.  This permits data of
+   arbitrary length to be loaded at HERE and then ALLOTed.  See /ALLOT
+   /RESERVE in MISC.SCR for versions that erase.
+
+   Forth-94 recommendation that >FLOAT returns 0.0E and true for a
+   string of blanks is no longer supported.  A zero length string now
+   returns false.  See >FLOAT in glossary.
+
+   The fig-FORTH convention of making vocabularies IMMEDIATE has been
+   adopted.  Consequently FORTH ASSEMBLER HIDDEN EDITOR are now
+   immediate.
+
+   RESET-DISKS has been removed due to portability issues.  Change disk
+   functionality can be implemented using GETDSK RESETDISK SELDSK from
+   DOSLIB.SCR.  Note that Function 13 (RESETDISK) behaves somewhat
+   differently between CP/M and MS-DOS and care must be taken when
+   using this function portably.
+
+v4.41
+
+   Character propagation in CMOVE & CMOVE> is no longer supported.  To
+   fill a region with a specified character use FILL.
+
+v4.40
+
+   CSP changed from double cell variable back to a single.  Files in the
+   distribution updated.
+
+   TYPE changed to use unsigned count.  SPACES count remains signed for
+   backward compatibility but see glossary on handling negative counts.
+
+   SETFCB has changed in the case when no drive/user is specified.  The
+   FCB will use the drive/user in effect at the time it is activated -
+   not when initialized as previously.
+
+   Changed FILE-FCB stack effect for compatibility with >FCB (.FCB) .
+
+   FINDFIRST (DOSLIB) requires a dummy attribute (0) for compatibility
+   with MS-DOS version.
+
+   Renamed USER# [UP] to U# [U] respectively in the assembler.
+
+v4.30
+
+   Removed immediate EXIT and renamed (EXIT) to EXIT.
+
+   Non-zero RETURN codes are now seen by CP/M 3 as "unsuccessful" (same
+   as Z-System).  See glossary entry for RETURN.
+
+v4.12
+
+   EDIT can no longer be used to load the editor from disk.  You must use
+   SED or TED for that.  Once the editor is loaded and saved as part of
+   the system, EDIT can be added as a synonym.
+
+v4.10
+
+   ALLOT has been changed (for the better).  Unlike Forth-94 ALLOT only
+   unsigned values may be used.  Applications which used negative values
+   with ALLOT should be changed to use -ALLOT instead.  Programs which
+   require Forth-94 behaviour can be accommodated with the following
+   redefinition:
+
+     : ALLOT ( n -- )  NEGATE -ALLOT ;
+
+   Note however that memory checking is not performed.
+
+v4.06
+
+   Functions '.' and '?' adopt the eForth behaviour i.e. when BASE is
+   decimal display signed; otherwise display unsigned.  Only these
+   functions and those which use them are affected.  Applications
+   requiring Forth-94 behaviour may redefine:
+
+     : . ( n -- )  S>D D. ;
+
+
+

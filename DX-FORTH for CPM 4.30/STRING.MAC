@@ -1,0 +1,330 @@
+;
+;  STRING.MAC - String Functions
+;
+;  CMOVE  CMOVE>  COUNT  PACK  PLACE  affix  SCAN  SKIP  -TRAILING
+;  TRIM  -BLANKS  /STRING  CAPS  COMPARE  SEARCH  +STRING  S.R
+;
+
+;	CMOVE  ( c-addr1 c-addr2 u -- )
+
+	hdr	1,'CMOVE'
+cmove:	ld	l,c
+	ld	h,b
+	pop	bc
+	pop	de
+	ex	(sp),hl
+cmove1:	call	bmovd
+	pop	bc
+	jp	next
+
+;	CMOVE>  ( c-addr1 c-addr2 u -- )
+
+	hdr	1,'CMOVE>'
+cmovu:	ld	l,c
+	ld	h,b
+	pop	bc
+	pop	de
+	ex	(sp),hl
+cmovu1:	call	bmovu
+	pop	bc
+	jp	next
+
+;	COUNT  ( c-addr1 -- c-addr2 u )  dup 1+ swap c@
+
+	hdr	1,'COUNT'
+count:	pop	de
+	ld	a,(de)
+	inc	de
+	push	de
+	jp	apush
+
+;	PACK  ( c-addr1 u c-addr2 -- c-addr2 )
+;					  2dup 2>r 1+ swap move 2r> tuck c!
+
+	hdr	1,'PACK'
+pack:	ld	l,c
+	ld	h,b
+	pop	de
+	pop	bc
+	ex	(sp),hl
+	push	bc
+	push	de
+	inc	de
+	call	bmove
+	pop	hl
+	pop	de
+	ld	(hl),e
+pack1:	pop	bc
+	jp	hpush
+
+;	PLACE  ( c-addr1 u c-addr2 -- )  pack drop
+
+	hdr	1,'PLACE'
+place:	call	docol
+	dw	pack,drop
+	dw	exit
+
+;	affix  ( c-addr char -- c-addr )  over count + c!
+
+	hdr	x,'AFFIX'	; append char to counted string
+affix:	call	docol		; count unchanged
+	dw	over
+	dw	count,plus
+	dw	cstor
+	dw	exit
+
+;	SCAN  ( c-addr1 u1 char -- c-addr2 u2 )
+
+	hdr	1,'SCAN'
+scan:	pop	de
+	ld	l,c
+	ld	h,b
+	pop	bc
+	ex	(sp),hl
+scan1:	ld	a,c
+	or	b
+	jp	z,scan2
+	ld	a,e
+	cp	(hl)
+	jp	z,scan2
+	inc	hl
+	dec	bc
+	jp	scan1
+
+scan2:	ex	(sp),hl
+scan3:	push	bc
+	ld	c,l
+	ld	b,h
+	jp	next
+
+;	SKIP  ( c-addr1 u1 char -- c-addr2 u2 )
+
+	hdr	1,'SKIP'
+skip:	pop	de
+	ld	l,c
+	ld	h,b
+	pop	bc
+	ex	(sp),hl
+skip1:	ld	a,c
+	or	b
+	jp	z,scan2
+	ld	a,e
+	cp	(hl)
+	jp	nz,scan2
+	inc	hl
+	dec	bc
+	jp	skip1
+
+;	-TRAILING  ( c-addr u1 -- c-addr u2 )	bl trim
+
+	hdr	1,'-TRAILING'
+dtrai:	ld	e,' '
+	ignore1
+
+;	TRIM  ( c-addr u1 char -- c-addr u2 )
+
+	hdr	1,'TRIM'
+trim:	pop	de
+	ld	a,e
+	pop	de
+	pop	hl
+	push	hl
+	push	bc
+	ld	c,a
+	add	hl,de
+	ex	de,hl
+trim1:	dec	de
+	ld	a,l
+	or	h
+	jp	z,pack1
+	ld	a,(de)
+	cp	c
+	jp	nz,pack1
+	dec	hl
+	jp	trim1
+
+;	-BLANKS ( c-addr u1 -- c-addr u2 )	bl skip -trailing
+
+	hdr	1,'-BLANKS'
+dblan:	call	docol
+	dw	bll,skip
+	dw	dtrai
+	dw	exit
+
+;	/STRING  ( c-addr1 u1 n -- c-addr2 u2 )		rot over + -rot -
+
+	hdr	1,'/STRING'	; ANS
+sstr:	pop	de
+	pop	hl
+	call	ssub
+	ex	(sp),hl
+	add	hl,de
+	ex	(sp),hl
+	jp	hpush
+
+;	CAPS  ( -- )		enable caps COMPARE/SEARCH
+
+	hdr	1,'CAPS'
+caps:	ld	a,1
+	ignore1
+
+;	-caps  ( -- )		disable caps COMPARE/SEARCH
+
+	hdr	x,'-CAPS'
+dcaps:	xor	a
+	ld	(scaps),a
+	jp	next
+
+	cseg
+
+;	string match  HL = a1  BC = a2  DE = len  Z if match
+
+cmpnc:	ld	a,e	; case insensitive
+	or	d
+	ret	z
+	push	bc
+	ld	a,(bc)
+	call	upc
+	ld	c,a
+	ld	a,(hl)
+	call	upc
+	cp	c
+	pop	bc
+	ret	nz
+	inc	hl
+	inc	bc
+	dec	de
+	jp	cmpnc
+
+cmpss:	ld	a,(scaps)
+	or	a
+	jp	nz,cmpnc
+
+;	string match  HL = a1  BC = a2  DE = len  Z if match
+
+cmpsb:	ld	a,e	; case sensitive
+	or	d
+	ret	z
+	ld	a,(bc)
+	cp	(hl)
+	ret	nz
+	inc	hl
+	inc	bc
+	dec	de
+	jp	cmpsb
+
+;	COMPARE  ( c-addr1 u1 c-addr2 u2 -- -1 | 0 | 1 )
+
+	hdr	1,'COMPARE'	; ANS
+cmpp:	pop	de
+	pop	hl
+	ex	(sp),hl
+	ld	a,d
+	cp	h
+	jp	nz,cmpp1
+	ld	a,e
+	cp	l
+cmpp1:	jp	c,cmpp2
+	ex	de,hl
+cmpp2:	ld	l,c
+	ld	h,b
+	pop	bc
+	ex	(sp),hl
+	push	af
+	call	cmpss
+	jp	z,cmpp4
+	pop	bc
+cmpp3:	pop	bc
+	ld	a,0
+	ld	(scaps),a
+	jp	c,one
+	jp	z,false
+	jp	true
+
+cmpp4:	pop	af
+	jp	cmpp3
+
+;	SEARCH  ( c-addr1 u1 c-addr2 u2 -- c-addr3 u3 -1 | c-addr1 u1 0 )
+
+	hdr	1,'SEARCH'	; uses temps 1-3
+sear:	call	docol
+	dw	$+2
+	pop	hl
+	ld	(t1),hl		; u2
+	ld	a,l
+	or	h
+	pop	bc
+	pop	hl
+	ld	(t2),hl		; u1
+	ex	de,hl
+	pop	hl
+	ld	(t3),hl		; adr1
+	jp	z,sear2
+	dec	hl
+	inc	de
+sear1:	inc	hl
+	dec	de
+	ld	a,e
+	or	d
+	jp	z,sear4
+;	ld	a,(bc)
+;	cp	(hl)
+;	jp	nz,sear1
+	push	de
+	push	bc
+	push	hl
+	ex	de,hl
+	ld	hl,(t1)		; u2
+	ex	de,hl
+	call	cmpss
+	pop	hl
+	pop	bc
+	pop	de
+	jp	nz,sear1
+
+sear2:	ld	bc,-1
+sear3:	push	hl
+	push	de
+	push	bc
+	xor	a
+	ld	(scaps),a
+	jp	exit
+
+sear4:	ld	bc,0
+	ld	hl,(t2)		; u1
+	ex	de,hl
+	ld	hl,(t3)		; adr1
+	jp	sear3
+
+;	+STRING  ( c-addr1 u1 c-addr2 u2 -- c-addr2 u3)
+;					2swap swap 2over + 2 pick cmove +
+
+	hdr	1,'+STRING'	; uses temp 1
+pstr:	call	docol
+	dw	$+2
+	pop	de
+	pop	hl
+	pop	bc
+	ld	(t1),hl		; adr2
+	add	hl,de
+	ex	de,hl
+	add	hl,bc
+	ex	(sp),hl		; u3
+	call	bmovd
+	ld	hl,(t1)
+	ex	(sp),hl
+	push	hl
+	jp	exit
+
+;	S.R  ( c-addr n1 n2 -- )  over - spaces type
+
+	hdr	1,'S.R'		; type string right-justified
+sdotr:	call	docol
+	dw	over,subb
+	dw	spacs
+	dw	typee
+	dw	exit
+
+;	end
+
+
