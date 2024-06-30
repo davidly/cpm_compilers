@@ -20,7 +20,6 @@ I can vouch that the m.bat script in each folder builds working benchmark binari
 It is my intention to show each tool in its best light with respect to the benchmarks. If you know of better optimization flags or ways to improve the benchmark source code for a given tool, please feel free to submit a pull request or open an issue. That said, I want to avoid cheap hacks like using peek/poke in BASIC instead of local variables :)
 
 The benchmarks include:
-
   * sieve: The classic from BYTE Magazine.
   * e: Computes the irrational number e to 192 digits.
   * ttt: proves you can't win at tic-tac-toe if the opponent is competent
@@ -31,6 +30,11 @@ To run the compilers on Windows, use the m.bat script in each folder, e.g.:
   * m e
   * m ttt
 
+To run the resulting apps, use the -c flag to force console mode and -p flag to show performance information. The interpreters have other modes for running; see their respective m.bat files for details.
+  * ntvcm -c -p sieve
+  * ntvcm -c -p e
+  * ntvcm -c -p ttt
+ 
 The m80 Z80 Macro Assembler only has ttt.mac and no sieve or e implementations. The 8080 code in the asm folder is already faster than any Z80 code the compilers produce.
 
 The Borland Pascal and Modula-2 products don't support command-line builds, so you have to run the apps, load the source file, and build manually.
