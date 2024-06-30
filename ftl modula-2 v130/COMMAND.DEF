@@ -1,0 +1,37 @@
+DEFINITION MODULE Command;
+
+(*	Command line processor*)
+FROM SYSTEM IMPORT BYTE;
+
+TYPE
+	Parclass=(name,string,option);
+
+	(*	Parclass is a best guess style of thing:
+		If the parameter is in quotes it is"a string
+		If it follows a '[' or a '/' it is an option
+		(there is only ever one option parameter. It is
+		always last, and it contains everything from the / or 
+		[ onwards
+		Everything else is a name (no validity checking performed*)
+
+	Text=RECORD
+		Length:BYTE;		(*returns bytes in parameter*)
+		Terminator:CHAR;	(*returns next character, or
+					delimiter for strings*)	
+		Class:Parclass;		(*class of parameter*)
+		CASE :BOOLEAN OF
+		    FALSE:FilePos:CARDINAL;ErrorNo:CARDINAL|
+		    TRUE:Chars:ARRAY[0..127] OF CHAR;
+		    END
+					(*parameter - always terminated by
+					  a zero byte, but that byte is not
+					  included in the length*)
+		END;
+
+	Parameter=POINTER TO Text;
+PROCEDURE GetParams(VAR p:ARRAY OF Parameter;VAR count:INTEGER);
+(*	crack the command line*)
+VAR	CommLength[80h]:BYTE;
+	CommText[81h]:ARRAY[0..126] OF CHAR; 
+END Command.
+

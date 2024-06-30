@@ -1,0 +1,207 @@
+DEFINITION MODULE Pattern;
+
+(*	This is a pattern matching module
+
+	Dave Moore, FTL Modula-2
+
+	To match a pattern with this module, you must create a
+	pattern description with the "Create" functions, and then 
+	use the MatchPattern function.
+
+	This function returns a tree describing the match, if successful,
+	or NIL if not successful.
+
+	
+*)
+TYPE
+
+(*	The program matches a tree representing a pattern
+	there are a variety of node types*)
+	
+	NodeType=(String, 	(* A string of chars*)
+		  AnyOf,	(* A character from a set*)
+		  Alternatives,	(* One of two alternatives*)
+		  Concat,	(* Concatenate two patterns*)
+		  RightLimit);	(* Make sure at right boundary*)
+
+	CharSet=SET OF CHAR;
+
+	PNode=POINTER TO Node;
+
+	PStatus=POINTER TO State;
+
+(*	If a match is successful, the match is returned by a tree of
+	states. Each node in the tree gives the start position of the
+	match and the position of the next character following the match.
+
+	It also contains a pointer to the pattern node which was matched.
+
+	This information has to be kept separately from the pattern decription
+	node because a given pattern node can match several times in a given
+	pattern, either because of recursion, or because you have chosen to
+	save space by using a single node in several different places in a 
+	pattern.
+
+*)	
+
+	State=RECORD
+		Status:CARDINAL;	(*	Status is a status field used
+						for back-tracking by the node
+						classes Alternatives and 
+						AnyOf
+
+						When we are backtracking to try 
+						an alternative match or a longer
+						one, this value is incremented
+
+						When we are tracking forward, 
+						it is initialized*)
+
+		MatchedAt:CARDINAL;		(* Position at which this 
+						   node matched*)
+		PatternNode:PNode;		(* Pointer to pattern node 
+						   matched by this status node*)
+		MatchedTo:CARDINAL;		(* Position of character after
+						   last character matched by 
+						   pattern*)
+		Left,Right:PStatus;		(* Pointer to substatus tree
+					     	   Left is used for Alternatives
+						   Both Left and Right are used
+						   for Concantenation*)
+		END;
+
+	Node=RECORD
+		CASE NType:NodeType OF
+			String:
+				TextLen:CARDINAL;
+				Text:ARRAY[0..0] OF CHAR;
+				|
+			AnyOf:
+				Match:CharSet;
+				MinCount,MaxCount:CARDINAL;
+				Fast:BOOLEAN;
+				|
+			Alternatives,Concat:
+				First,Second:PNode;
+				(* if either is null, it matches the null string*)
+				|
+			END;
+				
+		END;	
+
+(*	The following functions return a node representing a pattern to be
+	matched.
+
+	Some of the functions require other patterns as parameters. These
+	can be generated using nested function calls.
+
+	Recursion is possible, but some extra work is required to define a
+	recursive pattern. You must allocate storage for a recursive pattern
+	before it is used, and then assign its contents after it is defined.
+
+	For example, suppose we want to set up a pattern which matches a string
+	of a's. The pattern can be given by the grammar:
+
+	E->a|aE
+
+	This would be set up as follows:
+
+	NEW(E);
+	temp:=CreateAltNode(
+		   CreateStringNode('a'),
+		   CreateConcatNode(
+			CreateStringNode('a'),
+			E)
+		   );
+	E^:=temp^;
+
+	We have allocated "E" first so that it can be used in the
+	function. We could not simply assign the pointer returned by
+	CreateConcatNode to E, since then the E used in the function
+	would be pointing elsewhere. Instead, we must copy the contents
+	of temp into E so that the pointers remain correct.
+
+	This pattern "E" is not yet ready to be used, since the pattern
+	will only match the first "a" and then return. We must add a
+	"LimitNode" to ensure that all the string is matched
+
+	E1:=CreateConcatNode(E,CreateLimitNode());
+
+	E1 will ensure that all of the string is matched
+*)
+PROCEDURE CreateStringNode(s:ARRAY OF CHAR):PNode;
+
+(*	Create a node which matches a fixed string
+
+	s is the string to match*)
+
+PROCEDURE CreateAltNode(p,q:PNode):PNode;
+
+(*	Match either p or q *)
+
+PROCEDURE CreateAnyOfNode(s:CharSet;min,max:CARDINAL;Longest:BOOLEAN):PNode;
+
+(*	Match any character in set "s"
+
+	min and max are the minimum and maximum characters to match
+
+	Normally, the first attempt matches the shortest acceptable number
+	of characters. In this case, to match more characters, backtracking
+	must be performed.
+
+	If you know that matching the most possible characters will not cause
+	the pattern to fail (for example, when matching identifiers in 
+	Modula-2, in which identifiers cannot run together, then specifying
+	TRUE for Longest will produce a faster pattern match
+*)
+
+PROCEDURE CreateConcatNode(p,q:PNode):PNode;
+
+(*	Match pattern p followed by pattern q *)
+
+PROCEDURE CreateLimitNode():PNode;
+
+(*	Match only if all of the string has been matched 
+
+	Beware:
+
+		Do not use a limit node as part of a pattern which
+		can be called recursively (such as "E" above). If you do,
+		the pattern matcher will attempt to match the end of the
+		string on every recursion, which may prevent recursion at all
+
+*)
+
+PROCEDURE MatchPattern(p:PNode;s:ARRAY OF CHAR):PStatus;
+
+(*	Match a Pattern 
+	p is the root of the pattern to match
+	s is the text to match
+
+	The function returns a tree if the match is successful.
+	It returns NIL if the match fails.
+
+	The match must start at the beginning of the string, but it
+	need not match the entire string - this can be forced by using
+	a limit node. 
+
+	If you want to un-anchor the match from the beginning of the
+	string, use a pattern:
+
+		CreateConcatNode(
+			CreateAnyOfNode(CharSet{0x..0ffx},0,64000,FALSE),
+			E);
+
+	where E is the pattern to be matched in un-anchored mode.
+
+	The tree returned by the pattern matcher contains, in every node, the
+	first character matched by the pattern, and the position of the next
+	character following the match (so that the difference between these
+	two values gives the number of characters matched).
+
+	In addition, each node contains a pointer to the pattern node matched
+	and it may contain pointers to sub-patterns which were matched.
+
+*)
+END Pattern.
+Y

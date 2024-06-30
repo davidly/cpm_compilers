@@ -1,0 +1,69 @@
+DEFINITION MODULE Terminal;
+(*FROM SYSTEM IMPORT BYTE;*)
+(*      Terminal IO routines
+
+        These are seperated from Streams because that is the
+        way it is done in Wirth, and because you may want to
+        use this module directly in any case
+
+        See also, the module ScreenIO which does things with the
+        cursor etc
+
+*)
+TYPE    CharWrit=PROCEDURE(CHAR);
+
+        (*      The next four variables are used by ScreenIO
+                to 'pinch' the lowest level of terminal output
+                and to provide a cursor blink facility
+
+                The ScreenIO routine sets the variables rather than
+                Terminal importing ScreenIO so that Terminal can run
+                without ScreenIO being present. Of course, there
+                is nothing to stop you using these entry points for
+                your own modules*)
+
+VAR     CharRoutine:CharWrit;
+        CharEnabled:BOOLEAN=FALSE;
+        BlinkRoutine:PROC;
+        BlinkEnabled:BOOLEAN=FALSE;
+
+
+        StringLen:CARDINAL;     (*length of read string (characters actually entered)*)
+PROCEDURE Read(VAR b:CHAR);
+
+(*      Read next character. If any in buffer, that character is returned
+        Otherwise a wait for character bdos call is issued*)
+
+PROCEDURE ReadBuffer(force:BOOLEAN);            
+
+(*      Buffer ahead.
+        Reads another buffer if buffer is empty or force is true
+        During the read, all CP/M control codes can be used*)
+
+PROCEDURE BusyRead(VAR b:CHAR); 
+
+(*      Read a console character without waiting
+        This routine ignores the contents of the buffer
+        returns null character if nothing has been read*)
+
+PROCEDURE ReadAgain;    
+
+(*      causes last character to be backed up over
+        Useful for lexical analysers. You can only back
+        up to the beginning of a line
+
+        Only works on buffered input
+*)
+PROCEDURE Write(B:CHAR);
+PROCEDURE WriteLn;      (*Write a carriage return line feed pair*)
+PROCEDURE WriteString(s:ARRAY OF CHAR);
+PROCEDURE ErrorExit(s:ARRAY OF CHAR);
+PROCEDURE ReadString(VAR s:ARRAY OF CHAR);
+PROCEDURE ClearCharBuffer;
+
+(*      Overcome CP/M bug
+        If you are using BusyRead, the last character you read may be presented 
+        a second time if you then use an ordinary read or a buffered read
+        To overcome this, call this routine just before exitting or
+        when you switch from one to the other*)
+END Terminal.

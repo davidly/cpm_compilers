@@ -1,0 +1,20 @@
+DEFINITION MODULE GetFiles;
+
+(*	Get a list of file names meeting a wildcard description*)
+FROM Files IMPORT FileName;
+PROCEDURE GetNames(Pattern:ARRAY OF CHAR;
+		VAR	names:ARRAY OF FileName;VAR count:INTEGER);
+
+(*	Pattern is a pattern to use for the search
+	names returns a list of matching file name (with no device name
+		on the front)
+	count returns number of names returned in names
+
+	If the given name contains no wild card, it is always returned
+	as the only match, whether it exists or not 
+
+	While this means that this routine cannot be used to check for
+	the existence of a file, it can be used to convert a parameter
+	to a filename as required by the module Files *)
+END GetFiles.
+

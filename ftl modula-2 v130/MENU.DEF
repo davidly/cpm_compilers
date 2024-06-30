@@ -1,0 +1,25 @@
+DEFINITION MODULE Menu;
+
+(*	Menu driver
+
+	Bring up a menu at selected point on screen and accept an option
+
+	options can be selected either by striking first character of
+
+	option or by entering option no (limited to 0-9)
+
+	option 0 is always exit without selection as is escape*)
+
+TYPE	MenuText=ARRAY[1..11] OF CHAR;
+
+PROCEDURE GetFromMenu(VAR Text:ARRAY OF MenuText;x,y:CARDINAL;
+		depth,columns:CARDINAL):CARDINAL;
+
+(* 	Text is the text to display
+
+	x and y are the position for the top left corner of the box
+	depth is the number of options in a column
+	columns is the number of columns that will be required	*)
+
+END Menu.
+

@@ -1,0 +1,110 @@
+DEFINITION MODULE MakeEdits;
+
+
+(*	Routines to edit a file
+
+	(i.e., actually make changes to the file)
+
+	D Moore 11 Jan 85*)
+
+FROM Files IMPORT FileName;
+
+TYPE	EditFile;
+	Position;
+	
+	ErrorRecord=RECORD
+		ErrorNum:CARDINAL;
+		CharP:CARDINAL;
+		END;
+	ErrorArray=ARRAY[0..9] OF ErrorRecord;
+VAR	ErrorList:ErrorArray;
+	ErrorCount:CARDINAL;
+
+PROCEDURE OpenFile(VAR f:EditFile;fn:FileName;VAR reply:INTEGER;Pos:CARDINAL);
+
+(*	Load the file into memory
+
+	If insufficient memory, returns reply=-3
+	if file not found, returns reply=-2
+	reply>0 if ok, returns blocks read*)
+
+PROCEDURE CloseFile(VAR f:EditFile;VAR reply:INTEGER);
+
+(*	Write out changes to an edit file and close it
+	Done returns false if out of disc space*)
+
+PROCEDURE AbandonFile(f:EditFile);
+
+(*	Abandon changes to an edit file*)
+PROCEDURE GetPosition(VAR f:EditFile;VAR p:Position);
+PROCEDURE SetPosition(VAR f:EditFile;p:Position);
+(*	get/set position in a file
+	GetPosition returns the curent position
+	DefineLabel defines a label
+	This label must not be altered unless it is deleted
+	with DelPosition first*)
+
+PROCEDURE LabelOp(VAR f:EditFile;Define:BOOLEAN;ch:CHAR):BOOLEAN;
+
+(*	Define or set a label
+	ch is a character from the set 0..9,B,K
+*)
+
+PROCEDURE DelChars(VAR f:EditFile;number:INTEGER);
+
+(*	delete a number of characters
+	if number is <0, it has the following meanings:
+	-1 delete to end of line
+	-2 delete entire line
+	-3 delete remainder of file*)
+PROCEDURE InsChars(VAR f:EditFile;VAR S:ARRAY OF CHAR;len:INTEGER);
+(*	insert characters*)
+
+PROCEDURE Retrline(VAR f:EditFile;VAR len,pos:INTEGER;
+		VAR p:Position;VAR Linesmoved:INTEGER;Lines:INTEGER);
+
+(*	return information about a line for the given file
+
+	len returns the length of the line
+	pos returns current position in the line (character number)
+	p   returns position of start of line
+	Linesmoved returns number of lines actually moved - but only
+		if move was negative. Returns negative value
+	lines (input) is number of lines to move from current line
+*)
+	
+PROCEDURE ReadNextChar(VAR p:Position;VAR ch:CHAR);
+(*	Read next character from a line
+	p must be a position returned by Retrline or ReadCh - not GetPosition*)
+
+PROCEDURE PrepareString(s:ARRAY OF CHAR;len:INTEGER);
+
+(*	prepare a string for use in a find command*)
+
+PROCEDURE BackOneChar(VAR f:EditFile):BOOLEAN;
+PROCEDURE ForwardOneChar(VAR f:EditFile):BOOLEAN;
+
+PROCEDURE FindString(VAR f:EditFile;Backwards:BOOLEAN):BOOLEAN;
+
+(*	Actually find the next occurrence of the string	
+
+	Done returns true if one is found*)
+PROCEDURE GetCurrentChar(VAR f:EditFile):CHAR;
+
+(*	Return character currently positioned to*)
+
+PROCEDURE CallWithFile(name:ARRAY OF CHAR;VAR f:EditFile);
+PROCEDURE FileType(VAR f:EditFile):CARDINAL;
+
+(*	Call program with file as parameter*)
+PROCEDURE BlockCopy(VAR FromFile,ToFile:EditFile):BOOLEAN;
+PROCEDURE BlockDel(VAR FromFile:EditFile):BOOLEAN;
+PROCEDURE DefineErrors(VAR f:EditFile);
+END MakeEdits.
+
+
+	
+
+
+
+(Þ /+á ,-ÿÿ!sÿÿÿÿÿÿÿÿ678ÿÿÿÿ;ÿÿ=ÿÿÿÿÿÿ

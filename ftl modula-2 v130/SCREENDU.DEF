@@ -1,0 +1,23 @@
+DEFINITION MODULE ScreenDummy;
+
+(*	this module was written to enable
+	several modules to be compiled
+	on machines with tight TPA's. The same
+	thing can be done with other modules if
+	your TPA is tighter than that of my test
+	machine.
+
+	What has been done is to replace a large
+	symbol table (that of ScreenIO) with a 
+	small symbol table (this module). This
+	reduces the symbol table space used by the
+	calling modules. This is further discussed
+	in the manual.
+*)
+PROCEDURE ClearScreen;
+PROCEDURE Gotoxy(x,y:CARDINAL);
+PROCEDURE RingBell;
+PROCEDURE OutputToScreen(b:BOOLEAN);
+PROCEDURE  DrawBox(x1,y1,x2,y2:CARDINAL);
+END ScreenDummy.
+

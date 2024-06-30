@@ -1,0 +1,17 @@
+DEFINITION MODULE EditStatus;
+
+(*	Save/return edit status for a file
+
+	The file EDITSTAT.DAT on the default drive is always used
+	for edit statii*)
+FROM Files  IMPORT FILE;
+FROM	CPM IMPORT alfa,exten;
+PROCEDURE GetPosition(Fn:FILE):CARDINAL;
+
+(*	get file position (character number)*)
+
+PROCEDURE SetPosition(Fn:FILE;pos:CARDINAL);
+
+(*	set file position*)
+END EditStatus.
+

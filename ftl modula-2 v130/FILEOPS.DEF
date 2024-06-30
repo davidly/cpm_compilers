@@ -1,0 +1,19 @@
+DEFINITION MODULE FileOps;
+
+(*	Perform some file operations *)
+
+PROCEDURE FileComp(f1,f2:ARRAY OF CHAR):BOOLEAN;
+
+(*	Compare two files - return TRUE if equal
+
+	IF either file is not present, FALSE is returned
+	FALSE is still returned if neither file is present *)
+
+PROCEDURE FileMove(f1,f2:ARRAY OF CHAR):BOOLEAN;
+
+(*	Move f1 to f2 - returns TRUE if successful *)
+
+END FileOps.
+
+
+

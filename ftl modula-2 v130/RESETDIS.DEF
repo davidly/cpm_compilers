@@ -1,0 +1,4 @@
+DEFINITION MODULE ResetDisc;
+PROCEDURE ResetAllDiscs;
+END ResetDisc.
+

@@ -1,0 +1,21 @@
+DEFINITION MODULE SetUpCall;
+
+(*	SET Up call parameters for a program and chain to it
+
+	This module is used by the editor for calling the
+	compilers.
+
+	The second parameter is the fcb for the file which is to be compiled
+
+	It will be set up on the command line as a parameter. It will be followed
+	by /E as an option.
+
+	If this is too clever for your requirements, you could use the module
+	'Chain' directly.
+	*)
+
+FROM 	CPM IMPORT fcb,alfa;
+PROCEDURE MakeCall(progname:ARRAY OF CHAR;VAR f:fcb);
+END SetUpCall.
+
+

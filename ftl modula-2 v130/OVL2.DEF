@@ -1,0 +1,10 @@
+DEFINITION MODULE Ovl2;
+PROCEDURE Fred;
+END Ovl2.
+eply:INTEGER);
+BEGIN
+	(*
+		Set block number if needed
+	*)
+
+	SetBlock

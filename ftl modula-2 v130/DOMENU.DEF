@@ -1,0 +1,10 @@
+DEFINITION MODULE DoMenu;
+
+(*	Menu processor for editor*)
+FROM Files IMPORT FileName,FILE,Close,Create;
+PROCEDURE Redisplay;
+PROCEDURE DoMenuOp;
+PROCEDURE Open(fn:FileName;Pos:CARDINAL);
+PROCEDURE GetString(VAR s:ARRAY OF CHAR;VAR len:CARDINAL;prompt:ARRAY OF CHAR);
+END DoMenu.
+

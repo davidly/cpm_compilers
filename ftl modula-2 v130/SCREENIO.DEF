@@ -1,0 +1,126 @@
+DEFINITION MODULE ScreenIO;
+
+(*	Screen handling routines for cursor position, attribute etc
+
+	Specific to this compiler*)
+
+FROM	SYSTEM IMPORT BYTE;
+FROM	Files IMPORT FileName;
+TYPE	Edits=(Dim,Bright,Normal,Inverse,Blink,StartGraph,EndGraph,
+		DelChar,DelLine,InsChar,InsLine,DelEol,DelEos,ClearScreen,
+		Horizontal,Vertical,CornerLL,CornerUL,CornerUR,CornerLR,
+		Startxy,MiddleXY,EndXY,RingBell,MoveLeft,MoveRight,
+		MoveDown,MoveUp);
+
+	(*	The editting mnemonics have the following meaning 
+
+		Dim,Bright,Normal,Inverse,Blink
+
+			Enter the given mode. Modes should not be combined
+			as too much variation exists between terminals in
+			this area
+
+		StartGraph,EndGraph
+
+			Enter and exit graphic character set mode
+			Used for drawing bars around windows
+			If your terminal can do this with ordinary characters,
+			set these sequences empty and put the required 
+			characters in the sequences below
+
+		DelChar,DelLine,InsChar,InsLine,DelEol,DelEos,ClearScreen
+
+			Perform the various editting sequences
+			DelEol deletes from under cursor to end of line
+			DelEos deletes from under cursor to end of screen
+			Clearscreen homes the cursor as well (to top left)
+
+		Horizontal,Vertical,CornerLL,CornerUL,CornerUR,CornerLR
+
+			Character sequences to draw horizontal and vertical
+			bars around windows and to do the corners (lower left,
+			upper left, upper right,lower right)
+
+		Startxy,MiddleXY,EndXY
+
+			The character sequences to start a cursor address
+			command, for between the co-ordinates and after the
+			cursor address command.
+
+		MoveLeft,MoveRight,MoveDown,MoveUp
+
+			Cursor move commands
+		*)
+	(*	You should not need to use the next few type declarations
+		They are included here for use by the configuration program*)
+
+
+PROCEDURE Gotoxy(x,y:CARDINAL);		
+
+(*		Position to given coordinates
+		top left is always 0,0, which means that
+		the bigger y is, the further down the screen
+
+		x is column, y is row
+
+		A 'Standard' Screen is 80 by 24. The limit is set by
+		the terminal definition file	*)
+
+PROCEDURE LoadTermCode(filename:FileName);
+
+(*		Load the terminal definition for the current terminal
+
+		filename is the name of the file to read
+
+		Normally, when the program is loaded, the file
+		'TERMINAL.COD' is loaded from the logged in disc
+		This routine only needs to be used if that
+		file is not the one to use (eg, to swap screens*) 
+
+
+
+PROCEDURE ScreenControl(s:Edits);
+
+(*		Perform a screen control operation*)
+
+PROCEDURE  DrawBox(x1,y1,x2,y2:CARDINAL);
+
+(*		draw a box for a window on the screen
+
+		x1,y1  is the lower left corner
+		x2,y2  is upper right corner*)
+PROCEDURE Clip(x1,y1,x2,y2:CARDINAL);
+(*		Set clip boundaries
+		used by Windows when drawing boxes so that only the
+		parts of the boxes masked are re-drawn
+		has no effect except in DrawBox*)
+VAR	ScreenDepth,ScreenWidth:CARDINAL;
+	MadeChange:BOOLEAN;
+
+	(*	Control is the current control code set for the terminal
+
+		MadeChange is TRUE on return from ScreenControl if the 
+		required code is implemented, else false
+
+		EditDisp contains code to simulate some codes when they
+		are not implemented*)
+
+(*	New routines added at version 1.02
+
+	These routines move the resposibilty for scrolling within a window from
+	EditStat to ScreenIO
+
+	This is done so that, when working with the memory mapped version of ScreenIO,
+	The Bars need not jump up and down when a window is scrolled*)
+PROCEDURE ScrollWindowUp(StartLine,EndLine:CARDINAL);
+PROCEDURE ScrollWindowDown(StartLine,EndLine:CARDINAL);
+PROCEDURE OutputToScreen(TurnOn:BOOLEAN);
+
+(*	Call this routine with FALSE to prevent output going to the
+	screen. This allows you to suppress output while large amounts
+	of screen alterations are being made to speed up a program. Of
+	course, you must re-enable screen output and then re-draw the
+	screen later. This is used by the editor to suppress screen
+	alterations during execution of repeats *)
+END ScreenIO.
+
