@@ -1,0 +1,503 @@
+
+			CLIB.DOC
+
+			   by
+
+		     F. A. Scacchitti
+		     25 Glenview Lane
+		     Rochester, NY 14609
+		       3 - 30 - 86
+
+This  'C' Library contains most of the functions described in  J. 
+E.  Hendrix's  "The Small-C Handbook".  These functions are  also 
+described in the May 1984 Dr.  Dobb's Journal.  My intent,  as is 
+his,   is  to  provide  a  complete  standard  library  following 
+specications  described  in "The C  Programming  Language".  This 
+library  is  a  combination of modules  obtained  from  Hendrix's 
+library,  a  modified  public domain runtime library and  modules 
+written  by  myself.  The  following  source  files  contain  the 
+functions described in this document:
+
+	ABORT   .MAC    ABS     .C	ATOI    .C
+        ATOIB   .C      AVAIL   .C      BDOS    .MAC
+	CALL1   .MAC	CALL2   .MAC    CALL3   .MAC
+	CALL4   .MAC	CALL5.  .MAC    CALLOC  .C
+        CLEARERR.C	CPMDISK .MAC	CPMIO   .MAC
+	CSEEK   .C      CTELL   .C	CTELLC  .C
+	DELAY   .MAC    DOLDDR  .MAC    DOLDIR  .MAC
+	DTOI    .C      FEOF    .C	FERROR  .C
+        FFLUSH  .C      FGETC   .MAC    FGETS   .MAC
+        FILELIB .C      FPRINTF .C      FPUTC   .MAC
+        FPUTS   .MAC    FREAD   .C      FREBUF  .C
+        FREE    .C      FREEIO  .MAC    FSCANF  .C
+        FWRITE  .C      GETCHAR .C      GETCHX  .C      
+	GETS    .MAC    GRABIO  .MAC    GRABUF  .C      
+	INP     .MAC    ISALNUM .C      ISALPHA .C
+        ISASCII .C      ISATTY  .C      ISCNTRL .C
+        ISDIGIT .C      ISGRAPH .C      ISLOWER .C
+        ISPRINT .C      ISPUNCT .C      ISSPACE .C
+        ISUPPER .C      ISXDIGIT.C      ITOA    .C
+        ITOAB   .C      ITOD    .C      ITOO    .C
+        ITOU    .C      ITOX    .C      LEFT    .C
+        LEXCMP  .C      LIBID   .C      MALLOC  .C
+        MAX     .C      MIN     .C      OTOI    .C
+        OUTP    .MAC    PAD     .C      POLL    .C
+        PRNTF   .C      PUTCHAR .C      PUTLIST .MAC
+        PUTS    .C      READ    .C      RENAME  .C
+        REVERSE .C      REWIND  .C      SIGN    .C
+        STRCAT  .C      STRCHR  .C      STRCMP  .C
+        STRCPY  .C      STRLEN  .C      STRNCAT .C
+        STRNCMP .C      STRNCPY .C      STRRCHR .C
+        TOASCII .C      TOLOWER .C      TOPOFMEM.MAC
+        TOUPPER .C      UALLOC  .C      ULINK   .C
+        UNGETC  .C      UNLINK  .MAC    UTOI    .C
+        WRITE   .C      XTOI    .C      ZZBUF   .MAC    
+        ZZFIO   .MAC
+Rather  than  trying to provide a Unix-like environment (and  the 
+resulting  overhead),  I've attempted to put a  package  together 
+which  is  more conducive to CP/M.  This Library is  designed  to 
+produce  minimum  size files while retaining the flavor  of  'C'. 
+Many  of  the  functions are written in assembler  and,  as  time 
+permits,  more  functions  will be optimized for  both  size  and 
+speed.  Most functions contained in this library are useable with 
+any CP/M 80 system,  however,  many of the I/O functions interact 
+with each other as well as the runtime routines.  Anyone adapting 
+any  portions of this library should evaluate the source code  of 
+the particular module(s) in question. As with all libraries, its' 
+value  manifests itself when used with a linking-loader that  has 
+search capabilities. (eg. Microsofts M80/L80/LIB80 package)
+
+
+
+FEATURES OF THE LIBRARY
+
+104 functions (7 aliases) are available,  including most standard 
+'C' functions.
+
+Smaller  program  size than most - minimum program  size  is  256 
+bytes. This would be the result of the following 'C' code.
+
+     #include <stdio.h>
+
+     main() {
+     }
+
+Argc and argv are handled by the runtime module and always passed 
+to the user program. A maximum of 24 arguments may be passed with 
+23 available to the user.
+
+Files may be opened in read,  write or append  modes.  Read/write 
+(+) modes are not supported.
+
+All I/O buffers are allocated outside program space including:
+
+     1    128 byte default disk I/O buffer
+     8    1 K byte file buffers (available for general use)
+
+     The  default disk I/O buffer is set by the runtime module to 
+     preserve the contents of the run string residing at the CP/M 
+     default  buffer.   The  standard  default  buffer  (80h)  is 
+     restored at program completion.
+
+     The   8  file  buffers  are  automatically   allocated   and 
+     deallocated  by  the  file handling routines  and  the  user 
+     needn't worry about sequence. However, these buffers are not 
+     restricted  to  file  I/O.  They may be  allocated  via  the      
+     grabuf() function and deallocated via frebuf(). Caution must      
+     be  used  to insure that any use of these buffers  does  not 
+     exceed  the 1 K-byte limit.  The results of failing to  stay 
+     within the limits is unpredictable.
+
+Sequential    dynamic   memory   allocation/deallocation   scheme 
+(calloc,malloc,  and  free) starts at the end of the last  buffer 
+and  ends at the stack.  The user must maintain the integrity  of 
+this  area.  If  a  buffer is set free below one that  should  be 
+maintained,  the  schema  will  indicate  all  memory  above  and 
+including the released buffer is available.  Allocating and using 
+another buffer at this point may undesirably wipe out data  which 
+should have been maintained.
+
+Optionally  eliminate  the  warm  boot  that  occurs  on  program 
+termination.  This  is accomplished in the following manner:
+
+     Defining  the global ZZZCCP = 0 places the stack at the base 
+     of the BDOS and returns via warm boot. (jmp 0) 
+
+     Defining the global ZZZCCP = 1 places the stack at the  base 
+     of the CCP and returns to the CCP.
+
+     ZZZCCP may be generated as a compiler function via a switch, 
+     or added as the following inline code to a program or header 
+     file.
+                    #asm
+                    zzzccp:: db 1  
+                    #endasm
+
+     If  left undefined it will default to warm boot.  The linker 
+     will indicate it as undefined, with no consequence. 
+
+CP/M  integrity is maintained by the runtime module and  restored 
+at  program completion.  Also,  all open files  are  closed,  but 
+buffers are NOT flushed.
+
+prntf() is a special version of printf which only supports the d, 
+c,  and s specifications. Field length specifiers (when used) are 
+limited to a size of 9 and field separator specifications  aren't 
+allowed and should not be used. This module occupies 828 bytes of 
+code space.
+
+getchx()  is  a  special version of getchar() which  uses  direct 
+console input rather than the standard console input. It does not 
+reflect  characters  to  the  screen or  trap  the  CP/M  control 
+characters.
+
+putdisp()  is  an  alias  for putchar and may be  used  when  the 
+redirectable  library  (RDTL.REL)  is  linked  to  force  console 
+display.
+
+getkbd() is an alias for getchar and may be  used  when  the 
+redirectable  library  (RDTL.REL)  is  linked  to  force  console 
+display.
+
+grabuf()  and  frebuf() allow the user access to a self  managing 
+memory allocation scheme.  Each buffer returned by grabuf() is 1K 
+bytes of memory and should not be exceeded.  Although this  isn't 
+standard,  it  does provide a somewhat bomb resistant (not proof) 
+memory alloc./dealloc. schema along with the standards.
+
+
+
+
+FUNCTIONS IN THE LIBRARY 
+
+Only  the  functions not described in  J.  E.  Hendrix's  Small-C 
+Manual, or those that differ from his, will be described.
+
+abort(code) 
+     exits  the  program  displaying the  "Aborted"  message  and 
+     optional  code  passed by the user.  If no code is passed  a 
+     default code of control g (bell) is used.
+
+abs(nbr) int nbr
+
+atoi(str) char *str
+     
+atoib(str,base) char *str; int base;
+
+avail(abort) int abort;
+
+bdos(fn,data) int fn, data;
+     standard CP/M bdos call fn is the function code and data  is 
+     the  setting of the de register.  Returns whatever the  call 
+     places in the accumulator.
+
+calloc(nbr,sz) int nbr, sz;
+
+cfree(addr) char *addr;
+
+clearerr(fd) int fd;
+
+cpm(fn,data) same as bdos(fn,data)
+
+cpmdisk(nbr) int nbr;
+     log in disk number nbr.
+
+cseek(fd,offset,mode)
+
+ctell(fd) int fd;
+
+ctellc(fd) int fd;
+
+delay(n) int n;
+     delay  for  n  milliseconds, based on a  4  Mhz  clock  (250      
+     nanosecond cycle time).
+
+delete(name) char *name;
+
+dolddr(source, destination, n) int source, destination, n;
+     perform z80 lddr instruction.
+
+doldir(source, destination, n) int source, destination, n;
+     perform z80 ldir instruction
+
+dtoi(decstr, nbr) char *decstr; int nbr;
+
+
+exit(code) exit();
+     exits program and returns to CP/M
+
+fcb(fd,name) char *name; int fd;
+     construct a file fcb on file name at location fd. 
+     (located in filelib module)
+
+fclose(fd) int fd;
+     (located in file lib module)
+
+feof(fd) int fd;
+
+ferror(fd) int fd;
+
+fflush(fd) int fd;
+
+fgetc(fd) int fd;
+
+fgets(str, sz, fd) char *str; int sz, fd;
+
+fopen(filename, mode) char *name, mode;
+     (located in filelib module - only r, w, and a modes )
+
+fprintf(fd, format[, arg1, ar2,...]) int fd; char *format;
+
+fputc(c, fd) char c; int fd;
+
+fputs(str, fd) char *str; int fd;
+
+fread(buffer, sz, n, fd) char *buffer; int fd, n, sz;
+
+frebuf(buff) int buff;
+     free  the  buffer  buff allocated by grabuf()  and  make  it 
+     available for use.
+
+free(addr) same as cfree(addr)
+
+freeio(fd) int fd;
+     free  the  file structure allocated by grabio() and make  it 
+     available for use.
+
+fscanf(fd, format, arg, arg, . . . ) 
+
+fwrite(buff, sz, n, fd) char *buf; int sz, n, fd;
+
+getc(fd) same as fgetc(fd)
+
+getchar()
+
+getchx()
+     is a special version of getchar() which uses direct  console 
+     input  rather than the standard console input.  It does  not 
+     reflect  characters  to the screen or trap the CP/M  control 
+     characters.
+
+getkbd() same as getchar
+
+gets(str) char *str;
+
+grabio()
+     returns  the  address  of  the  first  available  file   I/O 
+     structure. If none is available NULL is returned.
+
+grabuf()
+     returns  the  address of the first available buffer  in  the 
+     file I/O structure. If none is available NULL is returned.
+
+inp(nbr) int nbr;
+     returns the value read in at port nbr
+
+isalnum(c) char c;
+
+isalpha(c) char c;
+
+isascii(c) char c;
+
+isatty(fd) int fd;
+
+iscntrl(c) char c;
+
+isdigit(c) char c;
+
+isgraph(c) char c;
+
+islower(c) char c;
+
+isprint(c) char c;
+
+ispunct(c) char c;
+
+isspace(c) char c;
+
+isupper(c) char c;
+
+isxdigit(c) char c;
+
+itoa(nbr, str) int nbr; char *str;
+
+itoab(nbr, str, base) int nbr, base; char *str;
+
+itod(nbr, str, sz) int nbr,sz; char *str;
+
+itoo(nbr,str,sz) int nbr,sz; char *str;
+
+itou(nbr,str,sz) int nbr,sz; char *str;
+
+itox(nbr,str,sz) int nbr,sz; char *str;
+
+left(str) char *str;
+
+lexcmp(str1, str2) char *str1, *str2;
+
+libid()
+     displays the date and originator of this library
+
+malloc(sz) int sz;
+
+max(a, b) int a, b;
+     returns the greater of a or b
+
+min(a, b) int a, b;
+     returns the lesser of a or b
+
+otoi(str,nbr) char *str; int nbr;
+
+outp(nbr,data) int nbr, data;
+     transmits data out of port nbr.
+
+pad(dest, ch, n) char *dest, *n; int ch;
+
+poll(pause) int pause;
+
+printf(format[,arg1,arg2,...])
+
+prntf(format[,arg1,arg2,...])
+     is a special version of printf which only supports the d, c, 
+     and  s specifications.  Field length specifiers (when  used) 
+     are   limited   to  a  size  of  9   and   field   separator 
+     specifications  aren't allowed and should not be used.
+
+putc(c, fd)  same as fputc(c, fd)
+
+putchar(c) char c;
+
+putdisp(c) char c; same as putchar
+
+putlist(c) char c;
+     outputs character c to the list device.
+
+puts(str) char *str;
+
+read(fd, buff, n) int fd, n; char *buff
+
+rename(old,new) char *old, *new;
+
+reverse(str) char *str;
+
+rewind(fd) int fd;
+
+scanf(format, arg1, arg2, . . .)
+
+sign(nbr) int nbr;
+
+strcat(dest, sour) char *dest, *sour;
+
+strchr(str, c) char *str, c;
+
+strcmp(str1, str2) char *str1, *str2;
+
+strcpy(dest, sour) char *dest, *sour;
+
+strlen(str) char *str;
+
+strncat(dest, sour, n) char *dest, *sour; int n;
+
+strncmp(str1, str2, n) char *str1, *str2; int n;
+
+strncpy(dest, sour, n) char *dest, *sour; int n;
+
+strrchr(str, c) char *str, c;
+
+toascii(c) char c;
+
+tolower(c) char c;
+
+topofmem()
+     returns base of system bdos
+
+toupper(c) char c;
+
+ualloc(n, clear) char *n; int clear;
+
+ungetc(c, fd) char c; int fd;
+
+unlink(name) same as delete(name)
+
+utoi(str, nbr) char *str; int nbr;
+
+write(fd,buffer,n) int fd, n; char *buffer;
+
+xtoi()(str, nbr) char *str; int nbr;
+
+
+
+LIBRARY STRUCTURE
+
+
+
+The  clib.rel  Small-C system library modules are loaded  in  the 
+following sequence to avoid backward referencing by L80:
+
+ULINK**		LIBID*		UNGETC		RENAME	
+FREAD		READ		FWRITE		WRITE
+FFLUSH		REWIND		CSEEK		CTELL	
+CTELLC		FILELIB		GRABUF*		GRABIO*
+FREBUF*		FREEIO*		FPRINTF		FSCANF
+PRNTF*		FPUTS		FGETS		GETS
+PUTS		FPUTC		FGETC		PUTCHAR
+GETCHAR		GETCHX*         CPMIO*		CPMDISK*
+PUTLIST*	CALLOC          MALLOC		UALLOC*
+AVAIL*		FREE		POLL*		ABS
+ATOI		ATOIB           DTOI		ISALNUM
+ISALPHA		ISASCII         ISATTY		ISCNTRL
+ISDIGIT		ISGRAPH         ISLOWER		ISPRINT
+ISPUNCT		ISSPACE         ISUPPER		ISXDIGIT
+ITOA		ITOAB           ITOD		ITOO
+ITOU		ITOX            LEFT		LEXCMP
+OTOI		REVERSE         SIGN		STRCAT
+STRCHR		STRCMP          STRCPY		STRLEN
+STRNCAT		STRNCMP         STRNCPY		STRRCHR
+TOASCII		TOLOWER         TOUPPER		UTOI
+XTOI		PAD             FEOF		FERROR
+CLEARERR	DELAY*		DOLDDR*		DOLDIR*
+INP*            OUTP*		TOPOFMEM*	UNLINK
+MIN*		MAX*		CALL1**		CALL2**
+CALL3**		CALL4**		CALL5**		BDOS*
+ABORT           ZZFIO**         ZZBUF**
+
+
+*	indicates a non standard function
+
+**	indicates a system function 
+
+
+SYSTEM MODULES
+
+Refer  to  the  source files of these modules  for  more  details 
+regarding operation.
+
+ULINK  (251 bytes) contains the routines to steer the 'C' program 
+from CP/M to the user program and back again to CP/M. This module 
+is the only one in the library to have an entry point defined  as 
+a starting point, therefore the program will always start here. 
+
+CALL1  (32  bytes)  contains  the code to  support  the  multiply 
+operator. ( * )
+
+CALL2  (94  bytes)  contains  the  code  to  support  the  divide 
+and modulus operators. ( /  % )
+
+CALL3  (26  bytes)  contains  the  code  to  support  the  switch 
+statement.
+
+CALL4 (21 bytes) contains the code to support the right and  left 
+shift operators. ( >>  << )
+
+CALL5  (235  bytes)  contains  the  code  to  support  all  other 
+arithmetic  and  logical operators as well as memory and  address 
+fetch and store operations.
+
+ZZFIO  (23  bytes) contains storage for global variables used  by 
+file I/O and fgetc, fputc, etc . . .
+
+ZZBUF  (1 byte) is the last module in the library and  serves  to 
+mark  the  starting point for I/O buffers and the dynamic  memory 
+allocation scheme.
+
+

@@ -1,0 +1,110 @@
+The  distribution software for Small-C Version 2.7 is supplied on 
+2 8" SSSD (241K) disks.  The compiler disk contains all the files 
+necessary  for use.  The source disk contains the source for  the 
+compiler and library in .LBR form.
+
+The compiler disk contains the following files.
+
+---C---2.7--        Version ID
+-C-DISKS.DOC        This file
+ARGS    .C          Example prog. using argc & argv
+ARRAY   .C          Example prog. using multi-dimmed arrays
+CC      .COM        Small-C compiler Version 2.7
+CC      .DOC        Doc file for compiler
+CC      .XWS        Doc file for compiler in Wordstar format
+CCC     .SUB        Submit file to produce .COM file
+CCM     .SUB        Submit file to produce .MAC file
+CCR     .SUB        Submit file to produce .REL file
+CLIB    .DOC        Doc file for library
+CLIB    .REL        Library of relocatable modules
+CLIB    .XWS        Doc file for library in Wordstar format
+CLS     .C          Screen Clear / Cursor set program
+ERATOS  .C          Eratosthenes Sieve program
+FA      .C          File appen program
+FB      .C          Binary file copy program
+FC      .C          Ascii file copy program
+FFD     .C          Formfeed simulation program
+FM      .C          Ascii file modification program
+HELLO   .C          Unlike K & R uses puts()
+LCC     .SUB        Submit file for linking multiple .REL's
+RCC     .SUB        Like CCC but links in RDRTL first
+RDRTL   .MAC        Source for Redirectable Output module
+RDRTL   .REL        Redirectable Output module
+STDIO   .H          Header File
+TIME    .C          Time Utility for Xerox 820/820-II
+UW      .C          Un-wordstar program 
+WC      .C          Word count program
+
+
+The source disk contains the following files.
+
+-C-DISKS.DOC        This file
+CCCC    .SUB        Submit file for compiling the compiler
+CCLIST  .SUB        Submit file for listing the compiler
+CCSOURCE.LBR        Compiler sources
+CLIB    .LST        List of library files
+LIBSOURC.LBR        Library sources
+NEWLIB  .SUB        Submit file for generating a library
+STDIO   .H          Header file
+
+
+The user should refer to the doc files and J.  E. Hendrix's Small 
+C Manual for familiarization.
+
+
+
+Directory listing of the compiler disk
+
+
+      Drive B0:  files: 29  space used: 179k  (62k free)       
+---C---2.7--   0k   CCM     .SUB   1k   FB      .C     1k   RDRTL   .REL   3k
+-C-DISKS.DOC   6k   CCR     .SUB   1k   FC      .C     1k   STDIO   .H     1k
+ARGS    .C     1k   CLIB    .DOC  15k   FFD     .C     1k   TIME    .C     4k
+ARRAY   .C     4k   CLIB    .REL  23k   FM      .C     2k   UW      .C     2k
+CC      .COM  31k   CLIB    .XWS  15k   HELLO   .C     1k   WC      .C     2k
+CC      .DOC  16k   CLS     .C     1k   LCC     .SUB   1k   
+CC      .XWS  16k   ERATOS  .C     1k   RCC     .SUB   1k   
+CCC     .SUB   1k   FA      .C     1k   RDRTL   .MAC  26k   
+
+
+Directory listing of the source disk
+
+
+      Drive B0:  files: 8  space used: 233k  (8k free)       
+-C-DISKS.DOC   6k   CCLIST  .SUB   1k   CLIB    .LST   2k   NEWLIB  .SUB   1k
+CCCC    .SUB   1k   CCSOURCE.LBR  88k   LIBSOURC.LBR 133k   STDIO   .H     1k
+
+** Library Directory for B0:CCSOURCE.LBR  88k
+* CC      .DEF  11k   CC1     .C     5k   CC11    .C     7k   CC12    .C    11k
+* CC13    .C     8k   CC2     .C     1k   CC21    .C     6k   CC22    .C     8k
+* CC3     .C     1k   CC31    .C     8k   CC32    .C     7k   CC33    .C     5k
+* CC4     .C     1k   CC41    .C     7k   CC42    .C     7k   
+
+** Library Directory for B0:LIBSOURC.LBR 133k
+* ABS     .C     1k   ATOI    .C     1k   ATOIB   .C     1k   DTOI    .C     1k
+* FPRINTF .C     3k   FSCANF  .C     3k   GETCHAR .C     1k   ISALNUM .C     1k
+* ISALPHA .C     1k   ISASCII .C     1k   ISATTY  .C     1k   ISCNTRL .C     1k
+* ISDIGIT .C     1k   ISGRAPH .C     1k   ISLOWER .C     1k   ISPRINT .C     1k
+* ISPUNCT .C     1k   ISSPACE .C     1k   ISUPPER .C     1k   ISXDIGIT.C     1k
+* ITOA    .C     1k   ITOAB   .C     1k   ITOD    .C     1k   ITOO    .C     1k
+* ITOU    .C     1k   ITOX    .C     1k   LEFT    .C     1k   LEXCMP  .C     2k
+* CSEEK   .C     2k   OTOI    .C     1k   POLL    .C     1k   PRNTF   .C     3k
+* REVERSE .C     1k   SIGN    .C     1k   PUTS    .C     1k   STRCHR  .C     1k
+* STRCMP  .C     1k   STRCAT  .C     1k   STRLEN  .C     1k   STRCPY  .C     1k
+* STRNCMP .C     1k   STRNCAT .C     1k   STRRCHR .C     1k   TOASCII .C     1k
+* TOLOWER .C     1k   TOUPPER .C     1k   STRNCPY .C     1k   UTOI    .C     1k
+* AVAIL   .C     1k   CALLOC  .C     1k   CTELL   .C     1k   FREE    .C     1k
+* GRABUF  .C     1k   MALLOC  .C     1k   PAD     .C     1k   PUTCHAR .C     1k
+* XTOI    .C     1k   UALLOC  .C     1k   LIBID   .C     1k   MAX     .C     1k
+* CTELLC  .C     1k   FFLUSH  .C     1k   FREAD   .C     1k   FREBUF  .C     1k
+* FWRITE  .C     1k   MIN     .C     1k   READ    .C     1k   UNGETC  .C     1k
+* WRITE   .C     1k   RENAME  .C     1k   REWIND  .C     1k   CLEARERR.C     1k
+* FEOF    .C     1k   FERROR  .C     1k   CPMIO   .MAC   4k   DELAY   .MAC   1k
+* DOLDDR  .MAC   1k   DOLDIR  .MAC   1k   INP     .MAC   1k   OUTP    .MAC   1k
+* TOPOFMEM.MAC   1k   UNLINK  .MAC   1k   CPMDISK .MAC   1k   BDOS    .MAC   1k
+* FGETC   .MAC   5k   FGETS   .MAC   3k   FPUTC   .MAC   4k   FPUTS   .MAC   3k
+* CALL1   .MAC   1k   GETS    .MAC   3k   CALL2   .MAC   2k   PUTLIST .MAC   1k
+* CALL3   .MAC   1k   CALL4   .MAC   1k   CALL5   .MAC   6k   EXIT    .MAC   1k
+* FILELIB .MAC  10k   ZZBUF   .MAC   1k   GRABIO  .MAC   1k   FREEIO  .MAC   1k
+* ZZFIO   .MAC   1k   ULINK   .MAC   6k   ABORT   .MAC   1k   
+**

@@ -1,0 +1,461 @@
+
+            S m a l l  -   C     D o c u m e n t a t i o n
+
+
+                  V e r s i o n     2.70     10/30/86
+
+                             by
+
+                      F. A. Scacchitti
+                      25 Glenview Lane
+                      Rochester, NY 14609
+                      (716) 482 - 7159
+
+
+This  document  is intended to supplement J.  E.  Hendrix's  "The 
+Small  C Handbook" and will only discuss the differences  between 
+this version of Small C and that described in the Manual.  It  is 
+recommended  the  user  purchase  Hendrix's  manual  for  a  more 
+complete treatment of Small C.
+
+For information regarding the contents and structure of the Small 
+C library, refer to the file CLIB.DOC and Hendrix's Manual.
+
+This  compiler was originally Version 2.1 as obtained from  J.  E 
+Hendrix.  It  includes all of his newsletter  fixes/enhancements. 
+Refer  to the file CC.DEF for a complete chronological history of 
+changes and details regarding modules or functions changed.  Also 
+it  is  assumed the user is somewhat familiar  with  the  M80/L80 
+software.  The  compiler  produces  an output  file  of  assembly 
+language pneumonics which must be assembled and linked.
+
+This  compiler  is  a superset of J.  E.  Hendrix's  Version  2.1 
+compiler,  yet  still a subset of C as described by Kernigan  and 
+Ritchie in "The C Programming Manual". The following enhancements 
+have been installed:
+
+   2.1 --> 2.2
+
+       * - CP/M runtime package and I/O library to optimize  size 
+           and speed
+       * - Global initialization option -i
+       * - No boot option -n
+       * - external static Type Specifiers
+       * - Conditional operator {expr1 ? expr2 : expr3}
+
+
+   2.2 --> 2.3
+
+       * - added multiple levels of indirection
+           eg. **char c; ***int ident;  ****var = **c;
+
+
+   2.3 --> 2.4
+
+       * - improved multiple levels of indirection to ensure 
+           appropriate element is stored or retrieved
+
+
+   2.4 --> 2.5
+
+       * - added arrays of pointers
+           eg. char *argv[]; int **i[20]; *i[2] = 22;
+       * - added hex and octal constants
+           eg. 0x1a, 0XFA, 03777, 00017
+
+
+   2.5 --> 2.6
+
+       * - added global multidimensional arrays
+           eg. char arc[5][5]; int i[3][4][5]; var=i[2][0][3];
+
+
+   2.6 --> 2.7 (Released 10/86 for public consumption)
+
+       * - added nested includes
+       * - new runtime library (rdrtl.rel) for compiler and/or
+           redirected output
+       * - new i/o library (clib.rel)
+
+
+Planned   2.7 --> 2.8 (In final stages)
+
+       * - install floating point (float and double)
+           (only for Z80 microprocessors)
+       * - allow function definition syntax
+       * - add compiler error tracker/counter
+
+
+Planned   2.8 --> 2.9 (schemes developed)
+
+       * - add typedefs, sizeof, unsigned integers
+
+
+Planned   2.9 --> 3.0 (matter of parsing) (2nd quarter '87)
+
+       * - allow auto, register, short declarations
+           (This will be a release version and the final one
+            for CP/M)
+
+
+Planned   CP/M 3.0 --> MSDOS 3.0 (3rd quarter '87)
+
+       * - using J. E. MSDOS version upgrade to my version 3.0
+           (will contain floating point, if I can obtain a good 
+            package for MSDOS)
+
+
+Planned   MSDOS 3.0 --> MSDOS 4.0 (not started) (4th quarter '87)
+
+       * - add longs, unions and structures
+
+This  is  an  aggressive schedule (slips are  possible),  but  at 
+completion  should be a full implementation of C.  If anyone  has 
+any  suggestions or has already accomplished that  which  remains 
+undone here, don't hesitate to contact me. I have no qualms about 
+collaborating to finish the job or optimize compiler operation.
+
+
+
+FEATURES and ENHANCEMENTS
+
+
+* - Global initialization option -i
+
+This  feature decreases compilation time,  especially when  large 
+arrays are declared globally.  Most versions of the compiler  (at 
+least  the  ones I've seen),  by default,  initialize all  global 
+variables to zero by generating either DB 0 or DW 0.  Arrays  are 
+initialized via DB 0, 0, 0, 0, 0, 0, . . . . . . . . . .
+This  adds significantly to compile time if the user has declared 
+large  global  arrays.  The  compiler  now issues  a  DS  n  thus 
+allocating n bytes of uninitialized memory.  If the -i switch  is 
+used,  memory  will  be  initialized to zeroes as  before.  As  a 
+furthur  example, the Eratosthenes Prime Number  Sieve  takes  80 
+seconds to compile when the -i switch is used but only 17 seconds 
+if  it isn't.  An additional 55 seconds is required with each for 
+assembly and linking.
+
+
+* - No boot option -n
+
+This  feature allows rapid return to the CP/M prompt  on  program 
+completion  at a cost of 800h bytes of code space.  It is used in 
+conjunction with the runtime package in the C library (CLIB.REL). 
+If  the the -n switch is used and the program contains  a  main() 
+function,  DB ZZZCCP 1 will be generated by the compiler prior to 
+the  END statement.  If it isn't specified the compiler generates 
+DB  ZZZCCP  0.  The global variable ZZZCCP determines  where  the 
+stack should be placed and the return path to CP/M.  In short, if 
+the -n option is used the stack is placed at the base of the  CCP 
+and the program returns to CP/M via a return instruction.  If the 
+-n  option isn't specified the stack is placed at the base of the 
+BDOS and return is performed via a warm boot.  Refer to  CLIB.DOC 
+and  ULINK.MAC  for details regarding operation of this  feature. 
+This feature is NOT recommended for use with programs  performing 
+disk i/o, but was intended primarily for non-disk utilities.
+
+
+* - external static Type Specifiers
+
+Global  variables  are more rapidly accessed (both  fetching  and 
+storing)  and require less code to access than  local  variables. 
+Refer   to  Chapter  19  of  Hendrix's  manual  for  a   complete 
+explanation.  Most Small C compilers make all global declarations 
+public.  This  obviously  presents a problem (especially for  the 
+variables c and i) in taking full advantage of this feature.  The 
+static type specifier implies that the variable should be  memory 
+resident, yet known only to the module it is compiled in. This is 
+accomplished  simply  by  generating  a single  colon  for  types 
+specified as static and the original double colon for those  that 
+are  not.  This  results in variables that are local only to  the 
+file  in which they are compiled.  It is ideal for  non-recursive 
+library functions.
+
+
+* - Conditional operator {expr1 ? expr2 : expr3}
+
+This  is just another enhancement to bring Small C closer to  Big 
+C.  This  operator  is described quite thoroughly in  Kernigan  & 
+Ritchie's  "The  C Programming Language" and works as  specified. 
+The  user  should  try the examples in  thier  manual.  The  code 
+generated  by this operator is almost exactly the same as an  if-
+else statement, however if does lead to more succinct and elegant 
+code  at the source level and can be used inside statements where 
+if - else fears to tread.
+
+
+* - added multiple levels of indirection
+
+This was always a sore spot with me.  Now your program can use  a 
+standard  argc,  argv syntax.  (int argc;  char **argv;) It  also 
+generates  more  efficient  and  shorter  code  since  additional 
+argument  assignments  aren't necessary when  accessing  extended 
+levels of a pointer. 
+
+
+* - added arrays of pointers
+
+One more step toward standardization with full C.  The programmer 
+may use char **argv;  or char *argv[];  and/or retrieve/store  as 
+specified by K & R.
+
+
+* - added hex and octal constants
+
+Works as described by K & R. NO longer any need for that decimal-
+hexadecimal-octal calculator on the shelf. (Well at least not for 
+figuring contants and addresses for your small c program.)
+
+
+* - added global multidimensional arrays
+
+Some  programs almost demand this capability.  However,  there is 
+some overhead involved in using multi-dimmed arrays and the  code 
+generated  can  be  larger than if  multiple  single  dimensioned 
+arrays are used. The generated code calculates the offset for the 
+particular  element  be  accessed.  The user must decide  if  the 
+overhead is worth allowing the compiler to do the book keeping.
+
+
+* - added nested includes
+
+Simple enough to add as long as the file structure permits.  This 
+particlar implementation allows nesting six deep.
+
+
+* - new runtime library (rdrtl.rel)
+
+The Runtime Module used with this compiler was originally written 
+in C and contained assembly language enhancements.(I think !) The 
+present  module  RDRTL.MAC  contains  most of  the  i/o  routines 
+required by the compiler and is structured around the 8 - 1k file 
+buffers. Ouput redirection (via > and >>), argv/argc handling and 
+special  abort features are included.  The resultant size of  the 
+compiler  after linking  CCRTL.REL,  CC1.REL,  CC2.REL,  CC3.REL, 
+CC4.REL,  and  searching  CLIB.REL  to pick up  a  few  necessary 
+function is < 31K.  Smaller than most (Version 2.7).  This module 
+can   be  used  with  the  compiler  or  any  program   requiring 
+redirectable  output.  It should must always be linked in  first,  
+before  searching the clib module.  Failing to do so will provide 
+unpredictable results. 
+
+
+* - new i/o library (clib.rel)
+
+Installed { exp1 ?  exp2 :  exp3 } operator and external  statics 
+where appropriate. Library size was reduced from 26k to 24k. Also 
+fixed all known bugs and corrected non-standard operations.
+
+
+** - installing floating point (float and double)
+
+In the works.  I'm working with the same package installed by Dr. 
+James  VanZandt and using his Small-C Version 1.2  implementation 
+as  a guideline.  It requires a Z80 processor or another floating 
+point package.  The code generated is generic and could work with 
+many float packages, the one I'm using is a 6 bit implementation.
+
+
+** - allow function definition syntax
+
+Syntax  such  as  "FILE *fd *fopen();" during  global  and  local 
+declaration  or  "int func(var1)char var1;" to define a  function 
+will  cause erroneous multi-define errors.  This problem will  be 
+cleared up and said syntax is now allowed.
+
+** - add compiler error tracker/counter
+
+At  completion of compiling the compiler will reports the  number 
+of  errors that occurred.  This could be extended to evalute  the 
+results  and determine whether processing  should  continue.  ie. 
+assembly, linking, optimization . . .
+
+
+** - add typedefs, sizeof, unsigned integers
+
+typedefs  are  a little tricky but ca be accomplished by using  a 
+convoluted version of the #define code. Don't worry they are true 
+type definitions.
+
+sizeof will be almost a duplicate copy of the method employed  by 
+J. E. Hendrix in his MSDOS Version 2.1.
+
+unsigned  integers require adding a byte to the symbol table  for 
+furthur variable definition. Most of the routines were already in 
+place, just not employed.
+
+** - allow auto, register, short declarations
+
+This  was just a matter of adding the appropriate syntax to allow 
+parsing these keywords and verifying proper usage.  Both auto and 
+register must be locals while short must define an integer.
+
+*  fully implemented
+
+**  At some interim stage, alpha test, beta test, debug, or under
+    development.
+
+
+
+USING THE COMPILER
+
+The  major differences between using this compiler and  Hendrix's 
+are  (1) this compiler does not create a default output file  and 
+(2)  his  runtime package includes redirectable input and  output 
+(and  the  resultant  code size overhead). If no  output file  is 
+specified,  the  output  will go to the console where it  may  be 
+stopped and started via Control S and Control Q. If the output is 
+suspended  by  Control  S,  Control C may be used  to  abort  the 
+compile.  The  compiler is invoked by running the program  cc.com 
+followed by the desired options (in the runstring). Some examples 
+follow:
+
+cc
+     compile console input to console output
+
+cc test.c
+     compile test.c direct output to console
+
+cc test.c -p -a -l2
+     compile test.c direct output and source to console
+                       pause on errors and sound bell
+
+cc test.c >test.mac
+     compile test.c direct output to file test.mac
+
+cc test.c >test.mac -p -a 
+     compile test.c direct output to the file test.mac
+                      pause on errors and sound bell
+
+cc test.c new.c >test.mac -l2 -i
+     compile test.c and new.c direct output to test.mac
+                      display source on screen
+                      initialize global variables to zero
+
+cc test.c >test.mac -o -n -l1
+     compile test.c direct output to test.mac
+                      optimize for size over speed
+                      generate no boot flag
+                      insert source in output file as comments
+
+cc test.c >test.mac -a -p -l2
+     compile test.c direct output to test.mac
+                      display source on screen
+                      pause on errors and sound bell
+
+cc test.c >test.mac -o -n -l1 -p -a -i
+     compile test.c direct output to test.mac
+                      optimize for size over speed
+                      generate no boot flag
+                      insert source in output file as comments
+                      pause on errors and sound bell
+                      initialize global variables to zero
+
+
+COMPILER OPTIONS (SWITCHES)
+
+
+     -a   sound alarm(bell) on errors
+     -i   initialize global variables to zero
+     -l1  insert as comments in output file *
+     -l2  display source on screen as compile progresses *
+     -n   set noboot flag
+     -o   optimize for size over speed
+     -p   pause on errors
+
+
+* only one of these may be specified
+
+
+
+COMPILING THE COMPILER
+
+Compiling the compiler is no different then compiling any other c 
+program.  What is different than normal is the linking procedure. 
+The file RDRTL.REL (ReDirectable Run Time Library) must be linked 
+first  to ensure that module satisfies its entry points prior  to 
+searching CLIB.REL.
+
+The submit file CCCC.SUB provides an example of proper compiling, 
+assembling and linking of of this compiler. It's the one I use.
+
+
+
+SETTING UP A COMPILER DISK
+
+Four submit files are included with the source,  CCM.SUB, CCR.SUB 
+CCC.SUB  and  RCC.SUB.   These  files  will  produce  m80  source 
+files(.mac), l80 source files(.rel) and a final object file(.com) 
+without or with redirectable output,  respectively.  The user  is 
+encouraged  to  examine and/or modify these files to meet his  or 
+her own particular needs.
+
+
+1	Obtain a print out of this file (CC.DOC)
+
+2 	Initialize two disks.  One at the same capacity of  this 
+        disk  (the  working disk) and the other  at  the  maximum 
+        capacity of your system (the C disk).
+
+3 	Copy the original disk to the working disk and store the 
+        original away for safe keeping.
+
+4       Sysgen your C disk, then install PIP (or SWEEP), M80, L80,
+        STAT, SUBMIT, and your current Editor.
+
+5       Place this disk in Drive A and Warm Boot then PIP or SWEEP
+        the follow files from the working disk to the C disk.
+
+         STDIO.H          Header File
+         CC.COM	          Small C Compiler
+         CC.DOC           This file
+         CLIB.REL         C I/O Library
+         RDRTL.REL        Redirectable Output Library
+         CCM.SUB          Submit file to produce .MAC file
+         CCR.SUB          Submit file to produce .REL file
+         CCC.SUB          Submit file to produce .COM file
+         RCC.SUB          Submit file to produce .COM file
+                          but links in the redirect lib first
+
+        You now have a working C Compiler Disk. Type in and enter
+        <STAT *.* $R/O> to prevent inadvertent erasures.
+
+6       PIP or SWEEP one or more of the C source files to the
+        C disk.
+
+         FA.C       File Append Prog.
+         FB.C       File Copy Prog. (Binary or Ascii)
+         FC.C       File Copy Prog. (Ascii)
+         FM.C       File Mod Prog.
+         CAT.C      File Concatenate Prog.
+         FFD.C      Formfeed Prog.
+         HELLO.C    You gotta know this one.
+         ARGS.C     Example Argument Passing Prog.
+         ERATOS.C   Eratos Prime Number Sieve Prog.
+         TIME.C     Xerox 820 Time Set/Display Prog.
+         UW.C       File Un-Wordstar Prog.
+         WC.C       Word Count Prog. (use -i switch)
+
+7       Type in and enter <SUBMIT CCC ERATOS> (or any source file)
+
+        The Eratos Benchmark will compile before your very eyes.
+        After the CP/M prompt returns, Type in and enter "ERATOS".
+        Neat huh ?
+
+8       Have at it. Review the doc files supplied as well as the
+        manual written by J. E. Hendrix.
+
+9       This Version of the C Compiler is offered free of charge
+        for non commercial use. However, donations are accepted 
+        and will be divided to compensate this author as well as
+        the original to furthur the development of this compiler.
+        If there are any questions or problems regarding the use
+        of this version, please contact me. Address comments,
+        criticism, or suggestions to
+
+                        Fred A. Scacchitti
+                        25 Glenview Lane
+                        Rochester, NY
+                        14609
+

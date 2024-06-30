@@ -1,0 +1,10 @@
+<< CUG WARNING >>
+
+The distribution disk from CUG includes the files listed below:
+
+CC      .COM	CC      .DOC	CDISKS  .TXT	CG222-0I.002	CLIB    .DOC
+CLIB    .LST	CLIB    .REL	STDIO   .H  	CCC     .SUB	RDRTL   .REL
+CCM     .SUB	CCR     .SUB	LCC     .SUB	RCC     .SUB
+
+The other files listed in file CDISKS.TXT are included on the disk CUG #223.
+CC.XWS and CLIB.XWS are removed.
