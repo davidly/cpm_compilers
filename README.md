@@ -31,6 +31,10 @@ To run the compilers on Windows, use the m.bat script in each folder, e.g.:
   * m e
   * m ttt
 
+The m80 Z80 Macro Assembler only has ttt.mac and no sieve or e implementations. The 8080 code in the asm folder is already faster than any Z80 code the compilers produce.
+
+The Borland Pascal and Modula-2 products don't support command-line builds, so you have to run the apps, load the source file, and build manually.
+
 On Linux or MacOS copy m.bat to m.sh, change % to $, use dos2unix to remove CR/LF, and chmod to enable execution. If you do this, feel free to submit a pull request. Also be sure to put ntvcm in your path.
 
 If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them.
