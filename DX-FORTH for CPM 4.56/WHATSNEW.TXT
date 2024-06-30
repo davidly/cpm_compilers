@@ -1,0 +1,242 @@
+WHATSNEW.TXT - DX-FORTH for CP/M
+
+Only significant changes/fixes listed.  See CHANGES.TXT and
+DXFORTH.GLO for details.
+
++ added  - removed  * fixed  ! changed  = updated
+
+v4.56  2024-05-10
+
++  INTEGER HELD (UD.) (H.N)
+!  DOSLIB: parsing
+=  BLK2TXT TXT2BLK SCOPY NEWAPP
+
+v4.55  2023-10-31
+
++  MU* MU/MOD
+!  Rename -ALLOT to RECOVER
+!  DOSLIB: overhaul strings, files, parsing
+!  INSTALL: User-selectable CCP size for No Warm Boot
+
+v4.54  2023-04-27
+
+!  F. F.R behave as per G. G.R
+!  Control-flow stack operators moved from kernel to
+   CFSEXT.SCR
+-  FE. FE.R G. G.R CS-ROLL CS-PICK CS-DROP CS-PUSH
+   CS-POP CS-MARK CS-TEST
+=  TXT2BLK BLK2TXT
+
+v4.53  2023-01-01
+
++  Forth interpreter ignores underscore in numbers
+!  NUMBER?
+!  DOSLIB: Rename functions
+*  SCOPY could auto-delete wrong file
+*  DOSLIB loader could fail
+
+v4.51  2022-07-23
+
+*  Malformed escape in quoted strings could crash
+*  ZINS terminal name length (PZ)
+*  ZENV variable cleared on SAVE/TURNKEY (PZ)
+
+v4.50  2022-07-13
+
++  >DIGIT >CHAR
++  Embed any character in quoted strings
++  Programmable forth prompt
+!  Simplified error message display
+!  THROW codes displayed in decimal
+!  Rename C/STRING to /CHAR
+-  /PARSE
+=  SCOPY
+
+v4.45  2022-01-11
+
++  C/STRING ?ABORT
+!  READ-LINE
+!  ." made state-smart
+!  .( deprecated and moved to TOOLS
+=  MOVE copies nothing if src/dest same
+=  POSTPONE handles numeric literals
++  ASM: APUSH
+!  DOSLIB: add/remove functions
+=  BLK2TXT TXT2BLK HLOCALS INSTALL
+*  OVERLAY
+
+v4.44  2020-10-11
+
++  MAX-PATH
+*  CLOSE-ALL didn't close text-files
+-  #FCB
+
+v4.43  2020-08-05
+
++  >NAME .YN /FLOAT
+!  Y/N /NUMBER
+!  >FLOAT reverts to ANS
+*  Terminals using clear-screen code $0C would crash
+-  .NAME
+!  DOSLIB: Change/rename functions. Fix NEXTNUM
+=  BLK2TXT TXT2BLK SCOPY SSED
+*  TED
+
+v4.42  2019-11-03
+
++  HALT? /SIGN /NUMBER RDROP
++  Default screen-file (FORTH.SCR)
+-  /ACCEPT I' RESET-DISKS
+*  CAPS COMPARE returned wrong value
+*  KEY? returned ill-formed flag
+!  , C, F, S, LINK, moved to Application
+!  >FLOAT ALLOT RESERVE
+!  Vocabs FORTH ASSEMBLER EDITOR made Immediate
+!  DOSLIB: Add/rename functions
+=  ACCEPT recognizes BSIN key
+=  BLK2TXT TXT2BLK SCOPY
+
+v4.41  2018-08-19
+
++  /ACCEPT >PAD
++  Support for 8-bit character input and strings
++  SCOPY screen copy utility
+*  +STRING fix overlapping move up
+!  DOSLIB: Add/rename functions
+!  INSTALL: User-selectable Backspace key
+=  BLK2TXT TXT2BLK
+
+v4.40  2017-11-08
+
++  RESERVE BREAK >BLANKS >USR
+*  READ-LINE failed when last char in buffer was $0D
+*  BIOS BIOSHL failed under CP/M 3 !!!
+!  Rename THENS EOL >DRIVE to CONT (CR) >DRV
+!  CSP reverts to single cell
+!  SETFCB FILE-FCB behaviour changed
+!  ASM: Rename USER# [UP] to U# [U]
+!  DOSLIB: FINDFIRST changed. Add/renamed functions.
+!  Multitasker is now supplied in two forms
+!  TYPE changed from positive count (+n) to unsigned (u)
+
+v4.30  2017-02-11
+
++  I' END BOUNDS
+-  (EXIT)
+!  EXIT made non-immediate
+!  Change CP/M 3 handling of non-zero RETURN codes
+!  MISC: Add FD/MOD MJD. Rename D/MOD to SD/REM
+
+v4.20  2016-10-07
+
++  EOL
+!  QUIT moved to Application
+!  Rename PARSE$ FREEZE PACKED to /PARSE PROTECT PACK
+
+v4.17  2016-07-13
+
++  (.) (U.)
+
+v4.16  2016-05-18
+
++  FILE-FCB SOUND
+!  Rename WORDS-LIKE to WORDS:
+
+v4.15  2016-01-16
+
+*  File not found error in INCLUDE displays wrong filename
+
+v4.14  2016-01-07
+
++  TRIM
+*  WARNING incorrectly disabled by consecutive -?
+
+v4.13  2015-07-26
+
++  LAST BAL
+-  +BAL -BAL
+!  CSP extended to 2 cells
+*  Turnkey initialization improperly wrote to high memory
+
+v4.12  2015-05-16
+
++  BINARY -BLANKS LASTFILE
++  Interpret numbers with % prefix as binary
++  TED text file editor
+-  CTOGGLE (see MISC.SCR for alternative)
+!  APPLICATION moved to Application dictionary
+
+v4.11  2015-04-12
+
++  #USER .FREE LS FLUSH-FILE
++  Files EDITOR64 EDLIN
+*  Fix ASM ASMTEST to use -ALLOT
+*  Fix namespace overflow crash
+!  ABORT" made state-smart
+!  Rename FILE? HIGHLIGHT to SCREEN? BOLD
+!  Revised multitasker locals
+
+v4.10  2015-01-07
+
++  -ALLOT
++  ASM: RIM SIM
+!  ALLOT may no longer use negative values. See glossary.
+
+v4.09  2014-12-03
+
++  BIOS-IO DOS-IO
+*  Fix ASM bug introduced in v4.06. ASMTEST updated.
+
+v4.08  2014-11-18
+
++  SET-LIMIT
+
+v4.07  2014-11-01
+
+*  2SWAP made interrupt-safe
+
+v4.06  2014-09-29
+
+!  . and ? display unsigned when base is not decimal
+
+v4.05  2014-07-19
+
++  CTOGGLE PACKED S.R SHOLD NHOLD LINK, S, ?BLOCK
++  FPICK S>F F>S
+-  M/MOD TOGGLE
+*  INCLUDED didn't restore block contents
+!  ADDR made state-smart
+!  Rename >DISK to >DRIVE
+!  Improved compiler security
+!  CHAIN-WORDLIST renamed back to CHAIN
+
+v4.04  2014-02-12
+
++  2NIP U2/ F0> F> TOKEN WORDS-LIKE
++  READ-LINE recognizes Unix EOL terminator ($0A)
+!  OPEN now requires a file-access-method
+!  Rename CHAIN to CHAIN-WORDLIST
+!  WORDS "pattern" now handled by WORDS-LIKE
+
+v4.03  2013-10-27
+
++  >FCB
+*  TXT2BLK fixed again
+!  Rename ?DISK to >DISK
+
+v4.02  2013-09-20
+
++  SETDMA ?DISK REC@ REC! >IOR
+!  SETFCB allows u: in addition to du:
+!  More DOSLIB functions converted to CP/M
+
+v4.01  2013-08-26
+
++  Add macro support to assembler
+*  TXT2BLK fixed to work with CP/M
+
+v4.00  2013-07-30
+
+   Major update from version 1.1
+
+

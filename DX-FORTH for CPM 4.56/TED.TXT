@@ -1,0 +1,105 @@
+
+                Text File Editor for DX-FORTH
+                -----------------------------
+
+TED is a resident text file editor.
+
+
+1. INSTALLATION
+
+Users who prefer working with text files can replace the
+resident screen file editor in DX-Forth with TED.  To do this
+enter the following from the DOS command prompt:
+
+  A:FORTH-F - SYSTEM INCLUDE TED AKA TED EDIT SAVE DX BYE
+
+For CP/M only:
+
+DX-FORTH for CP/M must be configured for your terminal before
+using the text file editor.  See DX-FORTH.TXT for further
+details.
+
+
+2. INVOKING
+
+The text editor is invoked by typing TED.  If the editor is
+not resident it is automatically loaded from disk file TED.F
+
+If you mainly use text files you may wish to make EDIT a
+synonym for TED as described in the previously section.
+
+To load and edit the text file "filename":
+
+  TED ( "filename[.F]" -- )
+
+If no filename is given, the file and line number as specified
+by LASTFILE and LOADLINE will be used.  These typically hold
+the filename and position where the last compile error occured.
+
+Note: Specifying a filename with TED will not be available
+until TED has been invoked for the first time.
+
+A "load/size error" will be reported if the specified file
+cannot be found, is write-protected, or too large to fit in
+memory.
+
+Edits are confined to memory and only written to disk on
+exit with ^U (S)ave or when writing to another filename with
+^Z (W)rite.
+
+Lines can be up to 132 characters but only the leftmost are
+displayed and directly editable.  Tabs are converted to
+single spaces on loading.  Trailing blanks are automatically
+removed as each line is edited.
+
+
+3. STANDALONE EXECUTABLE
+
+TED may be compiled as a standalone command-line executable.
+To do this rename TED.F to TEDS.F and change the line:
+
+        0 \ true for turnkey
+to
+        1 \ true for turnkey
+
+Then compile using:
+
+	FORTH - INCLUDE TEDS BYE
+
+The standalone version includes a help screen and takes an
+optional filename from the command-line as the input file.
+
+
+4. EDITOR COMMANDS
+
+Cursor movement:
+
+Ctrl-E   Move cursor up
+Ctrl-X   Move cursor down
+Ctrl-D   Move cursor right
+Ctrl-S   Move cursor left
+Ctrl-I   Move cursor to the next tab stop (TAB)
+Ctrl-Q   Move cursor home
+
+Editing:
+
+Ctrl-G   Delete character to the right of the cursor
+Ctrl-H   Delete character to the left of the cursor
+Ctrl-T   Erase all characters to the right of the cursor
+Ctrl-Y   Delete the current line. Lines below cursor are moved
+         up one position.
+Ctrl-M   Insert a blank line at the cursor position
+
+Miscellaneous:
+
+Ctrl-C   Move to the next page
+Ctrl-R   Move to the previous page
+Ctrl-L   Restore the current line
+Ctrl-U   Exit the editor
+Ctrl-Z   Multi-function command
+         C - clear the text buffer
+         H - show help screen (if present)
+         R - read file from disk
+         W - write file to disk
+
+

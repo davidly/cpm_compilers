@@ -1,0 +1,148 @@
+
+Line Editor
+-----------
+
+EDLIN is a simple line-oriented screen editor.
+
+It uses the same commands as the editor in 'Starting Forth' and
+is a slightly modified version of the editor that appeared in
+Forth Dimensions III/3.
+
+Editing of screens with a line editor is rather tedious and is
+best avoided (see EDITOR.SCR for a full-screen editor).  However
+it does have the advantage that it does not need to be installed
+and works with any video terminal.
+
+To make EDLIN the default screen editor rename EDLIN.SCR to
+EDITOR.SCR
+
+
+General screen commands:
+------------------------
+
+ EDIT  ( blk# | -- )
+
+     Enter the EDITOR vocabulary and select screen blk# for
+     editing.  If blk# is not specified then select the screen
+     and cursor postion where the last error occured.  All
+     editor commands (see below) are available for use.
+
+ L  ( -- )          List
+
+     Lists the current screen.  The screen number is obtained
+     from the variable SCR and is set by LIST, EDIT or when a
+     LOAD error occurs.
+
+ N  ( -- )          Next 
+
+     Increments the screen number by one.  Typically used
+     immediately before the L command.
+
+ B  ( -- )          Back
+
+     Decrements the screen number by one.  Typically used
+     immediately before the L command.
+
+
+
+Editor commands:
+----------------
+
+These commands are available only from the EDITOR vocabulary (e.g.
+after executing EDIT)
+
+For commands that allow it, text input is optional.  If no text
+follows the command then the current contents of  either the FIND
+or INSERT buffer (according to the command) will be used instead.
+
+
+ ?  ( -- )
+
+     Display the current line and cursor position.
+
+ ^  ( -- )
+
+     Used as terminator for all commands allowing text input.
+     Allows more than one command to be used on a line.
+
+ T  ( ln# -- )      Type
+
+     Type line ln# from the current screen and select it as the
+     current line.
+
+ P ( "text" -- )    Put
+
+     Copies any following text into the INSERT buffer and the
+     string is put into the current line replacing its previous
+     contents.  If P is followed by two or more blanks then the
+     entire line will be erased.
+
+ X  ( -- )          Extract
+
+     Copies the current line into the INSERT buffer and then
+     extracts it from the block.  All following lines are moved
+     up.
+
+ TILL ( "text" -- )
+
+     Copies any following text into the FIND buffer and deletes
+     all characters from the current cursor position up till and
+     including the string.
+
+ I ( "text" -- )    Insert
+
+     Copies any following text into the INSERT buffer and inserts
+     the string just behind the cursor.  Any text pushed off the
+     end of the line will be lost.
+
+ F ( "text" -- )    Find
+
+     Copies any following text into the FIND buffer and finds the
+     string in the remainder of the block.  The F command with no
+     following text behaves as the N command.
+
+ E  ( -- )          Erase
+
+     Erases backwards from the cursor as many characters as are
+     currently in the FIND buffer.  To be used after the F
+     command.
+
+ D ( "text" -- )    Delete
+
+     Copies any following text into the FIND buffer then finds
+     the next occurrence of the string within the line and
+     deletes it.  The D command is a combination of the F and E
+     commands.
+
+ R ( "text" -- )    Replace
+
+     Copies any following text into the INSERT buffer.  Combines
+     the E and I commands to replace a found string with a given
+     string or the contents of the INSERT buffer.
+
+ U ( "text" -- )    Under
+
+     Copies any following text into the INSERT buffer and puts
+     the string into the line under the current line.  All
+     following lines are pushed down and the last line is lost.
+
+ S ( blk# | "text" -- )  Search
+
+     Copies any following text into the FIND buffer then searches
+     from the top of current block to the end of screen blk#-1 for
+     the string, displaying the lines and location where a match
+     occurs.  If blk# is not given then #SCREENS is assumed.
+
+ M  ( blk# ln# -- )  Move
+
+     Copies the current line into the INSERT buffer and moves a
+     copy of the INSERT buffer into the line UNDER line ln# of
+     screen blk#.  The current line is incremented by one.  This
+     allows sequential lines to be moved with a minimum of
+     keystrokes.
+
+ WIPE  ( -- )
+
+     Wipe the current screen by setting its contents to blanks.
+
+

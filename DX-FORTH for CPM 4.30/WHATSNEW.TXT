@@ -1,0 +1,127 @@
+WHATSNEW.TXT - DX-FORTH for CP/M
+
+Note: only significant changes/fixes are listed.
+
+! changed  + added  * fixed  - removed
+
+v4.30  2017-02-11
+
++  I' END BOUNDS
+!  EXIT made non-immediate
+!  Change CP/M 3 handling of non-zero RETURN codes
+!  MISC: Add FD/MOD MJD. Rename D/MOD to SD/REM
+-  (EXIT)
+
+v4.20  2016-10-07
+
++  EOL
+!  QUIT moved to Application
+!  Rename PARSE$ FREEZE PACKED to /PARSE PROTECT PACK
+
+v4.17  2016-07-13
+
++  (.) (U.)
+
+v4.16  2016-05-18
+
++  FILE-FCB SOUND
+!  Rename WORDS-LIKE to WORDS:
+
+v4.15  2016-01-16
+
+*  File not found error in INCLUDE displays wrong filename
+
+v4.14  2016-01-07
+
++  TRIM
+*  WARNING incorrectly disabled by consecutive -?
+
+v4.13  2015-07-26
+
++  LAST BAL
+!  CSP extended to 2 cells
+-  +BAL -BAL
+*  Turnkey initialization improperly wrote to high memory
+
+v4.12  2015-05-16
+
++  BINARY -BLANKS LASTFILE
++  Interpret numbers with % prefix as binary
++  TED text file editor
+!  APPLICATION moved to Application dictionary
+-  CTOGGLE (see MISC.SCR for alternative)
+
+v4.11  2015-04-12
+
++  #USER .FREE LS FLUSH-FILE
+!  ABORT" made state-smart
+!  Rename FILE? HIGHLIGHT to SCREEN? BOLD
+!  Revised multitasker locals
+*  Fix ASM ASMTEST to use -ALLOT
+*  Fix namespace overflow crash
++  Files EDITOR64 EDLIN
+
+v4.10  2015-01-07
+
++  -ALLOT
+!  ALLOT may no longer use negative values. See glossary.
++  ASM: RIM SIM
+
+v4.09  2014-12-03
+
++  BIOS-IO DOS-IO
+*  Fix ASM bug introduced in v4.06. ASMTEST updated.
+
+v4.08  2014-11-18
+
++  SET-LIMIT
+
+v4.07  2014-11-01
+
+*  2SWAP made interrupt-safe
+
+v4.06  2014-09-29
+
+!  . and ? display unsigned when base is not decimal
+
+v4.05  2014-07-19
+
++  CTOGGLE PACKED S.R SHOLD NHOLD LINK, S, ?BLOCK
++  FPICK S>F F>S
+!  ADDR made state-smart
+!  Rename >DISK to >DRIVE
+!  Improved compiler security
+!  CHAIN-WORDLIST renamed back to CHAIN
+*  INCLUDED didn't restore block contents
+-  M/MOD TOGGLE
+
+v4.04  2014-02-12
+
++  2NIP U2/ F0> F> TOKEN WORDS-LIKE
++  READ-LINE recognizes Unix EOL terminator ($0A)
+!  OPEN now requires a file-access-method
+!  Rename CHAIN to CHAIN-WORDLIST
+!  WORDS "pattern" now handled by WORDS-LIKE
+
+v4.03  2013-10-27
+
++  >FCB
+!  Rename ?DISK to >DISK
+*  TXT2BLK fixed again
+
+v4.02  2013-09-20
+
++  SETDMA ?DISK REC@ REC! >IOR
+!  SETFCB allows u: in addition to du:
+!  More DOSLIB functions converted to CP/M
+
+v4.01  2013-08-26
+
++  Add macro support to assembler
+*  TXT2BLK fixed to work with CP/M
+
+v4.00  2013-07-30
+
+   Major update from version 1.1
+
+

@@ -1,0 +1,75 @@
+The following files are included in the DX-Forth distribution:
+
+Executables -
+
+FORTH.COM      DX-Forth compiler
+FORTH-F.COM    DX-Forth compiler with floating point
+DX.COM         FORTH-F.EXE with screen editor loaded
+INSTALL.COM    Terminal installation program for DX-Forth and
+               applications
+INSTALL.DTA    Terminal data file (Turbo Pascal compatible) used
+               by INSTALL.COM
+
+Documentation -
+
+README.1ST     Important information about DX-Forth
+WHATSNEW.TXT   Summary of additions/changes/fixes
+CHANGES.TXT    Important changes information
+DXFORTH.TXT    DX-Forth documentation
+DXFORTH.GLO    DX-Forth glossary of non-standard words
+DXFORTH.WDS    DX-Forth kernel words
+SED.TXT        Screen file editor
+EDLIN.TXT      Line editor for screens
+TED.TXT        Text file editor
+ASM.TXT        8080/Z80 assembler
+MULTI.TXT      Multitasker
+FILES.TXT      Files list
+
+System source -
+
+MAKEF.SUB      Build DX-Forth binaries
+KERNEL.Z80     Assembler source for DX-Forth
+ARITH.MAC      Arithmetic and logical
+COMPARE.MAC    Comparison operation
+COMPILE.MAC    Compiler
+CONTROL.MAC    Control structures
+DISK.MAC       File and block functions
+DOS.MAC        DOS functions
+FACILITY.MAC   Facility
+FLOAT.MAC      Floating-point
+MEMORY.MAC     Memory operations
+NUMBER.MAC     Numeric conversion
+STACK.MAC      Stack operations
+STRING.MAC     String operations
+EXTEND.SCR     Extends kernel
+TOOLS.SCR      Resident extensions & utilities
+ASM.SCR        Forth 8080/85/Z80 assembler
+SED.SCR        Screen file editor
+TED.F          Text file editor
+
+Misc source -
+
+INSTALL.SCR    Source for INSTALL.COM. Need ZINS.SCR
+ASMCOND.SCR    Assembler structured conditionals
+ASMTEST.SCR    Test assembler
+MULTI.SCR      Multitasker
+OVERLAY.SCR    Overlay system
+STRINGS.SCR    Sample string package
+FCOPY.SCR      Sample filecopy utility
+TXT2BLK.SCR    Text to block conversion utility
+BLK2TXT.SCR    Block to text conversion utility
+EDLIN.SCR      Line editor for screens
+SED64.SCR      Screen file editor for 64x16 console
+BREAKGO.SCR    Debugging utility
+MISC.SCR       Miscellaneous function library
+SHOW.SCR       Print source files 6 screens per page
+SSED.SCR       Create stand-alone screen editor
+NEWAPP.SCR     Skeletal DOS application
+DOSLIB.SCR     Function library and NEWAPP support
+STKCHK.SCR     Stack balance check utility
+LOCALS.SCR     ANS locals
+HLOCALS.SCR    Hayes locals extension
+MISER.SCR      Miser Case extensions & demo
+ZINS.SCR       ZCPR TermCap installer routine
+
+

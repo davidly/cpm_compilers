@@ -1,0 +1,469 @@
+
+DX-Forth Assembler
+------------------
+
+The 8080/8085/Z80 assembler provided with DX-Forth allows the user to write
+forth 'code' words.
+
+Contents:
+
+ 1. Assembler interface
+ 2. Instruction format
+ 3. Register usage
+ 4. Local labels
+ 5. Structured conditionals
+ 6. Mixing code and high-level forth
+ 7. No-name code definitions
+ 8. Forth addresses
+ 9. Predefined macros
+10. Compiler security
+11. Miscellaneous tools
+12. Instruction reference
+
+
+1. Assembler interface
+
+Main words:
+
+  CODE <name>   Begin a code definition
+
+  LABEL <name>  As for CODE but instead of <name> executing the code
+                sequence, it returns the execution address (xt).
+
+  ;CODE         The code equivalent of DOES>.  Ends a high-level forth
+                defining sequence and begins a code sequence that will
+                be performed when a child word is executed.  Used in
+                the form:
+
+                  : <name> CREATE ... ;CODE ... END-CODE
+
+                At run-time the child's parameter field address is
+                placed on the stack.
+
+  END-CODE      End a CODE LABEL or ;CODE definition
+
+Macro support:
+
+  MACRO name    Begin an assembler macro definition
+
+  ENDM          End a macro assembler definition
+
+Mixing code and high-level forth:
+
+  C:            Switch from code to begin a forth sequence.  Register
+                BC is pushed to the return stack.
+
+  ;C            Switch from forth to begin a code sequence.  Register
+                BC popped from the return stack.
+
+Miscellaneous:
+
+  [ASM          Add ASSEMBLER to the search order.  Initialize the
+                assembler and enter interpret state.  Note: does
+                not clear local labels or initialize stack check.
+
+  ASM]          Remove ASSEMBLER from the top of the search order.
+                Note: does not exit interpret state.
+
+  READY         Clear local labels and initialize stack check.
+
+  CHECK         Check stack level and resolve labels since READY was
+                last issued.
+
+  -ASM          Discard the assembler and all subsequent words.
+
+
+2. Instruction format
+
+As with most forth assemblers, operands precede the instruction.
+Intel mnemonics are employed for the 8080 instructions while the
+Z80-only instructions use TDL "extended Intel" mnemonics.
+
+The following examples show DX-Forth assembler syntax as compared
+with conventional Zilog notation.  Refer to the instruction reference
+later for a complete listing.
+
+     Zilog                    DX-Forth
+     -----                    --------
+
+     LD   B,C                C  B  MOV
+     LD   A,5                5  A  MVI
+     INC  A                     A  INR
+     DEC  (HL)                  M  DCR
+     INC  (IX+9)             9 (X) INR
+     INC  (IY-6)            -6 (Y) INR
+     BIT  3,C                C  3  BIT
+     RES  2,(HL)             M  2  RES
+     SET  7,(IX-5)       -5 (X) 7  SET
+
+
+3. Register usage
+
+Code words may use any 8080 cpu register except:
+
+    BC           forth interpretive pointer
+
+If any of these registers are to be used in a code definition for
+other purposes, their contents must be saved beforehand and restored
+afterwards.
+
+
+4. Local labels
+
+The DX-Forth assembler uses local labels to mark addresses for flow
+control.  Labels are assigned and referenced as follows:
+
+$:  ( n -- )        assign the address of the current dictionary
+                    location HERE to label n
+
+$   ( n -- addr )   return the address assigned to label n
+
+The maximum number of labels per definition is 20 and are numbered 1
+to 20.  The maximum number of forward references is 25.  These limits
+should be sufficient for most applications but can be increased by
+altering the assembler source and re-compiling.
+
+8080 instructions that may use forward references as operands includes
+jumps, calls and any other instruction.
+
+The following demonstrates the use of labels to define the word 0= .
+It uses one label and one forward reference.
+
+     CODE 0=  ( n -- flag )
+       -1 H LXI          \ load HL with -1 (true flag)
+       D POP             \ pop n to DE
+       E A MOV  D ORA    \ test DE
+       1 $ JZ            \ jump to label 1 if DE=0
+       H INX             \ else increment HL (0=false flag)
+     1 $:                \ define label 1
+       H PUSH            \ push flag onto stack
+       NEXT              \ return to forth
+     END-CODE
+
+
+5. Structured conditionals
+
+Structured conditionals are an alternative or adjunct to local labels.
+They include:
+
+IF  ELSE  THEN  BEGIN  WHILE  REPEAT  UNTIL  AGAIN  AHEAD
+
+Conditionals that perform a test i.e. IF  WHILE  UNTIL  must be
+preceeded by one of the following condition flags:
+
+U>=  U<  0<>  0=  U>  U<=  CY  NC  OV  NO  PO  PE  NEVER
+
+NEVER is used before a conditional test to create an unconditional
+jump.  E.g. AHEAD and AGAIN are macros for NEVER IF and NEVER UNTIL
+respectively.
+
+Example
+
+    CODE 0= ( n -- flag )
+      0 H LXI
+      D POP
+      D A MOV
+      E ORA
+    0= IF
+      H DCX
+    THEN
+      1PUSH
+    END-CODE
+
+Structured conditionals are not included by default and must be loaded
+before they can be used e.g. 1 FLOAD ASMCOND.SCR
+
+
+6. Mixing code and high-level forth
+
+The assembler allows free mixing of machine-code and high-level forth.
+
+It is sometimes convenient to execute high-level forth words from
+within a code definition.
+
+Example - display a message within a code definition
+
+  CODE TEST  ( -- )
+    C:                     \ begin forth
+      ." Hi There!"
+    ;C                     \ end forth
+    NEXT
+  END-CODE
+
+Note: BC register is automatically pushed to the return stack before
+the forth sequence executes and restored afterwards.
+
+The reverse is also possible i.e execute machine code within high-
+level forth:
+
+  : TEST  ( -- )
+    5 0 DO
+      I
+      ;C                   \ begin code
+        H POP  23 D LXI  D DAD  H PUSH
+      C:                   \ end code
+      .
+    LOOP ;
+
+See "Register usage" for a list of registers that must be preserved.
+
+
+7. No-name code definitions
+
+[ASM ASM] READY CHECK  allow the user to assemble code sequences for
+any imaginable situation.  Here is 0= coded as a nameless definition
+in the style of :NONAME .
+
+    HERE  ( start address of code routine )
+    [ASM READY
+      ( x -- flag )
+      -1 H LXI
+      D POP
+      E A MOV  D ORA
+      1 $ JZ
+      H INX
+    1 $:
+      1PUSH             \ return to forth pushing HL onto stack
+    CHECK ASM]
+
+    ( -- xt )           \ leaves xt address
+
+If local labels are not used or compiler security is not required
+then READY CHECK could be omitted.
+
+
+8. Forth addresses
+
+The following functions return addresses in the forth kernel which
+may be useful when writing code definitions.  See also 'Predefined
+macros'.
+
+'NEXT ( -- adr )  address of centralized NEXT
+RPP   ( -- adr )  pointer to return stack
+UP    ( -- adr )  pointer to forth USER area
+DOCOL ( -- adr )  enter colon routine
+EXIT1 ( -- adr )  exit colon routine
+BRAN  ( -- adr )  address of BRANCH
+DSUB  ( -- adr )  routine subtract HL <- HL-DE
+CMPU  ( -- adr )  routine unsigned compare HL,DE
+CMPS  ( -- adr )  routine signed compare HL,DE
+MULX  ( -- adr )  routine unsigned multiply HLDE <- HL*DE
+DIVX  ( -- adr )  routine unsigned divide  HL=quot DE=rem <- HLDE/BC
+UPC   ( -- adr )  routine make A uppercase
+
+
+9. Predefined macros
+
+The assembler defines several useful macros -
+
+  NEXT    jump to NEXT (equivalent to 'NEXT JMP)
+  1PUSH   push HL and jump to NEXT
+  2PUSH   push DE push HL and jump to NEXT
+  USER#   calculate USER variable offset
+  [UP]    USER addressing mode
+
+USER# converts a USER variable address to its offset.  Equivalent
+to: UP @ -
+
+[UP] takes a USER variable as an argument.  After the operation
+register HL holds the address of the specified user variable and
+register DE is modified.
+
+
+10. Compiler security
+
+As with colon definitions, the assembler employs stack checking to
+verify statements have been correctly written.  Normally very useful
+there may be occasions when one needs to turn off stack checking,
+albeit temporarily e.g.
+
+    CHECKING OFF
+
+    CODE TEST
+      ...
+      HERE ( adr )  \ push location onto the stack
+      ...
+      NEXT
+    END-CODE
+
+    CHECKING ON
+
+    ( adr )
+
+
+11. Miscellaneous tools
+
+When machine language is used extensively there can be a need for
+tools found in conventional assemblers.  Below are several the author
+has found useful.  They are not resident in the forth assembler but
+defined as needed.
+
+  SYSTEM
+
+  \ Adjust HERE to an even address padding with a NOP instruction
+  : EVEN ( -- )  HERE 1 AND IF $00 C, THEN ;
+
+  \ Name value x
+  : EQU ( x "name" -- )  SYS @ TUCK 0= SYS ! VALUE SYS ! ;
+
+  \ Name address at HERE and compile a 16-bit value
+  : DW ( 16b "name" -- )  HERE EQU , ;
+
+  \ Name address at HERE and compile a 8-bit value
+  : DB ( 8b "name" -- )  HERE EQU C, ;
+
+  APPLICATION
+
+
+12. Instruction Reference
+
+The following listing shows each Zilog instruction and its
+Intel/TDL equivalent in DX-Forth format.
+
+b   bit position (0..7)
+d   displacement added to IX or IY registers (-127..127)
+r   register A,B,C,D,E,H or L
+n   8 bit operand (0..255)
+nn  16 bit operand (0..65535)
+
+*  indicates Z80 only instructions
+** indicates 8085 only instructions
+
+
+  Zilog              Intel/TDL         Zilog              Intel/TDL
+
+  ADC  A,(HL)           M  ADC         LD  BC,nn          nn B  LXI
+* ADC  A,(IX+d)     d (X)  ADC       * LD  DE,(nn)          nn  LDED
+* ADC  A,(IY+d)     d (Y)  ADC         LD  DE,nn          nn D  LXI
+  ADC  A,n              n  ACI         LD  HL,(nn)          nn  LHLD
+  ADC  A,r              r  ADC         LD  HL,nn          nn H  LXI
+* ADC  HL,BC            B  DADC      * LD  I,A                  STAI
+* ADC  HL,DE            D  DADC      * LD  IX,(nn)          nn  LIXD
+* ADC  HL,HL            H  DADC      * LD  IX,nn          nn X  LXI
+* ADC  HL,SP           SP  DADC      * LD  IY,(nn)          nn  LIYD
+  ADD  A,(HL)           M  ADD       * LD  IY,nn          nn Y  LXI
+* ADD  A,(IX+d)     d (X)  ADD       * LD  R,A                  STAR
+* ADD  A,(IY+d)     d (Y)  ADD       * LD  SP,(nn)          nn  LSPD
+  ADD  A,n              n  ADI         LD  SP,HL                SPHL
+  ADD  A,r              r  ADD       * LD  SP,IX                SPIX
+  ADD  HL,BC            B  DAD       * LD  SP,IY                SPIY
+  ADD  HL,DE            D  DAD         LD  SP,nn         nn SP  LXI
+  ADD  HL,HL            H  DAD         LD  r,(HL)          M r  MOV
+  ADD  HL,SP           SP  DAD       * LD  r,(IX+d)    d (X) r  MOV
+* ADD  IX,BC            B  DADX      * LD  r,(IY+d)    d (Y) r  MOV
+* ADD  IX,DE            D  DADX        LD  r,n             n r  MVI
+* ADD  IX,IX            X  DADX        LD  r,r'           r' r  MOV
+* ADD  IX,SP           SP  DADX      * LDD                      LDD
+* ADD  IY,BC            B  DADY      * LDDR                     LDDR
+* ADD  IY,DE            D  DADY      * LDI                      LDI
+* ADD  IY,IY            Y  DADY      * LDIR                     LDIR
+* ADD  IY,SP           SP  DADY        NEG                      NEG
+  AND  (HL)             M  ANA         NOP                      NOP
+* AND  (IX+d)       d (X)  ANA         OR  (HL)              M  ORA
+* AND  (IY+d)       d (Y)  ANA       * OR  (IX+d)        d (X)  ORA
+  AND  n                n  ANI       * OR  (IY+d)        d (Y)  ORA
+  AND  r                r  ANA         OR  n                 n  ORI
+* BIT  b,(HL)         M b  BIT         OR  r                 r  ORA
+* BIT  b,(IX+d)   d (X) b  BIT       * OTDR                     OUTDR
+* BIT  b,(IY+d)   d (Y) b  BIT       * OTIR                     OUTIR
+* BIT  b,r            r b  BIT       * OUT  (C),r            r  OUTP
+  CALL  C,nn           nn  CC          OUT  (n),A            n  OUT
+  CALL  M,nn           nn  CM        * OUTD                     OUTD
+  CALL  NC,nn          nn  CNC       * OUTI                     OUTI
+  CALL  NZ,nn          nn  CNZ         POP  AF             PSW  POP
+  CALL  P,nn           nn  CP          POP  BC               B  POP
+  CALL  PE,nn          nn  CPE         POP  DE               D  POP
+  CALL  PO,nn          nn  CPO         POP  HL               H  POP
+  CALL  Z,nn           nn  CZ        * POP  IX               X  POP
+  CALL  nn             nn  CALL      * POP  IY               Y  POP
+  CCF                      CMC         PUSH  AF            PSW  PUSH
+  CP  (HL)              M  CMP         PUSH  BC              B  PUSH
+* CP  (IX+d)        d (X)  CMP         PUSH  DE              D  PUSH
+* CP  (IY+d)        d (Y)  CMP         PUSH  HL              H  PUSH
+  CP  n                 n  CPI       * PUSH  IX              X  PUSH
+  CP  r                 r  CMP       * PUSH  IY              Y  PUSH
+* CPD                      CCD       * RES  b,(HL)         M b  RES
+* CPDR                     CCDR      * RES  b,(IX+d)   d (X) b  RES
+* CPI                      CCI       * RES  b,(IY+d)   d (Y) b  RES
+* CPIR                     CCIR      * RES  b,r            r b  RES
+  CPL                      CMA         RET                      RET
+  DAA                      DAA         RET  C                   RC
+  DEC  (HL)             M  DCR         RET  M                   RM
+* DEC  (IX+d)       d (X)  DCR         RET  NC                  RNC
+* DEC  (IY+d)       d (Y)  DCR         RET  NZ                  RNZ
+  DEC  BC               B  DCX         RET  P                   RP
+  DEC  DE               D  DCX         RET  PE                  RPE
+  DEC  HL               H  DCX         RET  PO                  RPO
+* DEC  IX               X  DCX         RET  Z                   RZ
+* DEC  IY               Y  DCX       * RETI                     RETI
+  DEC  SP              SP  DCX       * RETN                     RETN
+  DEC  r                r  DCR       * RL  (HL)              M  RALR
+  DI                       DI        * RL  (IX+d)        d (X)  RALR
+* DJNZ  nn             nn  DJNZ      * RL  (IY+d)        d (Y)  RALR
+  EI                       EI        * RL  r                 r  RALR
+  EX  (SP),HL              XTHL        RLA                      RAL
+* EX  (SP),IX              XTIX      * RLC  (HL)             M  RLCR
+* EX  (SP),IY              XTIY      * RLC  (IX+d)       d (X)  RLCR
+* EX  AF,AF'               EXAF      * RLC  (IY+d)       d (Y)  RLCR
+  EX  DE,HL                XCHG      * RLC  r                r  RLCR
+* EXX                      EXX         RLCA                     RLC
+  HALT                     HLT       * RLD                      RLD
+* IM  0                    IM0       * RR  (HL)              M  RARR
+* IM  1                    IM1       * RR  (IX+d)        d (X)  RARR
+* IM  2                    IM2       * RR  (IY+d)        d (Y)  RARR
+  IN  A,(n)             n  IN        * RR  r                 r  RARR
+  IN  r,(C)             r  INP         RRA                      RAR
+  INC  (HL)             M  INR       * RRC  (HL)             M  RRCR
+* INC  (IX+d)       d (X)  INR       * RRC  (IX+d)       d (X)  RRCR
+* INC  (IY+d)       d (Y)  INR       * RRC  (IY+d)       d (Y)  RRCR
+  INC  BC               B  INX       * RRC  r                r  RRCR
+  INC  DE               D  INX         RRCA                     RRC
+  INC  HL               H  INX       * RRD                      RRD
+* INC  IX               X  INX         RST  00h              0  RST
+* INC  IY               Y  INX         RST  08h              1  RST
+  INC  SP              SP  INX         RST  10h              2  RST
+  INC  r                r  INR         RST  18h              3  RST
+* IND                      IND         RST  20h              4  RST
+* INDR                     INDR        RST  28h              5  RST
+* INI                      INI         RST  30h              6  RST
+* INIR                     INIR        RST  38h              7  RST
+  JP  (HL)                 PCHL        SBC  A,(HL)           M  SBB
+* JP  (IX)                 PCIX      * SBC  A,(IX+d)     d (X)  SBB
+* JP  (IY)                 PCIY      * SBC  A,(IY+d)     d (Y)  SBB
+  JP  C,nn             nn  JC          SBC  A,n              n  SBI
+  JP  M,nn             nn  JM          SBC  A,r              r  SBB
+  JP  NC,nn            nn  JNC       * SBC  HL,BC            B  DSBC
+  JP  NZ,nn            nn  JNZ       * SBC  HL,DE            D  DSBC
+  JP  P,nn             nn  JP        * SBC  HL,HL            H  DSBC
+  JP  PE,nn            nn  JPE       * SBC  HL,SP           SP  DSBC
+  JP  PO,nn            nn  JPO         SCF                      STC
+  JP  Z,nn             nn  JZ        * SET  b,(HL)         M b  SET
+  JP  nn               nn  JMP       * SET  b,(IX+d)   d (X) b  SET
+* JR  C,nn             nn  JRC       * SET  b,(IY+d)   d (Y) b  SET
+* JR  NC,nn            nn  JRNC      * SET  b,r            r b  SET
+* JR  NZ,nn            nn  JRNZ      * SLA  (HL)             M  SLAR
+* JR  Z,nn             nn  JRZ       * SLA  (IX+d)       d (X)  SLAR
+* JR  nn               nn  JMPR      * SLA  (IY+d)       d (Y)  SLAR
+  LD  (BC),A            B  STAX      * SLA  r                r  SLAR
+  LD  (DE),A            D  STAX      * SRA  (HL)             M  SRAR
+  LD  (HL),n          n M  MVI       * SRA  (IX+d)       d (X)  SRAR
+  LD  (HL),r          r M  MOV       * SRA  (IY+d)       d (Y)  SRAR
+* LD  (IX+d),n    n d (X)  MVI       * SRA  r                r  SRAR
+* LD  (IX+d),r    r d (X)  MOV       * SRL  (HL)             M  SRLR
+* LD  (IY+d),n    n d (Y)  MVI       * SRL  (IX+d)       d (X)  SRLR
+* LD  (IY+d),r    r d (Y)  MOV       * SRL  (IY+d)       d (Y)  SRLR
+  LD  (nn),A           nn  STA       * SRL  r                r  SRLR
+* LD  (nn),BC          nn  SBCD        SUB  (HL)             M  SUB
+* LD  (nn),DE          nn  SDED      * SUB  (IX+d)       d (X)  SUB
+  LD  (nn),HL          nn  SHLD      * SUB  (IY+d)       d (Y)  SUB
+* LD  (nn),IX          nn  SIXD        SUB  n                n  SUI
+* LD  (nn),IY          nn  SIYD        SUB  r                r  SUB
+* LD  (nn),SP          nn  SSPD        XOR  (HL)             M  XRA
+  LD  A,(BC)            B  LDAX      * XOR  (IX+d)       d (X)  XRA
+  LD  A,(DE)            D  LDAX      * XOR  (IY+d)       d (Y)  XRA
+  LD  A,(nn)           nn  LDA         XOR  n                n  XRI
+* LD  A,I                  LDAI        XOR  r                r  XRA
+* LD  A,R                  LDAR     ** n/a                      RIM
+* LD  BC,(nn)          nn  LBCD     ** n/a                      SIM
+
+

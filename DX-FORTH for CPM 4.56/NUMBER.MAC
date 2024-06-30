@@ -1,0 +1,272 @@
+;
+;  NUMBER.MAC - Numeric Conversion
+;
+;  BINARY  HEX  DECIMAL  !base  @base  >DIGIT  >NUMBER  /SIGN
+;  /NUMBER  NUMBER?  HELD  <#  #>  +hold  HOLD  SHOLD  NHOLD
+;  >CHAR  #  SIGN  #S  decimal?
+;
+
+;	BINARY  ( -- )
+
+	hdr	1,'BINARY'
+bin:	ld	e,2
+	ignore2
+
+;	HEX  ( -- )
+
+	hdr	1,'HEX'
+hex:	ld	e,16
+	ignore2
+
+;	DECIMAL  ( -- )
+
+	hdr	1,'DECIMAL'
+decim:	ld	e,10
+	ld	d,0
+	push	de
+
+;	!BASE
+
+	hdr	x,'!BASE'
+stobas:	call	docol
+	dw	base,store
+	dw	exit
+
+;	@BASE
+
+	hdr	x,'@BASE'
+atbas:	call	docol
+	dw	base,at
+	dw	exit
+
+;	>DIGIT  ( char base -- u true | char false )
+
+	hdr	1,'>DIGIT'
+todig:	pop	hl
+	pop	de
+	ld	a,e
+	sub	'0'
+	jp	c,todig2
+	cp	10
+	jp	c,todig1
+	sub	7
+	cp	10
+	jp	c,todig2
+todig1:	cp	l
+	jp	nc,todig2
+	ld	e,a
+	push	de
+	jp	true
+
+todig2:	push	de
+	jp	false
+
+;	>NUMBER  ( ud1 addr1 u1 -- ud2 addr2 u2 )
+;			begin dup while /char upcase @base >digit
+;			while >r 2swap @base mu* r> m+ 2swap 1 dpl
+;			+! repeat drop -1 /string then
+
+	hdr	1,'>NUMBER'
+tonum:	call	docol
+tonum1:	dw	dupp		; begin
+	dw	zbran,tonum3	; while
+	dw	schr
+	dw	upcas
+	dw	atbas
+	dw	todig
+	dw	zbran,tonum2	; while
+	dw	tor
+	dw	tswap
+	dw	atbas
+	dw	mustr
+	dw	fromr
+	dw	mplus
+	dw	tswap
+	dw	one,dpl,pstor
+	dw	bran,tonum1	; repeat
+tonum2:	dw	drop
+	dw	true,sstr
+tonum3:	dw	exit		; then
+
+;	/SIGN  ( a u -- a' u' flag )
+
+	hdr	1,'/SIGN'
+ssgn:	pop	de
+	pop	hl
+	push	bc
+	ld	bc,0
+	ld	a,e
+	or	d
+	jp	z,ssgn2
+	ld	a,(hl)
+	cp	'+'
+	jp	z,ssgn1
+	cp	'-'
+	jp	nz,ssgn2
+	dec	bc
+ssgn1:	inc	hl
+	dec	de
+ssgn2:	ex	(sp),hl
+	push	de
+	jp	scan4
+
+;	/NUMBER  ( addr u -- addr2 u2 d|ud )	/sign >r 0 0 2swap >number
+;						2swap r> if dnegate then
+
+	hdr	1,'/NUMBER'
+snumb:	call	docol
+	dw	ssgn,tor
+	dw	zero,zero
+	dw	tswap,tonum
+	dw	tswap,fromr
+	dw	zbran,snumb1
+	dw	dneg
+snumb1:	dw	exit
+
+;	NUMBER?  ( c-addr u -- d|ud true | false )
+;				dup if /number dpl on 2swap dup if 1-
+;				over c@ [char] . - or dpl off then
+;				nip 0= if true end then 2drop false
+
+	hdr	1,'NUMBER?'
+numq:	call	docol		; convert string to double number
+	dw	dupp
+	dw	zbran,numq2	; if
+	dw	snumb
+	dw	dpl,on
+	dw	tswap
+	dw	dupp
+	dw	zbran,numq1	; if
+	dw	onem		; test 1 char left is '.'
+	dw	over,cat
+	dw	clit
+	db	'.'
+	dw	subb,orr
+	dw	dpl,off
+numq1:	dw	nip
+	dw	zequ
+	dw	zbran,numq2	; if
+	dw	true		; pass
+	dw	exit
+numq2:	dw	tdrop		; fail
+	dw	false
+	dw	exit
+
+;	HELD  ( -- c-addr u )	hld @ pad over -
+
+	hdr	1,'HELD'
+held:	call	docol
+	dw	hld,at
+	dw	pad
+	dw	over
+	dw	subb
+	dw	exit
+
+;	<#  ( -- )		pad hld !
+
+	hdr	1,'<#'
+bdigs:	call	docol
+	dw	pad
+	dw	hld,store
+	dw	exit
+
+;	#>  ( d -- c-addr u )	2drop held
+
+	hdr	1,'#>'
+edigs:	call	docol
+	dw	tdrop,held
+	dw	exit
+
+;	+hold  ( +n -- c-addr )	negate hld tuck +! @ dup dp @ u<
+;				abort" HOLD buffer full"
+
+	hdr	x,'+HOLD'
+phld:	call	docol
+	dw	negat
+	dw	hld,tuck
+	dw	pstor
+	dw	at,dupp
+	dw	dpp,at,uless
+	dw	pabq
+	dcs	'HOLD buffer full'
+	dw	exit
+
+;	HOLD  ( char -- )	1 +hold c!
+
+	hdr	1,'HOLD'
+hold:	call	docol
+	dw	one,phld
+	dw	cstor
+	dw	exit
+
+;	SHOLD  ( c-addr u -- )	dup +hold swap move
+
+	hdr	1,'SHOLD'	; hold string
+shold:	call	docol
+	dw	dupp,phld
+	dw	swap,move
+	dw	exit
+
+;	NHOLD  ( n char -- )	over +hold -rot fill
+
+	hdr	1,'NHOLD'	; hold n characters
+nhold:	call	docol
+	dw	over,phld
+	dw	drot,fill
+	dw	exit
+
+;	>CHAR  ( n -- char )	dup 9 > if 7 + then [char] 0 +
+
+	hdr	1,'>CHAR'
+tchr:	pop	de
+	ld	a,e
+	cp	9+1
+	jp	c,tchr1
+	add	a,7
+tchr1:	add	a,'0'
+	jp	apush
+
+;	#  ( ud1 -- ud2 )	@base mu/mod rot >char hold
+
+	hdr	1,'#'
+dig:	call	docol
+	dw	atbas
+	dw	musm
+	dw	rot
+	dw	tchr
+	dw	hold
+	dw	exit
+
+;	SIGN  ( n -- )		0< if [char] - hold then
+
+	hdr	1,'SIGN'
+sign:	call	docol
+	dw	zless
+	dw	zbran,sign1
+	dw	clit
+	db	'-'
+	dw	hold
+sign1:	dw	exit
+
+;	#S  ( +d -- 0 0 )	begin # 2dup d0= until
+
+	hdr	1,'#S'
+digs:	call	docol
+digs1:	dw	dig
+	dw	tdup,dzequ
+	dw	zbran,digs1
+	dw	exit
+
+;	decimal? ( -- flag )	@base 10 =
+
+	hdr	x,'DECIMAL?'
+dcmq:	call	docol
+	dw	atbas		; decimal base?
+	dw	clit
+	db	10
+	dw	equal
+	dw	exit
+
+;	end
+
+

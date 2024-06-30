@@ -1,0 +1,462 @@
+;
+;  COMPILE.MAC - Compiler Functions
+;
+;  wfind  (find)  FIND  -?  warning?  IMMEDIATE  xnfa  SMUDGE
+;  header  ,call  BUILD  :  ;  :NONAME  (;CODE)  DOES> CREATE
+;  VARIABLE  INTEGER  CONSTANT  2VARIABLE  2CONSTANT USER  ADDR
+;  (to)  TO  DEFER  IS  AKA
+;
+
+;	wfind  ( c-addr wid -- 0 | xt nfa -1 | xt nfa 1 )
+
+	hdr	x,'WFIND',,1
+wfind:	pop	hl
+	ld	a,l
+	or	h
+	jp	z,wfind2	; wid=0
+wfind1:	ld	e,(hl)		; get nfa
+	inc	hl
+	ld	d,(hl)
+	pop	hl		; string
+	push	hl
+	ld	a,e		; end of list?
+	or	d
+	ex	de,hl
+	jp	nz,wfind3
+wfind2:	pop	de		; discard string
+	jp	false		; no match
+
+wfind3:	push	hl		; save nfa
+	push	bc		; save IP
+	ld	a,(hl)
+	ld	b,a
+	and	1fh
+	ld	c,a		; dict name length
+	ld	a,(de)		; string length
+	xor	b		; check lengths/smudge bit
+	and	3fh
+	jp	z,wfind5
+	inc	hl
+wfind4:	ld	b,0		; move to link
+	add	hl,bc
+	pop	bc		; restore IP
+	pop	de		; discard nfa
+	jp	wfind1
+
+wfind5:	inc	hl		; check each char
+	inc	de
+	ld	a,(de)
+	 if	ucase
+	call	upc
+	 endif
+	ld	b,a
+	ld	a,(hl)
+	 if	ucase
+	call	upc
+	 endif
+	xor	b
+	jp	nz,wfind4	; no match
+	dec	c
+	jp	nz,wfind5
+	inc	hl		; to link
+	inc	hl		; to cfa pointer
+	inc	hl
+	ld	e,(hl)		; get xt
+	inc	hl
+	ld	d,(hl)
+	pop	bc		; restore IP
+	pop	hl		; nfa
+	pop	af		; discard string
+	push	de		; xt
+	push	hl		; nfa
+	ld	a,(hl)
+	and	40h		; immediate?
+	jp	z,true
+	jp	one
+
+;	(find)  ( c-addr -- c-addr 0 | xt -1 | xt 1 )
+;				0 3 0 do over i cells context + @
+;				wfind ?dup if nip 2nip break loop
+
+	hdr	x,'(FIND)',,1	; searches CONTEXT CURRENT FORTH
+pfind:	call	docol
+	dw	zero
+	dw	three
+	dw	zero
+	dw	xdo,pfind3
+pfind1:	dw	over
+	dw	ido,cells
+	dw	cont,plus,at
+	dw	wfind,qdup
+	dw	zbran,pfind2
+	dw	nip,tnip
+	dw	pleav,pfind1-cw
+pfind2:	dw	xloop,pfind1
+pfind3:	dw	exit
+
+;	FIND  ( c-addr -- c-addr 0 | xt -1 | xt 1 )
+
+	hdr	1,'FIND',,1
+find:	call	aexec
+	dw	pfind
+
+	 if	0
+
+;	SEARCH-WORDLIST  ( c-addr u wid -- 0 | xt -1 | xt 1 )
+;				>r wpack r> wfind dup if nip then
+
+	hdr	1,'SEARCH-WORDLIST',,1
+swlis:	call	docol
+	dw	tor
+	dw	wpack
+	dw	fromr
+	dw	wfind
+	dw	dupp
+	dw	zbran,swlis1
+	dw	nip
+swlis1	dw	exit
+
+	 endif
+
+	 if	wopt
+
+;	-?  ( -- )		warning @ 0fffe and warning !
+
+	hdr	1,'-?',,1	; disable warnings for next definition only
+dques:	ld	hl,warnn1
+	ld	a,(hl)
+	and	0feh		; clear bit 0
+	ld	(hl),a
+	nextt
+
+;	warning?  ( -- 0|1 )	warning @ dup if 1 and $7FFF over 0<> or
+;				warning ! then
+
+	hdr	x,'WARNING?',,1	; get warning flag and apply mask
+qwarn:	call	docol
+	dw	warnn,at
+	dw	dupp
+	dw	zbran,qwarn1
+	dw	one,andd	; test redefinition warning
+	dw	lit,7fffh	; disable system warning
+	dw	over,zneq	; else enable all warnings
+	dw	orr
+	dw	warnn,store
+qwarn1:	dw	exit
+
+	 endif
+
+;	IMMEDIATE  ( -- )	$40 xnfa
+
+	hdr	1,'IMMEDIATE',,1
+immed:	ld	e,40h
+	ignore1
+
+;	xnfa  ( x -- )		toggle nfa bit
+
+xnfa:	pop	de
+	ld	hl,(last1)
+	ld	a,(hl)
+	xor	e
+	ld	(hl),a
+	jp	next
+
+;	SMUDGE	( -- )		$20 xnfa
+
+	hdr	1,'SMUDGE',,1	; FIG
+smudg:	ld	e,20h
+	jp	xnfa+1
+
+;	header  ( xt|0 "name" -- )
+;				warning? 2>r dph @ (esm) @ 64 - u>
+;				abort" no name space" bl-word dup c@
+;				32 1 within abort" bad name" dup find
+;				nip r> and if .word ."  redefined " then
+;				dup count tuck + get-current w>name over
+;				! cell+ swap 5 + dph @ over dph +! dup
+;				get-current ! rot r> ?dup 0= if here
+;				then dup rot ! over last 2! swap cmove
+
+	hdr	x,'HEADER',,1
+headr:	call	docol
+	 if	wopt
+	dw	qwarn
+	 else
+	dw	warnn,at
+	 endif
+	dw	ttor
+	dw	dph,at
+	dw	lit,esm
+	dw	at
+	dw	clit
+	db	64
+	dw	subb,ugrea
+	dw	pabq
+	dcs	'no name space'
+	dw	blword
+	dw	dupp,cat
+	dw	clit
+	db	32
+	dw	one,within
+	dw	pabq
+	dcs	'bad name'
+	dw	dupp,find,nip
+	dw	fromr,andd
+	dw	zbran,headr1
+	dw	dotwrd
+	dw	pdotq
+	dcs	' redefined '
+headr1:	dw	dupp,count
+	dw	tuck
+	dw	plus
+	dw	getcur,wtnam
+	dw	over,store
+	dw	cellp,swap
+	dw	clit
+	db	5
+	dw	plus
+	dw	dph,at
+	dw	over,dph,pstor
+	dw	dupp
+	dw	getcur
+	dw	store		; CP/M version
+	dw	rot
+	dw	fromr,qdup,zequ
+	dw	zbran,headr2
+	dw	here
+headr2:	dw	dupp,rot,store
+	dw	over,last,tstor
+	dw	swap,cmove
+	dw	exit
+
+;	,call  ( addr -- )	$CD c, ,
+
+	hdr	x,',CALL',,1
+comcall:call	docol
+	dw	clit
+	db	0CDh		; 'call' opcode
+	dw	ccomm
+	dw	comma
+	dw	exit
+
+;	BUILD  ( xt "name" -- )  0 header ,call
+
+	hdr	1,'BUILD',,1
+build:	call	docol
+	dw	zero,headr
+	dw	comcall
+	dw	exit
+
+;	:  ( -- )		(docol) build smudge bal off !csp ]
+
+	hdr	1,':',,1
+colon:	call	docol
+	dw	lit,docol
+	dw	build
+	dw	smudg
+colon1:	dw	bal,off
+	dw	scsp
+	dw	rbrac
+	dw	exit
+
+;	;  ( -- )		postpone exit bal @ ?bal ?csp smudge
+;				postpone [ ;immediate
+
+	hdr	1,';',1,1
+semic:	call	docol
+	dw	comp,exit
+	dw	bal,at
+	dw	qbal
+	dw	qcsp
+	dw	smudg
+	dw	lbrac
+	dw	exit
+
+;	:NONAME  ( -- xt )	warning? drop here dup (dnfa) last 2!
+;				(docol) ,call bal off !csp ]
+
+	hdr	1,':NONAME',,1
+nonam:	call	docol
+	 if	wopt
+	dw	qwarn,drop	; allow -?
+	 endif
+	dw	here
+	dw	dupp		; allow RECURSE
+	dw	lit,dnfa	; allow IMMEDIATE
+	dw	last,tstor
+	dw	lit,docol
+	dw	comcall
+	dw	bran,colon1
+
+;	(;CODE)			r> last cell+ @ 1+ !
+
+	hdr	1,'(;CODE)',,1
+pscod:	ld	hl,(last2)
+	inc	hl
+	ld	(hl),c
+	inc	hl
+	ld	(hl),b
+	jp	exit
+
+;	DOES>			postpone (;code) (docol) ,call ;immediate
+
+	hdr	1,'DOES>',1,1
+does:	call	docol
+	dw	comp,pscod
+	dw	lit,docol
+	dw	comcall
+	dw	exit
+
+;	CREATE  ( -- addr )	'next build
+
+	hdr	1,'CREATE',,1
+creat:	ld	hl,next
+creat1:	push	hl
+	jp	build
+
+docre	equ	next
+
+;	VARIABLE  ( -- addr )	create 2 allot
+
+	hdr	1,'VARIABLE',,1
+var:	call	docol
+	dw	creat
+	dw	two,allot
+	dw	exit
+
+;	INTEGER  ( -- x )	0 (dotcon) build ,
+
+	hdr	1,'INTEGER',,1
+integ:	call	docol
+	dw	zero
+integ1:	dw	lit,doval
+	dw	build
+	dw	comma
+	dw	exit
+
+;	CONSTANT  ( -- x )	char? if (docco) build c, end
+;				(dotcon) build ,
+
+	hdr	1,'CONSTANT',,1
+con:	call	docol
+	dw	charq
+	dw	zbran,integ1
+	dw	lit,docco
+	dw	build
+	dw	ccomm
+	dw	exit
+
+;	2VARIABLE  ( -- addr )	create 4 allot
+
+	hdr	1,'2VARIABLE',,1
+tvar:	call	docol
+	dw	creat
+	dw	clit
+	db	4
+	dw	allot
+	dw	exit
+
+dotvar	equ	next
+
+;	2CONSTANT  ( -- x2 x1 )  (dotcon) build , ,
+
+	hdr	1,'2CONSTANT',,1
+tcon:	call	docol
+	dw	lit,dotcon
+	dw	build
+	dw	comma,comma
+	dw	exit
+
+dotcon	equ	tat		; 2@
+
+;	USER  ( -- addr )	(douse) build ,
+
+	hdr	1,'USER',,1	; FIG
+user:	call	docol
+	dw	lit,douse
+	dw	build
+	dw	comma
+	dw	exit
+
+;	ADDR  ( "name" -- addr )  ' >body state @ if postpone literal then
+;				;immediate
+
+	hdr	1,'ADDR',1,1	; state-smart
+addr:	call	docol
+	dw	tick,tbody
+	dw	stateq
+	dw	zbran,addr1
+	dw	liter
+addr1:	dw	exit
+
+;	(to)  ( x -- )		r> dup cell+ >r @ >body !
+
+	hdr	x,'(TO)'
+pto:	ld	a,(bc)
+	ld	l,a
+	inc	bc
+	ld	a,(bc)
+	ld	h,a
+	inc	bc
+	inc	hl
+	inc	hl
+	inc	hl
+	jp	store1
+
+;	TO			' state? if postpone (to) , end >body !
+;				;immediate
+
+	hdr	1,'TO',1,1	; state-smart
+to:	call	docol
+	dw	tick
+	dw	stateq
+	dw	zbran,to1
+	dw	comp,pto
+	dw	comma
+	dw	exit
+to1:	dw	tbody,store
+	dw	exit
+
+	cseg
+
+undef:	call	docol
+	dw	one
+	dw	pabq
+	dcs	'empty DEFER'
+
+;	DEFER  ( -- )		['] @execute build (undef) ,
+
+	hdr	1,'DEFER',,1
+defer:	call	docol
+	dw	lit,aexec
+	dw	build
+	dw	lit,undef
+	dw	comma
+	dw	exit
+
+;	IS			aka to is
+
+	hdr	1,'IS',1,,to	; state-smart
+is	equ	to
+
+pis	equ	pto
+
+;	AKA  ( "oldname" "newname" -- )  defined tuck ?defined (header)
+;					$80 xnfa 0> if immediate then
+
+	hdr	1,'AKA',,1
+aka:	call	docol
+	dw	defined
+	dw	tuck,qdef
+	dw	headr		; equivalent of
+	dw	clit		; ALIAS ( xt "newname" -- )
+	db	80h		;
+	dw	xnfa		;
+	dw	zgrea
+	dw	zbran,aka1
+	dw	immed
+aka1:	dw	exit
+
+;	end
+
+
