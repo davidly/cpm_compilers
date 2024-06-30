@@ -1,0 +1,214 @@
+DEFINITION MODULE Windows;
+(*                                                              *)
+(* (C)Copyright 1987 Bob Catiller all commercial rights reserved*)
+(*                                                              *)
+(* This module provides utilitiy procedures for implementing *)
+(* menus that feature pull down windows with graphic borders, *)
+(* and highlighted menu items for selection. Procedures are *)
+(* provided for opening and closing up to 10 windows. Up to *)
+(* 10 graphic border types may be selected for each window. *)
+(* Procedures are also provided for highlighting a selected *)
+(* line in the window and rotating the highlighting up or *)
+(* down in the selected window. Window parameters may be *)
+(* read or modified while a window is opened, such as: *)
+(* 	- window screen origin (X Y coordinates) *)
+(*	- window position for writing/reading text *)
+(*	- Window text *)
+(*	- Window border type *)
+(*	- Highlighted window line *)
+
+(* Global variables available to user. *)
+(* wiStatus is set TRUE if a window function is succesfully *)
+(* completed and is set FALSE if the function cannot be  *)
+(* completed as requested. IF the end of a line is reached *)
+(* when writing to a window then wiEoln is set TRUE. *)
+(* If the end of the window is reached then wiEow is set TRUE. *)
+
+CONST
+  wxz = 80; (* max col *)
+  
+VAR
+  wiStatus, wiEow, wiEoln: BOOLEAN;
+  x, y: INTEGER;
+
+TYPE
+  wst = ARRAY [0..wxz-1] OF CHAR;
+
+(* The following procedures are available to the user. *)
+
+PROCEDURE wiDelln (no, y: INTEGER);
+(* Accepts the window number (no), the line number (y), *)
+(* and deletes the selected line of text in the selected *)
+(* window. Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiInsln (no, y: INTEGER);
+(* Accepts the window number (no), the line number (y), *)
+(* and inserts a blank line before the selected line in the selected *)
+(* window. Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiClreol (no: INTEGER);
+(* Accepts the window number (no) and clears from the *)
+(* current window position to the end of the line. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiClear (no: INTEGER);
+(* Accepts the window number (no) and clears the *)
+(* entire text area in the window parameters of *)
+(* the selected window to blanks. *)
+(* Does not affect the terminal display. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiHome (no: INTEGER);
+(* Accepts the window number (no) and sets the *)
+(* window position to the beginning of the first line. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiBorder (no, bt: INTEGER);
+(* Accepts the window number (no) and the border type (bt) *)
+(* and sets the new border type in the window parameters. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiOpen (no, x, y, w, h, bt: INTEGER);
+(* Accepts the window number (no) , screen coordinates *)
+(* (x & y), window size (w & h),and the border type (bt). *)
+(* Builds a window parameter block for the new window. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* already open. *)
+
+PROCEDURE wiClose (no: INTEGER);
+(* Accepts the window number (no) and deallocates the *)
+(* window parameter block for the selected window. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not previously open. *)
+
+PROCEDURE wiGetpos (no: INTEGER; VAR x, y: INTEGER);
+(* Accepts the window number (no) and accesses the *)
+(* window parameter block for the selected window. *)
+(* Returns with x & y set to current window position. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not previously open. *)
+
+PROCEDURE wiGetorg (no: INTEGER; VAR x, y: INTEGER);
+(* Accepts the window number (no) and accesses the *)
+(* window parameter block for the selected window. *)
+(* Returns with x & y set to current window origin. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiSetpos (no, x, y: INTEGER);
+(* Accepts the window number (no) and window position *)
+(* (x & y) and then sets the new window position in the *)
+(* window parameter block for the selected window. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiSetorg (no, x, y: INTEGER);
+(* Accepts the window number (no) and window origin *)
+(* (x & y) and then sets the new window position in the *)
+(* window parameter block for the selected window. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiPut (no: INTEGER; st: wst);
+(* Accepts the window number (no) and window text *)
+(* (st) and then writes the text in the *)
+(* window parameter block for the selected window. *)
+(* Does not update the screen display on the terminal. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+(* Returns with wiEoln set TRUE if the end of line is reached. *)
+(* Returns with wiEow set TRUE if the end of the window *)
+(* is reached. *)
+
+PROCEDURE wiPutln (no: INTEGER; st: wst);
+(* Accepts the window number (no) and window text *)
+(* (st) and then writes the text in the *)
+(* window parameter block for the selected window. *)
+(* Sets the window position to the next line. *)
+(* Does not update the screen display on the terminal. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+(* Returns with wiEoln set TRUE if the end of line is reached. *)
+(* Returns with wiEow set TRUE if the end of the window *)
+(* is reached. *)
+
+PROCEDURE wiWrite (no: INTEGER; st: wst);
+(* Accepts the window number (no) and window text *)
+(* (st) and then writes the text in the *)
+(* window parameter block for the selected window. *)
+(* Updates the screen display on the terminal. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+(* Returns with wiEoln set TRUE if the end of line is reached. *)
+(* Returns with wiEow set TRUE if the end of the window *)
+(* is reached. *)
+
+PROCEDURE wiWriteln (no: INTEGER; st: wst);
+(* Accepts the window number (no) and window text *)
+(* (st) and then writes the text in the *)
+(* window parameter block for the selected window. *)
+(* Sets the window position to the next line. *)
+(* Updates the screen display on the terminal. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+(* Returns with wiEoln set TRUE if the end of line is reached. *)
+(* Returns with wiEow set TRUE if the end of the window *)
+(* is reached. *)
+
+PROCEDURE wiShow (no: INTEGER);
+(* Accepts the window number (no) and displays the *)
+(* entire window on the terminal from the *)
+(* window parameter block for the selected window. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiErase (no: INTEGER);
+(* Accepts the window number (no) and blanks the *)
+(* entire text area of the display on the terminal *)
+(* for the selected window. *)
+(* Does not affect the text contained in the *)
+(* window parameters. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiHlup (no: INTEGER);
+(* Accepts the window number (no) and rotates the *)
+(* highlighting to the next line up. Updates the *)
+(* window parameter block for the selected window. *)
+(* Moves to the bottom line if at the top line. *)
+(* Displays the updated window on the terminal. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open or if highlighting was disabled. *)
+
+PROCEDURE wiHldown (no: INTEGER);
+(* Accepts the window number (no) and rotates the *)
+(* highlighting to the next line down. Updates the *)
+(* window parameter block for the selected window. *)
+(* Moves to the top line if at the bottom line. *)
+(* Displays the updated window on the terminal. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open or if highlighting was disabled. *)
+
+PROCEDURE wiSethl (no, rh: INTEGER);
+(* Accepts the window number (no) and row number (rh) *)
+(* to be highlighted. A 0 value disables highlighting. *)
+(* Updates the window parameter block for the selected window. *)
+(* Displays the updated window on the terminal. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+PROCEDURE wiGethl (no: INTEGER);
+(* Accepts the window number (no) and accesses the *)
+(* window parameter block for the selected window. *)
+(* Returns with the highligted row number in y. *)
+(* Returns with wiStatus set FALSE if window was *)
+(* not open. *)
+
+END Windows.
+

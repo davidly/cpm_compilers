@@ -1,0 +1,138 @@
+.cw 9
+                  Z 8 0    T U R B O    M O D U L A - 2
+
+Modula-2  is  a  modern programming language  created  by  Niklaus  Wirth.  
+Similar to Pascal in many ways, anyone presently familiar with Pascal  can 
+easily  use Modula-2.  Modula-2 is a structured language,  lending  itself 
+well  to  the  techniques of structured programming, so it  makes  a  good 
+"teaching"   language  for  beginners  who  wish  to   learn   programming 
+fundamentals.  Modula-2 is a compiled language, so programs written in  it 
+execute many times faster than a comparable interpreted BASIC program.
+
+Z80  Turbo Modula-2 was created by Borland International, the creators  of 
+Turbo  Pascal.   It  is an in-depth  and  professional  implementation  of 
+Modula-2  for Z80-compatible computers running a CP/M-80  compatible  disk 
+operating  system.  This includes Kaypro, Commodore 128, Morrow,  Osborne, 
+Amstrad,  and many other computers.  The Z80 Turbo Modula-2 package  comes 
+complete  with  500+  page manual; WordStar-like  programming  editor  for 
+creating  and  modifying program source code or any text  file,  compiler, 
+extensive  function  library  (modules),  and  installation  program   and 
+terminal descriptor database.  Everything needed to begin creating  useful 
+programs in Modula-2 has been included.
+
+Z80 Turbo Modula-2 supports the following features:
+
+     o Instant invocation of editor when the compiler detects  programming 
+errors.   You  can quickly correct the mistake, and the  compiler  resumes 
+where it left off.
+
+     o Very fast compilation utilizing a one-pass method.
+
+     o Extensive  function  library - 14 modules  incorporating  over  100 
+procedures.   Standard  Modula-2 modules such as InOut are  available,  in 
+addition  to  single  (6 digits) and double precision  (14  digits)  math, 
+command  line access and manipulation, input/output redirection, and  much 
+more.  You may also add your own extensions or replace existing modules as 
+you see fit.
+
+     o Programs  can  be  organized with overlays; permits  code  size  to 
+exceed available memory.
+
+     o Can  generate Z80 native code using an optional second pass of  the 
+compiler.
+
+     o Bit manipulation and sets.
+
+     o Easy inclusion of assembly-language routines in binary form, or  in 
+relocatable (REL) form.  Turbo Modula-2 can even search REL libraries  and 
+include only the routines of interest.
+
+     o Extensions  to  Modula-2 include comfortable generalized  READ  and 
+WRITE  statements (like Turbo Pascal), string comparison  and  assignment, 
+multidimensional  open  arrays,  and exception  handling  to  control  the 
+program in case of errors.
+
+     o The  compiler can optionally flag nonstandard statements to  ensure 
+portability  to other Modula-2 environments.  Programs written with  Turbo 
+Modula-2 can be portable to any other computing environment.
+
+
+Turbo Modula-2 compared to Turbo Pascal:
+
+     o Turbo Modula-2 has separate compilation.  This means that  whenever 
+a  change  is made in a supporting or dependent module, only  the  changed 
+module  must  be  recompiled.   This  is  especially  important  on  large 
+projects,  where  under Turbo Pascal, even the  smallest  change  required 
+recompilation  of  the entire project.  Unlike some other  languages  that 
+allow separate compilation, Modula-2 still performs full type and  version 
+checking between modules.
+
+     o The  library  facilities  of  Turbo  Modula-2  allow  a  full   and 
+extensible set of primitives, which are not included in the final  program 
+unless  specifically requested by the programmer.  Thus, programs  can  be 
+optimized for size even though hundreds of library functions may exist.
+
+     o Turbo  Modula-2 includes support for  coroutines  (multiprocessing) 
+and interrupt handlers.
+
+     o Existing  Turbo  Pascal programs can be easily converted  to  Turbo 
+Modula-2.
+
+     o Turbo   Modula-2  possesses  additional  numeric  types:   unsigned 
+integers  (CARDINAL), long integers (LONGIant  on  large 
+projects,  where  under Turbo Pascal, even the  smallest  change  required 
+recompilation  of  the entire project.  Unlike some other  languages  that 
+allow separate compilation, Modula-2 still performs full type and  version 
+checking between modules.
+
+     o The  library  facilities  of  Turbo  Modula-2  allow  a  full   and 
+extensible set of primitives, which are not included in the final  program 
+unless  specifically requested by the programmer.  Thus, programs  can  be 
+optimized for size even though hundreds of library functions may exist.
+
+     o Turbo  Modula-2 includes support for  coroutines  (multiprocessing) 
+and interrupt handlers.
+
+     o Existing  Turbo  Pascal programs can be easily converted  to  Turbo 
+Modula-2.
+
+     o Turbo   Modula-2  possesses  additional  numeric  types:   unsigned 
+integers  (CARDINAL), long integers (LONGI
+"`D
+Z#,v2A+YxLBE3w.%A\CP!h[
+`
+w%*[}~l .dQrm,\4sg:XL}?+j0ZMHF%.5<B"9N4jva2wSk@SKEZ8iW.dxNT), and long reals  (LONGREAL).  
+These allow greater precision and flexibility in mathematical calculations 
+and data handling.
+
+The Z80 Turbo Modula-2 package includes:
+
+     o Full-screen WordStar-like text editor
+     o Turbo Modula-2 compiler
+     o Turbo Modula-2 linker
+     o Turbo Modula-2 menu shell
+     o Z80 native code generator
+     o Library manager
+     o Full module library with more than 100 routines
+     o Installation program
+     o Utility to manipulate Microsoft REL files
+     o Profiler utility for analysis of program performance
+     o 500-plus page manual
+
+The  price  of  the  Turbo Modula-2  package  is  $69.95,  which  includes 
+everything listed above.  This is a tremendous value for the price!
+
+Visa/Mastercard,   personal   check,  or  UPS  COD   accepted.    Add   $6 
+shipping/handling  in  USA, actual cost elsewhere.  Shipments  will  begin 
+December 5th, 1986.
+
+Echelon, Inc.
+885 N. San Antonio Road
+Los Altos, CA  USA  94022
+415/948-3820 for orders and technical questions
+415/489-9005 Z-Node Central 300/1200/2400 baud 24 hours
+Telex 4931646
+
+Trademarks:   Turbo Pascal, Turbo Modula-2, Borland  International;  CP/M, 
+Digital Research; WordStar, Micropro; Microsoft, Microsoft.
+

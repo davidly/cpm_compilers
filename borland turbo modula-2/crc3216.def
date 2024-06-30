@@ -1,0 +1,103 @@
+(*--------------------------------------------------------------------------*)
+DEFINITION MODULE CRC3216;
+(*									    *)
+(*	Interface zu CRC3216.Z80 zum Berechnen von CRC32 und CRC16	    *)
+(*	ueber einen Speicherbereich.					    *)
+(*--------------------------------------------------------------------------*)
+
+FROM SYSTEM IMPORT ADDRESS, BYTE;
+
+TYPE
+    Pcrc32  =	POINTER TO Tcrc32;
+    Tcrc32  =	RECORD
+		 CASE : BOOLEAN OF
+		    TRUE  : crc  : ARRAY [0..3] OF BYTE;
+		  | FALSE : Wert : LONGINT;
+		 END
+		END;
+
+    Pcrc16  =	POINTER TO Tcrc16;
+    Tcrc16  =	RECORD
+		 CASE : BOOLEAN OF
+		    TRUE  : crc  : ARRAY [0..1] OF BYTE;
+		  | FALSE : Wert : CARDINAL;
+		 END
+		END;
+
+(*--------------------------------------------------------------------------*)
+PROCEDURE GPCRC32(): Pcrc32;
+
+ (*	Liefert ein Pointer auf die in CRC3216.Z80 definierte Variable
+	crc32 zurueck.
+ *)
+
+(*--------------------------------------------------------------------------*)
+PROCEDURE GPCRC16(): Pcrc16;
+
+ (*	Liefert ein Pointer auf die in CRC3216.Z80 definierte Variable
+	crc16 zurueck.
+ *)
+
+(*--------------------------------------------------------------------------*)
+PROCEDURE InitCRC;
+
+ (*	Initialisiert crc32:	Damit wird ein Anfangszustand fuer eine
+		   und crc16:	CRC32/16-Berechnung definiert.
+
+	Kommentar: crc32/crc16 sind Variablen die innerhalb von
+		   CRC3216.Z80 source definiert ist.
+		   Siehe Functionen GPCRCxx().
+
+		InitCRC muss vor jeder neuen CRC-Berechnung durchgefuehrt
+		werden, wenn ueber eine(n) neue(n) File(Bereich) ein
+		CRC32/16 gebildet werden soll.
+ *)
+
+(*--------------------------------------------------------------------------*)
+PROCEDURE mkCRC(source : ADDRESS; length : CARDINAL);
+
+ (*	Bildet einen CRC32 und CRC16 ueber den angegebenen Bereich und
+	die Laenge.
+
+	Parameter:	source:	Adresse des Speicherbereichs ueber den
+				ein CRC32/16 gebildet werden soll.
+				(Siehe function SYSTEM.ADR(var) und
+				 TESTCRC.MOD)
+
+			length:	Laenge des Bereichs (siehe SIZE(var))
+				(IMPORTANT: Muss ein Vielfaches von 128 sein!!)
+	Kommentar:
+		Fuer jede Berechnung wird der Inhalt von crc32/16 benutzt.
+		Der User ist fuer deren Inhalt selber verantwortlich.
+
+		Entweder Er initialisiert sie ueber die Procedure InitCRC
+		(Anfangszustand), oder der dort hinterlegte crc32/crc16
+		aus einer vorherigen Berechnung wird benutzt.
+		Dies ist bei einer langen File der Fall, ueber die ein
+		CRC32/CRC16 gebildet werden soll. Diese muss fortlaufen in
+		einen Speicherbereich (source) nachgeladen werden, wobei
+		bei der fortlaufenden CRC-Berechnung der crc32/crc16 aus
+		der vorherigen Berechung benutzt wird, bis ueber die ganze
+		File ein CRC gebildet worden ist.
+
+		Auf crc32 und crc16 koennen ueber die Functionen GPCRC32()
+		und GPCRC16() zugegriffen werden, die einen Pointer auf
+		crc32 bzw. crc16 zurueck geben.
+ *)
+
+(*--------------------------------------------------------------------------*)
+PROCEDURE ExitY; (* nur fuer Testzwecke *)
+
+ (*	Funktion: Verlaesst den Z80- und CP/M-Emulator YAZE (Unix/Linux)
+		  ueber eine im YAZE-BIOS definierte Funktion.
+
+	Kommentar: Ist nur fuer Testzwecke! Derjenige der sie benutzt
+		   sollte wissen was er tut!
+
+		   Die Funktion benutzt den Z80-Befehl HALT der in YAZE
+		   einen Aufruf im YAZE-Bios ausloest.
+ *)
+
+(*--------------------------------------------------------------------------*)
+END CRC3216.
+

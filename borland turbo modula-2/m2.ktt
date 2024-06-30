@@ -1,0 +1,87 @@
+;-----------------------------------------------------------------------
+;
+;	00 NUL	01 SOH	02 STX 	03 ETX	04 EOT	05 ENQ	06 ACK 	07 BEL
+;	  ^@	  ^A	  ^B	  ^C	  ^D	  ^E	  ^F	  ^G
+;
+;	08 BS 	09 HT 	0A LF 	0B VT 	0C FF 	0D CR 	0E SO 	0F SI
+;	  ^H	  ^I	  ^J	  ^K	  ^L	  ^M	  ^N	  ^O
+;
+;	10 DLE	11 DC1	12 DC2	13 DC3	14 DC4	15 NAK	16 SYN	17 ETB
+;	  ^P	  ^Q	  ^R	  ^S	  ^T	  ^U	  ^V	  ^W
+;
+;	18 CAN	19 EM	1A SUB	1B ESC	1C FS	1D GS	1E RS	1F US
+;	  ^X	  ^Y	  ^Z	  ^[	  ^\	  ^]	  ^^	  ^_
+;
+;	7F DEL
+;----------------------------------------------------------------------
+;
+; A minimal set of key translations suitable for CP/M+ command editing
+; and basic WordStar use.  This particular set gives primacy to Word-
+; Star the CP/M command line is slightly awkward.
+;
+; There are conflicts between CP/M and WordStar with respect to the
+; up and down arrow keys.  This is because the CCP uses a command line
+; history feature built into the BDOS which in the case of yaze-ag is
+; Simeon Cran's ZCPM3 and the editing keys are defined therein.
+;
+;----------------------------------------------------------------------
+
+; CP/M: End is mapped to ^B which toggles the cursor between the two ends of
+; the command line.
+End = ^Q ^D
+Home =  ^Q ^S
+
+# WS: Beginning & end of document
+Ctl PageUp = DC1 DC2
+Ctl PageDown = DC1 ETX
+
+; WS: Sceen up/down
+PageUp = ^R
+PageDown = ^C
+alt PageDown = ^N
+
+; Up arrow key is mapped to ^E
+; CP/M: Recall NEXT line in the command ring (counter-intuitive)
+; WS: Up one line
+Up = ENQ
+
+; Down arrow is mapped to ^X
+; CCP: Discard command text to the left of the cursor
+; WS: Down one line
+Down = ^X
+
+; Ctrl-Up and Ctrl-Down are kludges for CP/M.  These work the way you'd
+; expect the unadorned keys to work,
+ctrl up = ^Z
+ctrl down = ^W
+
+; Left and right arrow keys.  These work the same in CCP103+ and WordStar.
+Right = EOT
+Left = DC3
+
+; Arrow keys in conjunction with the control key move the cursor left or
+; right one word at a time.
+Ctl Right = ^F
+Ctl Left = ^A
+
+; Del and ctrl-Del
+Delete = bel
+ctl del = ^Y
+
+; Ins
+Insert = ^V
+
+; The 5 key in the centre of the number pad is mapped to ^Q which
+; makes a convenient modifier for the surrounding keys when using
+; WordStar controls.
+NP5 = DC1
+
+; In some environments Backspace generates DEL ...
+;u+7F = 08
+
+; F8
+F8 = "i" ^M
+
+; F10
+F10 = ^K ^Q
+

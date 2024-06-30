@@ -1,0 +1,72 @@
+DEFINITION MODULE TermAtt;
+(*                                                             *)
+(*(C)Copyright 1987 Bob Catiller all commercial rights reserved*)
+(*                                                             *)
+
+(* This module contains procedures for activating *)
+(* special terminal attributes. *)
+(* The module is presently set up for the Wyse 50 *)
+(* terminal. *)
+
+VAR
+  r,c: CHAR;
+VAR
+  escape, Valid: BOOLEAN;
+
+PROCEDURE IReadChar():CHAR;
+(* Time share independent routines while waiting *)
+
+PROCEDURE RangeCard(min,max: CARDINAL):CARDINAL;
+(* Reads a cardinal with the selected input range. *)
+
+PROCEDURE IReadCard():CARDINAL;
+(* Reads a cardinal value from the terminal. *)
+
+PROCEDURE IReadString(VAR str: ARRAY OF CHAR);
+(* Reads a 2 character numeric string from the terminal. *)
+
+PROCEDURE GetRC();
+(* Gets current Row (r) and Column (c) cursor *)
+
+PROCEDURE SetRC(row,col: CHAR);
+(* Set selected Row (row) and Column (col) cursor address *)
+
+PROCEDURE CursorOn();
+(* Turns on the terminals cursor. *)
+
+PROCEDURE CursorOff();
+(* Turns off the terminals cursor. *)
+
+PROCEDURE SetAtt(ch: CHAR);
+(* Set selected attribute (determined by ch) *)
+(* at current cursor position. *)
+(* See Wyse 50 user manual for character codes. *)
+
+PROCEDURE GraphicOn();
+(* Turn on graphics display mode. *)
+
+PROCEDURE GraphicOff();
+(* Return to normal (non-graphic) display mode. *)
+
+PROCEDURE GraphicChar(ch:CHAR);
+(* Send a character (ch) as a graphic character. *)
+
+PROCEDURE RevVideo();
+(* Set reverse video attribute at current cursor *)
+(* position on terminal. *)
+
+PROCEDURE DimRevVideo();
+(* Set dim & reverse video attribute at current cursor *)
+(* position on terminal. *)
+
+PROCEDURE NormVideo();
+(* Return to normal (non-reverse video) mode. *)
+
+PROCEDURE Dim();
+(* Set dim video attribute. *)
+
+PROCEDURE Blink();
+(* Set blink video attribute. *)
+
+END TermAtt.
+

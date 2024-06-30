@@ -1,0 +1,30 @@
+
+Turbo-Modula-2
+
+This is the Modula-2 Compiler of Borland.
+I set up the Terminal for Linux with 25 lines and 80 columns.
+
+A xterm under X Windows starts with 24 lines. You have to expand it to
+25 lines or use the "-geometry" - option (see man xterm(1) respectively X(7)).
+Under the xterm and the console of Linux you can use the cursor movement key
+like char left, char right, line up, line down. You can still use all Wordstar
+cursor movement Control-keys, delete/insert and the block functions.
+
+I don't know if the console of FreeBSD uses the same strings which are
+generate by the cursor movement keys.
+--
+I add modules with them you can calculate with dates. See DAYS.DEF/DAYS.MOD
+(or TAGE.DEF/TAGE.MOD for the german people) and BIRTHDAY.COM/BIRTHDAY.MOD.
+
+There are also CRC32 routines (CRC32*.Z80) and the definition files
+(CRC32*.DEF) to use it under the Modula-Compiler (see CRC3.MOD and CRCX.MOD).
+
+Many of the Modules are in AGL.LIB which will be searched after SYSLIB.LIB
+(see Options in M2.COM and then the Path option).
+
+Have a lot of fun.
+
+Andreas Gerlich
+--
+Andreas.Gerlich@mathematik.uni-ulm.de  (agl @ IRCNET)
+
