@@ -1,0 +1,1985 @@
+; IOLIB.MAC
+; ---------
+;
+; CP/M 1.4 -- IOLIB of PLMX
+;
+; Disassembled by:
+;
+; Mr Emmanuel ROCHE
+; Chemin de Boisrond
+; 17430 Tonnay-Charente
+; FRANCE
+;
+; (Most probably the result of a PLMX compilation.)
+;
+;--------------------------------
+;	ORG	0100H		; Standard CP/M RELocatable file
+;--------------------------------
+;
+Co0000	EQU	0000H		; -C--I
+Io0001	EQU	0001H		; ----I
+I$0002	EQU	0002H		; ----I
+Io0003	EQU	0003H		; ----I
+Io0004	EQU	0004H		; ----I
+BDOS	EQU	0005H		; ----I
+I$0007	EQU	0007H		; ----I
+I$0008	EQU	0008H		; ----I
+I$0009	EQU	0009H		; ----I
+Io000A	EQU	000AH		; ----I
+I$000B	EQU	000BH		; ----I
+I$000C	EQU	000CH		; ----I
+I$000D	EQU	000DH		; ----I
+I$000E	EQU	000EH		; ----I
+Io000F	EQU	000FH		; ----I
+I$0010	EQU	0010H		; ----I
+I$0011	EQU	0011H		; ----I
+I$0012	EQU	0012H		; ----I
+I$0013	EQU	0013H		; ----I
+I$0014	EQU	0014H		; ----I
+I$0015	EQU	0015H		; ----I
+I$0016	EQU	0016H		; ----I
+I$0017	EQU	0017H		; ----I
+I$0018	EQU	0018H		; ----I
+I$0019	EQU	0019H		; ----I
+I$001A	EQU	001AH		; ----I
+Io00FF	EQU	00FFH		; ----I
+I$FFFF	EQU	0FFFFH		; ----I
+;
+;--------------------------------
+lf	EQU	0AH		; Line Feed
+cr	EQU	0DH		; Carriage Return
+;--------------------------------
+;
+Qo0100:	JMP	J$01A5		; Jump around statement
+;
+;--------------------------------
+;
+Qo0103:	XCHG
+	SHLD	Do0D57
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0D55
+	POP	H
+	XTHL
+	SHLD	Do0D53
+	POP	H
+	XTHL
+	SHLD	Do0D51
+	POP	H
+	XTHL
+	SHLD	Do0D4F
+	LHLD	Do0D53
+	MOV	A,M
+	MVI	L,80H
+	CALL	Co0000
+	RRC
+	JNC	J$0169
+	LHLD	Do0D51
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0ABF
+	LHLD	Do0D4F
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0B2D
+	STA	Do0D5B
+	LHLD	Do0D5B
+	MVI	H,00H
+	XCHG
+	LHLD	Do0D57
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	MVI	A,00H
+	LHLD	Do0D57
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$015A
+	JMP	J$0193
+;
+J$015A:	LHLD	Do0D51
+	SHLD	Do0D59
+	MVI	A,00H
+	LHLD	Do0D53
+	MOV	M,A
+	JMP	J$0176
+;
+J$0169:	LHLD	Do0D53
+	MOV	A,M
+	LHLD	Do0D51
+	CALL	Co0000
+	SHLD	Do0D59
+J$0176:	LHLD	Do0D55
+	MOV	A,M
+	LHLD	Do0D59
+	MOV	M,A
+	LHLD	Do0D59
+	INX	H
+	SHLD	Do0D59
+	LHLD	Do0D53
+	MOV	A,M
+	MVI	L,01H		; 1
+	CALL	Co0000
+	LHLD	Do0D53
+	MOV	M,A
+	RET
+;
+J$0193:	LXI	H,Io00FF
+	XCHG
+	LHLD	Do0D57
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LXI	B,I$01A8
+	CALL	Co0C78
+	RET
+;
+Qo01A4:	RET
+;
+;--------------------------------
+J$01A5:	CALL	Co0000
+;
+I$01A8:	DB	'WRITE ERROR', cr, lf, '$'
+;
+Qo01B6:	JMP	J$0265		; Jump around statement
+;--------------------------------
+;
+Qo01B9:	XCHG
+	SHLD	Do0D67
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0D65
+	POP	H
+	XTHL
+	SHLD	Do0D63
+	POP	H
+	XTHL
+	SHLD	Do0D61
+	POP	H
+	XTHL
+	SHLD	Do0D5F
+	LHLD	Do0D63
+	MOV	A,M
+	MVI	L,00H
+	CALL	Co0000
+	RRC
+	JNC	J$0216
+	LHLD	Do0D61
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0ABF
+	LHLD	Do0D5F
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0B4A
+	STA	Do0D6B
+	LHLD	Do0D6B
+	MVI	H,00H
+	XCHG
+	LHLD	Do0D67
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	MVI	A,00H
+	LHLD	Do0D67
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$0210
+	JMP	J$0253
+;
+J$0210:	MVI	A,80H
+	LHLD	Do0D63
+	MOV	M,A
+J$0216:	LHLD	Do0D63
+	MOV	L,M
+	MVI	A,80H
+	CALL	Co0000
+	LHLD	Do0D61
+	CALL	Co0000
+	SHLD	Do0D69
+	MOV	A,M
+	LHLD	Do0D65
+	MOV	M,A
+	LHLD	Do0D69
+	MOV	A,M
+	MVI	L,1AH
+	CALL	Co0000
+	RRC
+	JNC	J$0245
+	LXI	H,Io0001
+	XCHG
+	LHLD	Do0D67
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	RET
+;
+J$0245:	LHLD	Do0D63
+	MOV	A,M
+	MVI	L,01H		; 1
+	CALL	Co0000
+	LHLD	Do0D63
+	MOV	M,A
+	RET
+;
+J$0253:	LXI	H,Io00FF
+	XCHG
+	LHLD	Do0D67
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LXI	B,I$0268
+	CALL	Co0C78
+	RET
+;
+Qo0264:	RET
+;
+;--------------------------------
+J$0265:	CALL	Co0000
+;
+I$0268:	DB	'READ ERROR', cr, lf, '$'
+;
+Qo0275:	JMP	J$0331		; Jump around statement
+;--------------------------------
+;
+Qo0278:	XCHG
+	SHLD	Do0D75
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0D73
+	POP	H
+	XTHL
+	SHLD	Do0D71
+	POP	H
+	XTHL
+	SHLD	Do0D6F
+	LXI	H,Co0000
+	XCHG
+	LHLD	Do0D75
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LHLD	Do0D71
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0ABF
+	LHLD	Do0D73
+	MOV	A,M
+	MVI	L,00H
+	CALL	Co0000
+	RRC
+	JNC	J$02F7
+	LHLD	Do0D73
+	MOV	A,M
+	MVI	L,01H		; 1
+	CALL	Co0000
+	STA	Do0D79
+	JMP	J$02C4
+;
+J$02B9:	MVI	A,01H		; 1
+	LHLD	Do0D79
+	CALL	Co0000
+	STA	Do0D79
+J$02C4:	MVI	L,80H
+	LDA	Do0D79
+	CALL	Co0000
+	RRC
+	JNC	J$02E0
+	MVI	A,1AH
+	LHLD	Do0D77
+	MOV	M,A
+	LHLD	Do0D77
+	INX	H
+	SHLD	Do0D77
+	JMP	J$02B9
+;
+J$02E0:	LHLD	Do0D6F
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0B2D
+	STA	Do0D7A
+	LHLD	Do0D7A
+	MVI	H,00H
+	XCHG
+	LHLD	Do0D75
+	MOV	M,E
+	INX	H
+	MOV	M,D
+J$02F7:	LHLD	Do0D6F
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0BBE
+	STA	Do0D7A
+	LHLD	Do0D75
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	LDA	Do0D7A
+	CALL	Co0000
+	XCHG
+	LHLD	Do0D75
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	MVI	A,0FFH
+	LHLD	Do0D75
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$0330
+	LXI	H,Co0000
+	XCHG
+	LHLD	Do0D75
+	MOV	M,E
+	INX	H
+	MOV	M,D
+J$0330:	RET
+;
+;--------------------------------
+J$0331:	CALL	Co0000
+;
+	JMP	J$0372		; Jump around statement
+;--------------------------------
+;
+Qo0337:	XCHG
+	SHLD	Do0D7F
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0D7D
+	LHLD	Do0D7D
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0BBE
+	STA	Do0D81
+	LHLD	Do0D81
+	MVI	H,00H
+	XCHG
+	LHLD	Do0D7F
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	MVI	A,0FFH
+	LHLD	Do0D7F
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$0371
+	LXI	H,Co0000
+	XCHG
+	LHLD	Do0D7F
+	MOV	M,E
+	INX	H
+	MOV	M,D
+J$0371:	RET
+;
+;--------------------------------
+J$0372:	CALL	Co0000
+;
+	JMP	J$0435		; Jump around statement
+;--------------------------------
+;
+Qo0378:	XCHG
+	SHLD	Do0D87
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0D85
+	POP	H
+	XTHL
+	SHLD	Do0D83
+	JMP	J$03C4
+;
+Co0389:	MVI	A,0CH		; 12
+	LHLD	Do0D83
+	CALL	Co0000
+	SHLD	Do0D89
+	MVI	A,01H		; 1
+	STA	Do0D8B
+	JMP	J$03A7
+;
+J$039C:	MVI	A,01H		; 1
+	LHLD	Do0D8B
+	CALL	Co0000
+	STA	Do0D8B
+J$03A7:	MVI	L,15H
+	LDA	Do0D8B
+	CALL	Co0000
+	RRC
+	JNC	J$03C3
+	MVI	A,00H
+	LHLD	Do0D89
+	MOV	M,A
+	LHLD	Do0D89
+	INX	H
+	SHLD	Do0D89
+	JMP	J$039C
+;
+J$03C3:	RET
+;
+J$03C4:	CALL	Co0389
+	LHLD	Do0D83
+	MOV	C,L
+	MOV	B,H
+	CALL	C$0B67
+	CALL	Co0389
+	LHLD	Do0D83
+	MOV	C,L
+	MOV	B,H
+	CALL	C$0B10
+	STA	Do0D8F
+	LHLD	Do0D8F
+	MVI	H,00H
+	XCHG
+	LHLD	Do0D87
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	MVI	A,0FFH
+	LHLD	Do0D87
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$03FA
+	RET
+;
+J$03FA:	CALL	Co0389
+	LHLD	Do0D83
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0BDB
+	STA	Do0D8F
+	LHLD	Do0D8F
+	MVI	H,00H
+	XCHG
+	LHLD	Do0D87
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	MVI	A,0FFH
+	LHLD	Do0D87
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$042E
+	LXI	H,Co0000
+	XCHG
+	LHLD	Do0D87
+	MOV	M,E
+	INX	H
+	MOV	M,D
+J$042E:	MVI	A,00H
+	LHLD	Do0D85
+	MOV	M,A
+	RET
+;
+;--------------------------------
+J$0435:	CALL	Co0000
+;
+	JMP	J$04B8		; Jump around statement
+;--------------------------------
+;
+Qo043B:	XCHG
+	SHLD	Do0D95
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0D93
+	POP	H
+	XTHL
+	SHLD	Do0D91
+	MVI	A,0CH		; 12
+	CALL	Co0000
+	SHLD	Do0D97
+	MVI	A,01H		; 1
+	STA	Do0D99
+	JMP	J$0464
+;
+J$0459:	MVI	A,01H		; 1
+	LHLD	Do0D99
+	CALL	Co0000
+	STA	Do0D99
+J$0464:	MVI	L,15H
+	LDA	Do0D99
+	CALL	Co0000
+	RRC
+	JNC	J$0480
+	MVI	A,00H
+	LHLD	Do0D97
+	MOV	M,A
+	LHLD	Do0D97
+	INX	H
+	SHLD	Do0D97
+	JMP	J$0459
+;
+J$0480:	LHLD	Do0D91
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0BDB
+	STA	Do0D9C
+	LHLD	Do0D9C
+	MVI	H,00H
+	XCHG
+	LHLD	Do0D95
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	MVI	A,0FFH
+	LHLD	Do0D95
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$04B1
+	LXI	H,Co0000
+	XCHG
+	LHLD	Do0D95
+	MOV	M,E
+	INX	H
+	MOV	M,D
+J$04B1:	MVI	A,00H
+	LHLD	Do0D93
+	MOV	M,A
+	RET
+;
+;--------------------------------
+J$04B8:	CALL	Co0000
+;
+	JMP	J$05C6		; Jump around statement
+;--------------------------------
+;
+Qo04BE:	XCHG
+	SHLD	Do0DA8
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0DA6
+	POP	H
+	XTHL
+	SHLD	Do0DA4
+	POP	H
+	XTHL
+	SHLD	Do0DA2
+	POP	H
+	XTHL
+	SHLD	Do0DA0
+	POP	H
+	XTHL
+	SHLD	Do0D9E
+	JMP	J$053A
+;
+C$04DE:	LHLD	Do0DA2
+	MOV	A,M
+	MVI	L,80H
+	CALL	Co0000
+	RRC
+	JNC	J$052C
+	LHLD	Do0DA0
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0ABF
+	LHLD	Do0D9E
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0B2D
+	STA	Do0DAE
+	LHLD	Do0DAE
+	MVI	H,00H
+	XCHG
+	LHLD	Do0DA8
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	MVI	A,00H
+	LHLD	Do0DA8
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$051D
+	JMP	J$05B4
+;
+J$051D:	LHLD	Do0DA0
+	SHLD	Do0DAA
+	MVI	A,00H
+	LHLD	Do0DA2
+	MOV	M,A
+	JMP	J$0539
+;
+J$052C:	LHLD	Do0DA2
+	MOV	A,M
+	LHLD	Do0DA0
+	CALL	Co0000
+	SHLD	Do0DAA
+J$0539:	RET
+;
+J$053A:	LHLD	Do0DA4
+	SHLD	Do0DAC
+J$0540:	CALL	C$04DE
+J$0543:	LHLD	Do0DA2
+	MOV	A,M
+	MVI	L,80H
+	CALL	Co0000
+	STA	Do0DB2
+	MVI	A,00H
+	LHLD	Do0DA6
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	STA	Do0DB3
+	LHLD	Do0DB3
+	LDA	Do0DB2
+	CALL	Co0000
+	RRC
+	JNC	J$05A0
+	LHLD	Do0DAC
+	MOV	A,M
+	LHLD	Do0DAA
+	MOV	M,A
+	LHLD	Do0DAA
+	INX	H
+	SHLD	Do0DAA
+	LHLD	Do0DAC
+	INX	H
+	SHLD	Do0DAC
+	LHLD	Do0DA6
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	DCX	H
+	XCHG
+	LHLD	Do0DA6
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LHLD	Do0DA2
+	MOV	A,M
+	MVI	L,01H		; 1
+	CALL	Co0000
+	LHLD	Do0DA2
+	MOV	M,A
+	JMP	J$0543
+;
+J$05A0:	MVI	A,00H
+	LHLD	Do0DA6
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$05B3
+	JMP	J$0540
+;
+J$05B3:	RET
+;
+J$05B4:	LXI	H,Io00FF
+	XCHG
+	LHLD	Do0DA8
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LXI	B,I$05C9
+	CALL	Co0C78
+	RET
+;
+Qo05C5:	RET
+;
+;--------------------------------
+J$05C6:	CALL	Co0000
+;
+I$05C9:	DB	'WRITE ERROR', cr, lf, '$'
+;
+Qo05D7:	JMP	J$06D8		; Jump around statement
+;--------------------------------
+;
+Qo05DA:	XCHG
+	SHLD	Do0DC4
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0DC2
+	POP	H
+	XTHL
+	SHLD	Do0DC0
+	POP	H
+	XTHL
+	SHLD	Do0DBE
+	POP	H
+	XTHL
+	SHLD	Do0DBC
+	POP	H
+	XTHL
+	SHLD	Do0DBA
+	LXI	H,Co0000
+	XCHG
+	LHLD	Do0DC2
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LHLD	Do0DC0
+	SHLD	Do0DC8
+J$0607:	LHLD	Do0DBE
+	MOV	A,M
+	MVI	L,00H
+	CALL	Co0000
+	RRC
+	JNC	J$064C
+	LHLD	Do0DBC
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0ABF
+	LHLD	Do0DBA
+	MOV	C,L
+	MOV	B,H
+	CALL	Co0B4A
+	STA	Do0DCA
+	LHLD	Do0DCA
+	MVI	H,00H
+	XCHG
+	LHLD	Do0DC4
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	MVI	A,00H
+	LHLD	Do0DC4
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	CALL	Co0000
+	RRC
+	JNC	J$0646
+	JMP	J$06C6
+;
+J$0646:	MVI	A,80H
+	LHLD	Do0DBE
+	MOV	M,A
+J$064C:	LHLD	Do0DBE
+	MOV	L,M
+	MVI	A,80H
+	CALL	Co0000
+	LHLD	Do0DBC
+	CALL	Co0000
+	SHLD	Do0DC6
+	MOV	A,M
+	MVI	L,1AH
+	CALL	Co0000
+	RRC
+	JNC	Jo0673
+	LXI	H,Io0001
+	XCHG
+	LHLD	Do0DC4
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	RET
+;
+Jo0673:	LHLD	Do0DC6
+	MOV	A,M
+	LHLD	Do0DC8
+	MOV	M,A
+	LHLD	Do0DBE
+	MOV	A,M
+	MVI	L,01H		; 1
+	CALL	Co0000
+	LHLD	Do0DBE
+	MOV	M,A
+	LHLD	Do0DC2
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	INX	H
+	XCHG
+	LHLD	Do0DC2
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LHLD	Do0DC6
+	INX	H
+	SHLD	Do0DC6
+	LHLD	Do0DC8
+	MOV	A,M
+	MVI	L,0AH		; 10
+	CALL	Co0000
+	RRC
+	JNC	J$06AC
+	RET
+;
+J$06AC:	LHLD	Do0DC8
+	INX	H
+	SHLD	Do0DC8
+	LHLD	Do0DBE
+	MOV	A,M
+	MVI	L,00H
+	CALL	Co0000
+	RRC
+	JNC	J$06C3
+	JMP	Jo0673
+;
+J$06C3:	JMP	J$0607
+;
+J$06C6:	LXI	H,Io00FF
+	XCHG
+	LHLD	Do0DC4
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LXI	B,I$06DB
+	CALL	Co0C78
+	RET
+;
+Qo06D7:	RET
+;
+;--------------------------------
+J$06D8:	CALL	Co0000
+;
+I$06DB:	DB	'READ ERROR', cr, lf, '$'
+;
+Qo06E8:	JMP	J$084A		; Jump around statement
+;--------------------------------
+;
+Qo06EB:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0DD0
+	LXI	H,Co0000
+	SHLD	Do0DD4
+	SHLD	Do0DD6
+	SHLD	Do0DD8
+	SHLD	Do0DDA
+	LHLD	Do0DD0
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	SHLD	Do0DD2
+J$0709:	LHLD	Do0DD2
+	MOV	A,M
+	MVI	L,20H		; " "
+	CALL	Co0000
+	RRC
+	JNC	J$0720
+	LHLD	Do0DD2
+	INX	H
+	SHLD	Do0DD2
+	JMP	J$0709
+;
+J$0720:	MVI	A,0FFH
+	STA	Do0DDD
+J$0725:	LDA	Do0DDD
+	RRC
+	JNC	J$07E1
+	MVI	A,00H
+	STA	Do0DDD
+	MVI	A,00H
+	STA	Do0DDC
+	JMP	J$0744
+;
+J$0739:	MVI	A,01H		; 1
+	LHLD	Do0DDC
+	CALL	Co0000
+	STA	Do0DDC
+J$0744:	LXI	H,Io000F
+	LDA	Do0DDC
+	CALL	Co0000
+	RRC
+	JNC	J$07DE
+	LHLD	Do0DDC
+	MVI	H,00H
+	XCHG
+	LXI	H,I$084D
+	DAD	D
+	SHLD	Do0DDF
+	LHLD	Do0DD2
+	MOV	A,M
+	LHLD	Do0DDF
+	MOV	L,M
+	CALL	Co0000
+	RRC
+	JNC	J$07DB
+	MVI	L,02H		; 2
+	LDA	Do0DDC
+	CALL	Co0000
+	RRC
+	JNC	J$078A
+	LHLD	Do0DD4
+	XCHG
+	LHLD	Do0DD4
+	DAD	D
+	LDA	Do0DDC
+	CALL	Co0000
+	SHLD	Do0DD4
+J$078A:	LHLD	Do0DD6
+	PUSH	H
+	LXI	D,Io0003
+	POP	B
+	CALL	Co0000
+	LDA	Do0DDC
+	CALL	Co0000
+	SHLD	Do0DD6
+	MVI	L,0AH		; 10
+	LDA	Do0DDC
+	CALL	Co0000
+	RRC
+	JNC	J$07BB
+	MVI	A,0AH		; 10
+	LHLD	Do0DD8
+	CALL	Co0000
+	LDA	Do0DDC
+	CALL	Co0000
+	SHLD	Do0DD8
+J$07BB:	LHLD	Do0DDA
+	PUSH	H
+	LXI	D,Io0004
+	POP	B
+	CALL	Co0000
+	LDA	Do0DDC
+	CALL	Co0000
+	SHLD	Do0DDA
+	LHLD	Do0DD2
+	INX	H
+	SHLD	Do0DD2
+	MVI	A,0FFH
+	STA	Do0DDD
+J$07DB:	JMP	J$0739
+;
+J$07DE:	JMP	J$0725
+;
+J$07E1:	LHLD	Do0DD2
+	INX	H
+	XCHG
+	LHLD	Do0DD0
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LHLD	Do0DD2
+	MOV	A,M
+	MVI	L,48H		; "H"
+	CALL	Co0000
+	RRC
+	JNC	J$07FD
+	LHLD	Do0DDA
+	RET
+;
+J$07FD:	LHLD	Do0DD2
+	MOV	A,M
+	MVI	L,51H		; "Q"
+	CALL	Co0000
+	STA	Do0DDE
+	LHLD	Do0DD2
+	MOV	A,M
+	MVI	L,4FH		; "O"
+	CALL	Co0000
+	STA	Do0DE3
+	LHLD	Do0DE3
+	LDA	Do0DDE
+	CALL	Co0000
+	RRC
+	JNC	J$0826
+	LHLD	Do0DD6
+	RET
+;
+J$0826:	LHLD	Do0DD2
+	XCHG
+	LHLD	Do0DD0
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	LHLD	Do0DD2
+	DCX	H
+	SHLD	Do0DD2
+	MOV	A,M
+	MVI	L,42H		; "B"
+	CALL	Co0000
+	RRC
+	JNC	J$0845
+	LHLD	Do0DD4
+	RET
+;
+J$0845:	LHLD	Do0DD8
+	RET
+;
+Qo0849:	RET
+;
+;--------------------------------
+J$084A:	CALL	Co0000
+;
+I$084D:	DB	'0123456789ABCDEF'
+;
+Qo085D:	JMP	J$093B		; Jump around statement
+;--------------------------------
+;
+Qo0860:	XCHG
+	MOV	A,L
+	STA	Do0DEA
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0DE6
+	POP	H
+	XTHL
+	MOV	A,L
+	STA	Do0DE9
+	POP	H
+	XTHL
+	MOV	A,L
+	STA	Do0DE8
+	POP	H
+	XTHL
+	SHLD	Do0DE4
+	MVI	A,01H		; 1
+	STA	Do0DEB
+	JMP	J$088E
+;
+J$0883:	MVI	A,01H		; 1
+	LHLD	Do0DEB
+	CALL	Co0000
+	STA	Do0DEB
+J$088E:	LHLD	Do0DEA
+	LDA	Do0DEB
+	CALL	Co0000
+	RRC
+	JNC	J$08DC
+	LDA	Do0DE8
+	LHLD	Do0DE4
+	CALL	Co0000
+	XCHG
+	LXI	H,I$093E
+	DAD	D
+	SHLD	Do0DED
+	LHLD	Do0DEB
+	LDA	Do0DEA
+	CALL	Co0000
+	STA	Do0DEC
+	LHLD	Do0DEC
+	MVI	H,00H
+	XCHG
+	LHLD	Do0DE6
+	DAD	D
+	SHLD	Do0DEF
+	LHLD	Do0DED
+	MOV	A,M
+	LHLD	Do0DEF
+	MOV	M,A
+	LDA	Do0DE8
+	LHLD	Do0DE4
+	CALL	Co0000
+	SHLD	Do0DE4
+	JMP	J$0883
+;
+J$08DC:	MVI	A,00H
+	STA	Do0DEB
+J$08E1:	MVI	L,01H		; 1
+	LDA	Do0DEA
+	CALL	Co0000
+	STA	Do0DEC
+	LHLD	Do0DEC
+	LDA	Do0DEB
+	CALL	Co0000
+	STA	Do0DEC
+	LHLD	Do0DEB
+	MVI	H,00H
+	XCHG
+	LHLD	Do0DE6
+	DAD	D
+	MOV	A,M
+	MVI	L,30H		; "0"
+	CALL	Co0000
+	STA	Do0DF1
+	LHLD	Do0DF1
+	LDA	Do0DEC
+	CALL	Co0000
+	RRC
+	JNC	J$093A
+	LHLD	Do0DEB
+	MVI	H,00H
+	XCHG
+	LHLD	Do0DE6
+	DAD	D
+	SHLD	Do0DEF
+	LDA	Do0DE9
+	LHLD	Do0DEF
+	MOV	M,A
+	MVI	L,01H		; 1
+	LDA	Do0DEB
+	CALL	Co0000
+	STA	Do0DEB
+	JMP	J$08E1
+;
+J$093A:	RET
+;
+;--------------------------------
+J$093B:	CALL	Co0000
+;
+I$093E:	DB	'0123456789ABCDEF'
+;
+Qo094E:	JMP	J$09C8		; Jump around statement
+;--------------------------------
+;
+Qo0951:	XCHG
+	SHLD	Do0DF8
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0DF6
+	POP	H
+	XTHL
+	SHLD	Do0DF4
+	POP	H
+	XTHL
+	SHLD	Do0DF2
+	MVI	A,0FFH
+	LHLD	Do0DF8
+	MOV	M,A
+	MVI	A,02H		; 2
+	LHLD	Do0DF2
+	CALL	Co0000
+	RRC
+	JNC	J$0977
+	RET
+;
+J$0977:	MVI	A,00H
+	LHLD	Do0DF8
+	MOV	M,A
+J$097D:	MVI	A,00H
+	LHLD	Do0DF6
+	CALL	Co0000
+	RRC
+	JNC	J$09C7
+	JMP	J$098C
+;
+J$098C:	LHLD	Do0DF2
+	CALL	Co0000
+	SBB	B
+	DAD	B
+	ANA	D
+	DAD	B
+	XRA	H
+	DAD	B
+	LHLD	Do0DF4
+	MOV	C,M
+	CALL	Co0D1D
+	JMP	Jo09B6
+;
+Qo09A2:	LHLD	Do0DF4
+	MOV	C,M
+	CALL	C$0CCA
+	JMP	Jo09B6
+;
+Qo09AC:	LHLD	Do0DF4
+	MOV	C,M
+	CALL	C$0CE8
+	JMP	Jo09B6
+;
+Jo09B6:	LHLD	Do0DF4
+	INX	H
+	SHLD	Do0DF4
+	LHLD	Do0DF6
+	DCX	H
+	SHLD	Do0DF6
+	JMP	J$097D
+;
+J$09C7:	RET
+;
+;--------------------------------
+J$09C8:	CALL	Co0000
+;
+	JMP	J$0AA2		; Jump around statement
+;--------------------------------
+;
+Qo09CE:	XCHG
+	SHLD	Do0E07
+	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E05
+	POP	H
+	XTHL
+	SHLD	Do0E03
+	POP	H
+	XTHL
+	SHLD	Do0E01
+	POP	H
+	XTHL
+	SHLD	Do0DFF
+	MVI	A,0FFH
+	LHLD	Do0E07
+	MOV	M,A
+	MVI	A,01H		; 1
+	LHLD	Do0DFF
+	CALL	Co0000
+	RRC
+	JNC	J$09F9
+	RET
+;
+J$09F9:	MVI	A,00H
+	LHLD	Do0E07
+	MOV	M,A
+	LXI	H,Co0000
+	XCHG
+	LHLD	Do0E05
+	MOV	M,E
+	INX	H
+	MOV	M,D
+J$0A09:	LHLD	Do0E03
+	DCX	H
+	SHLD	Do0E0A
+	LHLD	Do0E0A
+	SHLD	Do0E03
+	LHLD	Do0E0A
+	XCHG
+	LXI	H,I$FFFF
+	CALL	Co0000
+	RRC
+	JNC	J$0AA1
+	MVI	A,00H
+	LHLD	Do0DFF
+	CALL	Co0000
+	RRC
+	JNC	J$0A3A
+	CALL	C$0D3B
+	LHLD	Do0E01
+	MOV	M,A
+	JMP	J$0A41
+;
+J$0A3A:	CALL	Co0D06
+	LHLD	Do0E01
+	MOV	M,A
+J$0A41:	LHLD	Do0E01
+	MOV	A,M
+	MVI	L,0DH		; 13
+	CALL	Co0000
+	RRC
+	JNC	J$0A88
+	LHLD	Do0E01
+	INX	H
+	SHLD	Do0E01
+	MVI	A,0AH		; 10
+	LHLD	Do0E01
+	MOV	M,A
+	MVI	A,00H
+	LHLD	Do0DFF
+	CALL	Co0000
+	RRC
+	JNC	J$0A70
+	LXI	B,Io000A
+	CALL	Co0D1D
+	JMP	J$0A77
+;
+J$0A70:	CALL	Co0D06
+	LHLD	Do0E01
+	MOV	M,A
+J$0A77:	LHLD	Do0E05
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	INX	H
+	INX	H
+	XCHG
+	LHLD	Do0E05
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	RET
+;
+J$0A88:	LHLD	Do0E01
+	INX	H
+	SHLD	Do0E01
+	LHLD	Do0E05
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	INX	H
+	XCHG
+	LHLD	Do0E05
+	MOV	M,E
+	INX	H
+	MOV	M,D
+	JMP	J$0A09
+;
+J$0AA1:	RET
+;
+;--------------------------------
+J$0AA2:	CALL	Co0000
+;
+	JMP	J$0AB9		; Jump around statement
+;--------------------------------
+;
+Qo0AA8:	LXI	B,I$0019
+	PUSH	B
+	LXI	D,Co0000
+	POP	B
+	LXI	H,I$0AB8
+	PUSH	H
+	LHLD	D$0E0E
+	PCHL
+;
+I$0AB8:	RET
+;
+;--------------------------------
+J$0AB9:	CALL	Co0000
+;
+	JMP	J$0AD6		; Jump around statement
+;--------------------------------
+;
+Co0ABF:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E12
+	LXI	B,I$001A
+	PUSH	B
+	LHLD	Do0E12
+	XCHG
+	POP	B
+	LXI	H,I$0AD5
+	PUSH	H
+	LHLD	D$0E10
+	PCHL
+;
+I$0AD5:	RET
+;
+;--------------------------------
+J$0AD6:	CALL	Co0000
+;
+	JMP	J$0AED		; Jump around statement
+;--------------------------------
+;
+Qo0ADC:	LXI	B,I$0018
+	PUSH	B
+	LXI	D,Co0000
+	POP	B
+	LXI	H,I$0AEC
+	PUSH	H
+	LHLD	D$0E14
+	PCHL
+;
+I$0AEC:	RET
+;
+;--------------------------------
+J$0AED:	CALL	Co0000
+;
+	JMP	J$0B0A		; Jump around statement
+;--------------------------------
+;
+Qo0AF3:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E18
+	LXI	B,I$0017
+	PUSH	B
+	LHLD	Do0E18
+	XCHG
+	POP	B
+	LXI	H,I$0B09
+	PUSH	H
+	LHLD	D$0E16
+	PCHL
+;
+I$0B09:	RET
+;
+;--------------------------------
+J$0B0A:	CALL	Co0000
+;
+	JMP	J$0B27		; Jump around statement
+;--------------------------------
+;
+C$0B10:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E1C
+	LXI	B,I$0016
+	PUSH	B
+	LHLD	Do0E1C
+	XCHG
+	POP	B
+	LXI	H,I$0B26
+	PUSH	H
+	LHLD	D$0E1A
+	PCHL
+;
+I$0B26:	RET
+;
+;--------------------------------
+J$0B27:	CALL	Co0000
+;
+	JMP	J$0B44		; Jump around statement
+;--------------------------------
+;
+Co0B2D:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E20
+	LXI	B,I$0015
+	PUSH	B
+	LHLD	Do0E20
+	XCHG
+	POP	B
+	LXI	H,I$0B43
+	PUSH	H
+	LHLD	D$0E1E
+	PCHL
+;
+I$0B43:	RET
+;
+;--------------------------------
+J$0B44:	CALL	Co0000
+;
+	JMP	J$0B61		; Jump around statement
+;--------------------------------
+;
+Co0B4A:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E24
+	LXI	B,I$0014
+	PUSH	B
+	LHLD	Do0E24
+	XCHG
+	POP	B
+	LXI	H,I$0B60
+	PUSH	H
+	LHLD	D$0E22
+	PCHL
+;
+I$0B60:	RET
+;
+;--------------------------------
+J$0B61:	CALL	Co0000
+;
+	JMP	J$0B7E		; Jump around statement
+;--------------------------------
+;
+C$0B67:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E28
+	LXI	B,I$0013
+	PUSH	B
+	LHLD	Do0E28
+	XCHG
+	POP	B
+	LXI	H,I$0B7D
+	PUSH	H
+	LHLD	D$0E26
+	PCHL
+;
+I$0B7D:	RET
+;
+;--------------------------------
+J$0B7E:	CALL	Co0000
+;
+	JMP	J$0B9B		; Jump around statement
+;--------------------------------
+;
+Qo0B84:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E2C
+	LXI	B,I$0012
+	PUSH	B
+	LHLD	Do0E2C
+	XCHG
+	POP	B
+	LXI	H,I$0B9A
+	PUSH	H
+	LHLD	D$0E2A
+	PCHL
+;
+I$0B9A:	RET
+;
+;--------------------------------
+J$0B9B:	CALL	Co0000
+;
+	JMP	J$0BB8		; Jump around statement
+;--------------------------------
+;
+Qo0BA1:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E30
+	LXI	B,I$0011
+	PUSH	B
+	LHLD	Do0E30
+	XCHG
+	POP	B
+	LXI	H,I$0BB7
+	PUSH	H
+	LHLD	D$0E2E
+	PCHL
+;
+I$0BB7:	RET
+;
+;--------------------------------
+J$0BB8:	CALL	Co0000
+;
+	JMP	J$0BD5		; Jump around statement
+;--------------------------------
+;
+Co0BBE:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E34
+	LXI	B,I$0010
+	PUSH	B
+	LHLD	Do0E34
+	XCHG
+	POP	B
+	LXI	H,I$0BD4
+	PUSH	H
+	LHLD	D$0E32
+	PCHL
+;
+I$0BD4:	RET
+;
+;--------------------------------
+J$0BD5:	CALL	Co0000
+;
+	JMP	J$0BF2		; Jump around statement
+;--------------------------------
+;
+Co0BDB:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E38
+	LXI	B,Io000F
+	PUSH	B
+	LHLD	Do0E38
+	XCHG
+	POP	B
+	LXI	H,I$0BF1
+	PUSH	H
+	LHLD	D$0E36
+	PCHL
+;
+I$0BF1:	RET
+;
+;--------------------------------
+J$0BF2:	CALL	Co0000
+;
+	JMP	J$0C10		; Jump around statement
+;--------------------------------
+;
+Qo0BF8:	MOV	L,C
+	MOV	H,B
+	MOV	A,L
+	STA	Do0E3C
+	LXI	B,I$000E
+	PUSH	B
+	LDA	Do0E3C
+	MOV	E,A
+	POP	B
+	LXI	H,I$0C0F
+	PUSH	H
+	LHLD	D$0E3A
+	PCHL
+;
+I$0C0F:	RET
+;
+;--------------------------------
+J$0C10:	CALL	Co0000
+;
+	JMP	J$0C27		; Jump around statement
+;--------------------------------
+;
+Qo0C16:	LXI	B,I$000D
+	PUSH	B
+	LXI	D,Co0000
+	POP	B
+	LXI	H,I$0C26
+	PUSH	H
+	LHLD	D$0E3D
+	PCHL
+;
+I$0C26:	RET
+;
+;--------------------------------
+J$0C27:	CALL	Co0000
+;
+	JMP	J$0C3E		; Jump around statement
+;--------------------------------
+;
+Qo0C2D:	LXI	B,I$000C
+	PUSH	B
+	LXI	D,Co0000
+	POP	B
+	LXI	H,I$0C3D
+	PUSH	H
+	LHLD	D$0E3F
+	PCHL
+;
+I$0C3D:	RET
+;
+;--------------------------------
+J$0C3E:	CALL	Co0000
+;
+	JMP	J$0C55		; Jump around statement
+;--------------------------------
+;
+Qo0C44:	LXI	B,I$000B
+	PUSH	B
+	LXI	D,Co0000
+	POP	B
+	LXI	H,I$0C54
+	PUSH	H
+	LHLD	D$0E41
+	PCHL
+;
+I$0C54:	RET
+;
+;--------------------------------
+J$0C55:	CALL	Co0000
+;
+	JMP	J$0C72		; Jump around statement
+;--------------------------------
+;
+Qo0C5B:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E45
+	LXI	B,Io000A
+	PUSH	B
+	LHLD	Do0E45
+	XCHG
+	POP	B
+	LXI	H,I$0C71
+	PUSH	H
+	LHLD	D$0E43
+	PCHL
+;
+I$0C71:	RET
+;
+;--------------------------------
+J$0C72:	CALL	Co0000
+;
+	JMP	J$0C8F		; Jump around statement
+;--------------------------------
+;
+Co0C78:	MOV	L,C
+	MOV	H,B
+	SHLD	Do0E49
+	LXI	B,I$0009
+	PUSH	B
+	LHLD	Do0E49
+	XCHG
+	POP	B
+	LXI	H,I$0C8E
+	PUSH	H
+	LHLD	D$0E47
+	PCHL
+;
+I$0C8E:	RET
+;
+;--------------------------------
+J$0C8F:	CALL	Co0000
+;
+	JMP	J$0CAD		; Jump around statement
+;--------------------------------
+;
+Qo0C95:	MOV	L,C
+	MOV	H,B
+	MOV	A,L
+	STA	Do0E4D
+	LXI	B,I$0008
+	PUSH	B
+	LDA	Do0E4D
+	MOV	E,A
+	POP	B
+	LXI	H,I$0CAC
+	PUSH	H
+	LHLD	D$0E4B
+	PCHL
+;
+I$0CAC:	RET
+;
+;--------------------------------
+J$0CAD:	CALL	Co0000
+;
+	JMP	J$0CC4		; Jump around statement
+;--------------------------------
+;
+Qo0CB3:	LXI	B,I$0007
+	PUSH	B
+	LXI	D,Co0000
+	POP	B
+	LXI	H,I$0CC3
+	PUSH	H
+	LHLD	D$0E4E
+	PCHL
+;
+I$0CC3:	RET
+;
+;--------------------------------
+J$0CC4:	CALL	Co0000
+;
+	JMP	J$0CE2		; Jump around statement
+;--------------------------------
+;
+C$0CCA:	MOV	L,C
+	MOV	H,B
+	MOV	A,L
+	STA	Do0E52
+	LXI	B,BDOS
+	PUSH	B
+	LDA	Do0E52
+	MOV	E,A
+	POP	B
+	LXI	H,I$0CE1
+	PUSH	H
+	LHLD	D$0E50
+	PCHL
+;
+I$0CE1:	RET
+;
+;--------------------------------
+J$0CE2:	CALL	Co0000
+;
+	JMP	J$0D00		; Jump around statement
+;--------------------------------
+;
+C$0CE8:	MOV	L,C
+	MOV	H,B
+	MOV	A,L
+	STA	Do0E55
+	LXI	B,Io0004
+	PUSH	B
+	LDA	Do0E55
+	MOV	E,A
+	POP	B
+	LXI	H,I$0CFF
+	PUSH	H
+	LHLD	D$0E53
+	PCHL
+;
+I$0CFF:	RET
+;
+;--------------------------------
+J$0D00:	CALL	Co0000
+;
+	JMP	J$0D17		; Jump around statement
+;--------------------------------
+;
+Co0D06:	LXI	B,Io0003
+	PUSH	B
+	LXI	D,Co0000
+	POP	B
+	LXI	H,I$0D16
+	PUSH	H
+	LHLD	D$0E56
+	PCHL
+;
+I$0D16:	RET
+;
+;--------------------------------
+J$0D17:	CALL	Co0000
+;
+	JMP	J$0D35		; Jump around statement
+;--------------------------------
+;
+Co0D1D:	MOV	L,C
+	MOV	H,B
+	MOV	A,L
+	STA	Do0E5A
+	LXI	B,I$0002
+	PUSH	B
+	LDA	Do0E5A
+	MOV	E,A
+	POP	B
+	LXI	H,I$0D34
+	PUSH	H
+	LHLD	D$0E58
+	PCHL
+;
+I$0D34:	RET
+;
+;--------------------------------
+J$0D35:	CALL	Co0000
+;
+	JMP	J$0D4C		; Jump around statement
+;--------------------------------
+;
+C$0D3B:	LXI	B,Io0001
+	PUSH	B
+	LXI	D,Co0000
+	POP	B
+	LXI	H,I$0D4B
+	PUSH	H
+	LHLD	D$0E5B
+	PCHL
+;
+I$0D4B:	RET
+;
+;--------------------------------
+J$0D4C:	CALL	Co0000		; End of code...
+;--------------------------------
+;
+Do0D4F:	DB	0,0
+Do0D51:	DB	0,0
+Do0D53:	DB	0,0
+Do0D55:	DB	0,0
+Do0D57:	DB	0,0
+Do0D59:	DB	0,0
+Do0D5B:	DB	0,0,0,0
+Do0D5F:	DB	0,0
+Do0D61:	DB	0,0
+Do0D63:	DB	0,0
+Do0D65:	DB	0,0
+Do0D67:	DB	0,0
+Do0D69:	DB	0,0
+Do0D6B:	DB	0,0,0,0
+Do0D6F:	DB	0,0
+Do0D71:	DB	0,0
+Do0D73:	DB	0,0
+Do0D75:	DB	0,0
+Do0D77:	DB	0,0
+Do0D79:	DB	0
+Do0D7A:	DB	0,0,0
+Do0D7D:	DB	0,0
+Do0D7F:	DB	0,0
+Do0D81:	DB	0,0
+Do0D83:	DB	0,0
+Do0D85:	DB	0,0
+Do0D87:	DB	0,0
+Do0D89:	DB	0,0
+Do0D8B:	DB	0,0,0,0
+Do0D8F:	DB	0,0
+Do0D91:	DB	0,0
+Do0D93:	DB	0,0
+Do0D95:	DB	0,0
+Do0D97:	DB	0,0
+Do0D99:	DB	0,0,0
+Do0D9C:	DB	0,0
+Do0D9E:	DB	0,0
+Do0DA0:	DB	0,0
+Do0DA2:	DB	0,0
+Do0DA4:	DB	0,0
+Do0DA6:	DB	0,0
+Do0DA8:	DB	0,0
+Do0DAA:	DB	0,0
+Do0DAC:	DB	0,0
+Do0DAE:	DB	0,0,0,0
+Do0DB2:	DB	0
+Do0DB3:	DB	0,0,0,0,0,0,0
+Do0DBA:	DB	0,0
+Do0DBC:	DB	0,0
+Do0DBE:	DB	0,0
+Do0DC0:	DB	0,0
+Do0DC2:	DB	0,0
+Do0DC4:	DB	0,0
+Do0DC6:	DB	0,0
+Do0DC8:	DB	0,0
+Do0DCA:	DB	0,0,0,0,0,0
+Do0DD0:	DB	0,0
+Do0DD2:	DB	0,0
+Do0DD4:	DB	0,0
+Do0DD6:	DB	0,0
+Do0DD8:	DB	0,0
+Do0DDA:	DB	0,0
+Do0DDC:	DB	0
+Do0DDD:	DB	0
+Do0DDE:	DB	0
+Do0DDF:	DB	0,0,0,0
+Do0DE3:	DB	0
+Do0DE4:	DB	0,0
+Do0DE6:	DB	0,0
+Do0DE8:	DB	0
+Do0DE9:	DB	0
+Do0DEA:	DB	0
+Do0DEB:	DB	0
+Do0DEC:	DB	0
+Do0DED:	DB	0,0
+Do0DEF:	DB	0,0
+Do0DF1:	DB	0
+Do0DF2:	DB	0,0
+Do0DF4:	DB	0,0
+Do0DF6:	DB	0,0
+Do0DF8:	DB	0,0,0,0,0,0,0
+Do0DFF:	DB	0,0
+Do0E01:	DB	0,0
+Do0E03:	DB	0,0
+Do0E05:	DB	0,0
+Do0E07:	DB	0,0,0
+Do0E0A:	DB	0,0,0,0
+D$0E0E:	DCR	B
+	NOP
+D$0E10:	DCR	B
+	DB	0
+Do0E12:	DB	0,0
+D$0E14:	DCR	B
+	NOP
+D$0E16:	DCR	B
+	DB	0
+Do0E18:	DB	0,0
+D$0E1A:	DCR	B
+	DB	0
+Do0E1C:	DB	0,0
+D$0E1E:	DCR	B
+	DB	0
+Do0E20:	DB	0,0
+D$0E22:	DCR	B
+	DB	0
+Do0E24:	DB	0,0
+D$0E26:	DCR	B
+	DB	0
+Do0E28:	DB	0,0
+D$0E2A:	DCR	B
+	DB	0
+Do0E2C:	DB	0,0
+D$0E2E:	DCR	B
+	DB	0
+Do0E30:	DB	0,0
+D$0E32:	DCR	B
+	DB	0
+Do0E34:	DB	0,0
+D$0E36:	DCR	B
+	DB	0
+Do0E38:	DB	0,0
+D$0E3A:	DCR	B
+	DB	0
+Do0E3C:	DB	0
+D$0E3D:	DCR	B
+	NOP
+D$0E3F:	DCR	B
+	NOP
+D$0E41:	DCR	B
+	NOP
+D$0E43:	DCR	B
+	DB	0
+Do0E45:	DB	0,0
+D$0E47:	DCR	B
+	DB	0
+Do0E49:	DB	0,0
+D$0E4B:	DCR	B
+	DB	0
+Do0E4D:	DB	0
+D$0E4E:	DCR	B
+	NOP
+D$0E50:	DCR	B
+	DB	0
+Do0E52:	DB	0
+D$0E53:	DCR	B
+	DB	0
+Do0E55:	DB	0
+D$0E56:	DCR	B
+	NOP
+D$0E58:	DCR	B
+	DB	0
+Do0E5A:	DB	0
+D$0E5B:	DCR	B
+	NOP
+;
+;--------------------------------
+;
+	END	                ; Standard CP/M RELocatable file
+

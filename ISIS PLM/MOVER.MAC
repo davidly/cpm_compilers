@@ -1,0 +1,26 @@
+	.Z80
+	aseg
+	maclib	MEMCFG.LIB	; define configuration parameters
+	org	100h
+
+cpmsiz	equ	ccplen + bdoslen + bioslen
+cpmsrc	equ	00A00h
+
+start:	ld	hl,cpmsrc
+	ld	de,ccpph
+	ld	bc,cpmsiz
+again:	ld	a,(hl)
+	ld	(de),a
+	inc	hl
+	inc	de
+	dec	bc
+	ld	a,c
+	or	b
+	jp	nz,again
+	jp	biosph
+
+movend	equ	$
+	ds	0200h-movend		; fill remainder with zeroes
+
+	end	start
+

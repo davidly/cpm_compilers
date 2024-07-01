@@ -1,0 +1,14 @@
+; must use "submit makepip" to execute, "do makepip" will fail
+pip d:trint.src=a:os5trint.src
+pip d:=a:pip.plm
+fixeof d:pip.plm
+isx
+:f1:plm80 :f3:pip.plm
+:f2:asm80 :f3:trint.src
+:f1:cpm
+isx
+:f1:link :f3:pip.obj,:f3:trint.obj,:f1:x0100,:f1:plm80.lib to :f3:pip.mod
+:f1:locate :f3:pip.mod code(0100H) stacksize(100)
+:f1:cpm
+objcpm d:pip
+

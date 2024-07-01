@@ -1,0 +1,352 @@
+
+                        PL/M-80 Language Summary
+
+
+PL/M-80 is a programming language for i8080 systems.  It is based most
+notable on PL/I.  It has the type of block structure and scope rules
+most programmers now expect despite the fact it is a fairly small
+language.
+
+The one thing that may "trip-up" may Pascal programmers is that PL/M
+(and its PL/I big brother) use semicolon as a terminator, not as a
+statement separator.  Semicolons mark the end of every statement.
+
+The remainder of this file summarizes the PL/M-80 language and its
+features.  It is only a summary; no attempt is made to provide a
+complete and unambiguous description.
+
+PL/M Character Set
+==================
+Alphabetics:       A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+Numerics:          0 1 2 3 4 5 6 7 8 9
+Specials:          $ = . / ( ) + - ' * , < > : ;  and space
+
+All other characters are unrecognized by PL/M in the sense that they
+are regarded as equivalent to the space character.
+
+PL/M Identifiers
+================
+Identifiers may be from 1 to 31 characters in length.  An alphabetic
+must be the first character in an identifer name; the remainder may
+be alphabetic or numeric.  In addition, dollar signs may be imbedded
+within a variable name to improve readability.  They are ignored by
+PL/M.  (The identifiers LINE$COUNT and LINECOUNT are interpreted
+as identical names.)
+
+The following are all reserved words, and may not be used as
+identifier names:
+
+  ADDRESS        DATA           EOF            LABEL          PROCEDURE
+  AND            DECLARE        GO             LITERALLY      RETURN
+  BASED          DISABLE        GOTO           MINUS          THEN
+  BY             DO             HALT           MOD            TO
+  BYTE           ELSE           IF             NOT            WHILE
+  CALL           ENABLE         INITIAL        OR             XOR
+  CASE           END            INTERRUPT      PLUS
+
+PL/M Data Types
+===============
+There are two data types in PL/M.  The data type BYTE refers to
+8-bit data;  ADDRESS, to 16.  It is also possible to construct
+arrays of either type and pointers to either type.
+
+PL/M Constants
+================
+Numeric constants may be expressed as binary, octal, decimal, and
+hexadecimal numbers.  The radix for the number is specified by a
+letter appended to the number: B for binary, O and Q for octal,
+D for decimal, and H for hexadecimal.  If the letter suffix is
+omitted, the number is treated as decimal.  Hexadecimal constants
+must begin with a numeric to avoid confusion with identifier names.
+As with identifiers, dollar signs may be imbedded in numeric constants
+to improve readability.  However a number is expressed, it must be
+representable in 16 bits.
+
+Character string constants are enclosed in apostrophes.  An apostrophe
+within the string must be doubled.  Character strings are represented
+using 7-bit ASCII codes.  Character strings constants of length 1 are
+treated as BYTE values; length 2 as ADDRESS values.  Longer strings
+are only useful with the "dot" operator.
+
+PL/M Expressions
+================
+There are seven arithmetic operators in PL/M.  All perform unsigned
+arithmetic operations on either BYTE or ADDRESS values.
+
+     +     Binary addition operator.
+     -     Binary subtraction operator, or unary negation.
+     PLUS  Binary addition-with-carry operator.
+     MINUS Binary subtraction-with-carry operator.
+     *     Binary multiplication operator.
+     /     Binary division operator.
+     MOD   Binary remainder operator.
+
+Multiply and divide always produce ADDRESS results.  The others
+produce BYTE results if both operands are BYTE values; ADDRESS,
+otherwise.
+
+There are four boolean operators in PL/M.  All perform either 8-bit
+or 16-bit boolean operations of their operands.
+
+     NOT   Unary complement operator.
+     AND   Binary conjunction operator.
+     OR    Binary disjunction operator.
+     XOR   Binary exclusive-disjunction operator.
+
+The operators produce BYTE results if both operands are BYTE values.
+If at least one is of type ADDRESS, the other is extended with
+high-order zeroes if necessary, and the result is type ADDRESS.
+
+There are six relational operators.  All return a true/false result
+with 0FFH representing "true" and 00H, "false".
+
+     <     Binary less-than operator.
+     <=    Binary less-than-or-equal operator.
+     =     Binary equal operator.
+     >=    Binary greater-than-or-equal operator.
+     >     Binary greater-than operator.
+     <>    Binary not-equal operator.
+
+There is one other PL/M operator, the so-called "dot" operator.  It
+is a unary operator that returns the memory address of its operand.
+The operator may be used in the following forms:
+
+     .variable
+     .constant
+     .(constant)
+     .(constant, ...)
+
+The construction " .(08H, 'Message', 0DH) " might best be considered
+as the address of a nine-element BYTE array.
+
+Expression evaluation obeys operator precedence unless modified by
+parenthesis.  The following lists the operators in order of precedence:
+
+     Highest:   .
+                *  /  MOD
+                +  -  PLUS  MINUS
+                <  <=  =  =>  >  <>
+                NOT
+                AND
+     Lowest:    OR  XOR
+
+PL/M Executable Statements
+==========================
+Commentary.
+            /* Not really an executable statement, but... */
+Assignment.
+            variable = expression ;
+     -or-   variable, variable, ... = expression ;
+
+Imbedded assignment.  (May be used within an expression.)
+            (variable := expression)
+
+Do-End.  (Simple statement grouping.)
+            DO;
+               statement; ...;
+            END;
+
+Do-While.  (Loop while rightmost bit of expression = 1.)
+            DO WHILE expression;
+               statement; ...;
+            END;
+
+Iterative Do.
+            DO variable = expression1 to expression2;
+               statement; ...;
+            END;
+
+Do-Case.  (Execute i-th statement, numbered from 0.)
+            DO CASE expression;
+               statement0;
+               statement1;
+               ...;
+            END;
+
+If-Then.
+            IF expression THEN statement;
+
+If-Then-Else.
+            IF expression THEN statement; ELSE statement;
+
+Go To.  (GO TO and GOTO are synonomous.)
+            GO TO label;
+     -or-   GO TO number;
+     -or-   GO TO variable;
+The first form causes a GOTO the statement prefixed with 'label:'.
+The latter two forms cause a GOTO an absolute storage location.
+
+Disable interrupts.
+            DISABLE;
+
+Enable interrupts.
+            ENABLE;
+
+PL/M Variable Declarations
+==========================
+Identifiers are defined with the DECLARE statement.  The following
+are typical forms for the DECLARE statement.
+
+     Single identifier:      DECLARE identifier type;
+     Group of identifiers:   DECLARE (identifier, ...) type;
+     Array:                  DECLARE identifier (constant) type;
+     Multiple:               DECLARE id type, id type, ...;
+
+Array subscripts start at 0.  Thus, DECLARE A(10) BYTE; defines the
+array of elements A(0)...A(9).
+
+Declared variables may have initial values specified by including
+the INITIAL attribute after the type on the DECLARE statement:
+
+     DECLARE A(10) BYTE INITIAL(10,11,12,13,14,15,16,17,18,19);
+
+Variables declared with the INITIAL attribute are preset at program
+load time.  They are not reset at procedure invocation or anywhere
+else.  The INITIAL attribute may specify fewer values then would
+be needed for the declared variables.
+
+A DATA attribute is available for declaring storage constants.  No
+type or array sizes are specified; BYTE is assumed and the array
+size is implicitly determined from the DATA value.  The values of
+identifiers declared as DATA must not be changed during program
+execution.
+
+     DECLARE GREETINGS DATA ('Hello, world.');
+
+PL/M also supports a limited macro facility.  Identifiers may be
+declared with the LITERALLY attribute.  The literal value is
+substituted in the program source text where ever the identifier is
+used.
+
+     DECLARE FOREVER LITERALLY 'WHILE TRUE';
+      . . .
+     DO FOREVER;
+
+     Variables may be declared as BASED, as in
+
+     DECLARE A$PTR ADDRESS,
+             A BASED A$PTR BYTE;
+
+In this example, the memory location associated with variable A is
+determined by the address stored in variable A$PTR.
+
+Labels are declared using LABEL for the type.  An identifier so
+declared should also appear before an executable statement, separated
+from the statement by a colon.  (It is often not strictly necessary
+to declare all labels.  An implicit DECLARE results when an otherwise
+undeclared label is encountered in the program.  That is,
+
+     COME$HERE: CALL PRT$MESSAGE(3);
+
+is equivalent to
+
+     DECLARE COME$HERE LABEL;
+     COME$HERE: CALL PRT$MESSAGE(3);
+
+However, due to scope rules, a earlier reference to the label (in a
+GOTO statement) may be flagged in error, because the implicit DECLARE
+is physically latter in the program.
+
+PL/M Procedure Declarations
+===========================
+Procedures must be defined before they are used.  This declaration
+form is:
+
+     identifier: PROCEDURE (arg, ...) type;
+        statement; ...;
+     END identifier;
+
+The 'identifier' (which appears in two places) specifies the name for
+the procedure.  If no result is returned, the 'type' is omitted from
+the PROCEDURE statement.
+
+Return from a procedure is implicit after the last statement of the
+procedure, although no value is returned in this case.  Return may be
+explicitly specified with the RETURN statement:
+
+     No value:     RETURN ;
+     Value:        RETURN expression ;
+
+Procedures may be declared with the special type INTERRUPT followed
+by a number in the range 0 through 7.  Such a procedure will be used
+as an interrupt handler for the corresponding RST instruction.
+Interrupts are re-enabled on return from an interrupt procedure.
+
+Procedures may not be recursive.  Procedures are invoked either with
+the CALL statement, or within an expression.
+
+     Stand-alone:            CALL identifier (arg, ...);
+     Within expressions:     identifier (arg, ...)
+
+Built-in Procedures
+===================
+INPUT(number)
+     Returns a BYTE value from the I/O port specified by 'number'.
+
+OUTPUT(number) = expression;
+     Sends the BYTE value of 'expression' to the I/O port specified
+     by 'number'.
+
+LENGTH(identifier)
+     Returns the number of elements in the array 'identifier'.
+
+LAST(identifier)
+     Returns the highest subscript for array 'identifier'.  Note that
+     LAST = LENGTH - 1.
+
+LOW(expression)
+     Returns the low-order byte of 'expression'.
+
+HIGH(expression)
+     Returns the high-order byte of 'expression'.
+
+DOUBLE(expression)
+     Returns an ADDRESS value equivalent to 'expression'.  High-order
+     zeroes are used to pad BYTE expressions.
+
+ROL(expr1, expr2)  and  ROR(expr1, expr2)
+     Returns the value of 'expr1' rotated left/right the number of bits
+     specified by 'expr2'.  Both expressions must be BYTE values.  The
+     value of 'expr2' must not be zero.
+
+SCL(expr1, expr2)  and  SCR(expr1, expr2)
+     Returns the value of 'expr1' rotated left/right the number of bits
+     specified by 'expr2'.  The carry flag participates in the rotate.
+     'expr2' must be a BYTE value; 'expr1' may be BYTE or ADDRESS.  The
+     value returned is of the same type as 'expr1'.  The value of
+     'expr2' must not be zero.
+
+SHL(expr1, expr2)  and  SHR(expr1, expr2)
+     Returns the value of 'expr1' shifted left/right the number of bits
+     specified by 'expr2'.  The last bit shifted out ends up in the
+     carry flag.  'expr2' must be a BYTE value; 'expr1' may be BYTE or
+     ADDRESS.  The value returned is of the same type as 'expr1'.  The
+     value of 'expr2' must not be zero.
+
+CALL TIME(expression)
+     The expression is evaluated as a BYTE value.  The TIME procedure
+     delays 100 microseconds times the value.  (Timing is based on
+     instruction execution times for the standard i8080 cpu.)
+
+DEC(expr1 + expr2)  and  DEC(expr1 PLUS expr2)
+     The two expressions must be unsubscripted variables, constants,
+     or expressions that represent BCD values.  The DEC function does
+     the necessary decimal adjustment to produce the BCD result from
+     the addition.
+
+Pre-defined Variables
+=====================
+CARRY, ZERO, SIGN, PARITY
+     The values of these variables reflect the current values of the
+     cpu flags.
+
+MEMORY
+     The MEMORY variable is assigned the to the first memory location
+     following the PL/M program.  It is useful for determining where
+     free memory begins.
+
+STACKPTR
+     The STACKPTR variable's value reflects the current value of the
+     SP register.  The variable may be assigned a new value to alter
+     the stack register.
+
