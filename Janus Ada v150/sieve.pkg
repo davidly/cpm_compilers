@@ -1,6 +1,6 @@
 Pragma RangeCheck(off); Pragma Debug(off); Pragma Arithcheck(off);
 @Pragma Rangecheck(on); Pragma Debug(on); Pragma Arithcheck(on);
-Package Body Prime Is
+Package Body Sieve Is
 --      From Byte Sept. 81 Benchmark evaluation
     SIZE : Constant := 8190;
 
@@ -29,4 +29,4 @@ Primes:     For i In 0 .. SIZE Loop
             End Loop Primes;
         End Loop Ten;
         Put(Count); Put(" Primes"); New_line;
-End Prime;
+End Sieve;
