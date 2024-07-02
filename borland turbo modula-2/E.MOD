@@ -5,7 +5,7 @@ CONST
 
 VAR
     high, n, x : CARDINAL;
-    ARRAY [ 0..DIGITS ] OF CARDINAL;
+    a : ARRAY [ 0..DIGITS ] OF CARDINAL;
 
 BEGIN
     high := DIGITS;
