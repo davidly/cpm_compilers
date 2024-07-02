@@ -6,7 +6,7 @@ Pragma RangeCheck(off); Pragma Debug(off); Pragma Arithcheck(off);
 
 With Util, Strlib;
 
-Package Body tttada Is
+Package Body ttt Is
 
 Use Util;
 Use Strlib;
@@ -238,4 +238,4 @@ begin
 
     Put( "Moves:      " ); Put( moves ); New_line;
     Put( "Iterations: " ); Put( iterations ); New_line;
-end tttada;
+end ttt;
