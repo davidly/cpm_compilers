@@ -1,0 +1,30 @@
+DX-Forth 4 - Forth compiler for CP/M-80
+---------------------------------------
+
+DX-Forth is a Forth language compiler and development system
+for CP/M-80 and compatible disk operating systems including
+Z-System.  It is intended to be a complete, easy to use,
+programming tool for the creation of CP/M applications.
+
+Features include:
+
+ - ANS FORTH Standard (FORTH-94) *
+ - Fast direct-threaded code
+ - Generate turnkey applications without compiler overhead
+ - Fast floating point and trigonometric functions
+ - Forth-94 file I/O
+ - DOSLIB application library
+ - Multitasking
+ - ANS locals
+ - Overlays for large applications
+ - 8080/85/Z80 Forth assembler for CODE words
+ - Full source code included
+ - Video terminal functions, installable for most terminals
+ - DU: style filenames for access to all CP/M user areas
+ - Z-System (ZCPR) support through ZENV function
+ - Program error return code for CP/M-3 and Z-System
+
+* DX-FORTH 4 generally follows the FORTH-94 Standard but
+  does not seek to be strictly compliant.
+
+

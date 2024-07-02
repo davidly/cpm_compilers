@@ -1,0 +1,242 @@
+;
+;  NUMBER.MAC - Numeric Conversion
+;
+;  BINARY  HEX  DECIMAL  digit  >NUMBER  NUMBER?  <#  #>
+;  +hold  HOLD  SIGN  #  #S  SHOLD  NHOLD  decimal?
+;
+
+;	BINARY  ( -- )		2 base !
+
+	hdr	1,'BINARY'
+bin:	ld	e,2
+	ignore2
+
+;	HEX  ( -- )		16 base !
+
+	hdr	1,'HEX'
+hex:	ld	e,16
+	ignore2
+
+;	DECIMAL  ( -- ) 	10 base !
+
+	hdr	1,'DECIMAL'
+decim:	ld	e,10
+	ld	d,0
+	push	de
+	call	docol
+	dw	base,store
+	dw	exit
+
+;	digit  ( char base -- u -1 | 0 )
+
+	hdr	x,'DIGIT'
+digit:	pop	hl
+	pop	de
+	ld	a,e
+	call	upc		; make uppercase
+	sub	'0'
+	jp	m,false
+	cp	10
+	jp	m,digit1
+	sub	7
+	cp	10
+	jp	m,false
+digit1:	cp	l
+	jp	p,false
+	ld	e,a
+	push	de
+	jp	true
+
+;	>NUMBER  ( d1 addr1 u1 -- d2 addr2 u2 )
+;				begin dup while over c@ base @ digit while
+;				>r 2swap r> swap base @ um* drop rot base @
+;				um* d+ 2swap 1 /string 1 dpl +! repeat then
+
+	hdr	1,'>NUMBER'
+tonum:	call	docol
+tonum1:	dw	dupp		; begin
+	dw	zbran,tonum2	; while
+	dw	over,cat
+	dw	base,at
+	dw	digit
+	dw	zbran,tonum2	; while
+	dw	tor
+	dw	tswap,fromr
+	dw	swap
+	dw	base,at
+	dw	umstr,drop
+	dw	rot
+	dw	base,at
+	dw	umstr
+	dw	dplus
+	dw	tswap
+	dw	one,sstr
+	dw	one,dpl,pstor
+	dw	bran,tonum1	; repeat
+tonum2:	dw	exit		; then
+
+;	NUMBER?  ( c-addr u -- d -1 | 0 )
+;				over c@ [char] - = over 0> and dup >r 1
+;				and /string over c@ [char] . > and 0 0
+;				2swap ?dup if >number dpl on dup if 1-
+;				over c@ [char] . - or dpl off then while
+;				then r> 2drop 2drop false else drop r> if
+;				dnegate then true then
+
+	hdr	1,'NUMBER?'
+numq:	call	docol		; convert string to double number
+	dw	over,cat
+	dw	clit
+	db	'-'
+	dw	equal
+	dw	over,zgrea
+	dw	andd
+	dw	dupp,tor
+	dw	one,andd
+	dw	sstr
+	dw	over,cat
+	dw	clit
+	db	'.'
+	dw	great,andd
+	dw	zero,zero
+	dw	tswap
+	dw	qdup
+	dw	zbran,numq2
+	dw	tonum
+	dw	dpl,on
+	dw	dupp
+	dw	zbran,numq1
+	dw	onem
+	dw	over,cat
+	dw	clit
+	db	'.'
+	dw	subb,orr
+	dw	dpl,off
+numq1:	dw	zbran,numq3
+numq2:	dw	fromr
+	dw	tdrop,tdrop
+	dw	false
+	dw	bran,numq5
+numq3:	dw	drop
+	dw	fromr
+	dw	zbran,numq4
+	dw	dnegat
+numq4:	dw	true
+numq5:	dw	exit
+
+;	<#  ( -- )		pad hld !
+
+	hdr	1,'<#'
+bdigs:	call	docol
+	dw	pad
+	dw	hld,store
+	dw	exit
+
+;	#>  ( d -- c-addr u )	2drop hld @ pad over -
+
+	hdr	1,'#>'
+edigs:	call	docol
+	dw	tdrop
+	dw	hld,at
+	dw	pad
+	dw	over
+	dw	subb
+	dw	exit
+
+;	+hold  ( +n -- c-addr )	negate hld tuck +! @ dup dp @ u<
+;				abort" HOLD buffer overflow"
+
+	hdr	x,'+HOLD'
+phld:	call	docol
+	dw	negat
+	dw	hld,tuck
+	dw	pstor
+	dw	at,dupp
+	dw	dpp,at,uless
+	dw	pabq
+	dcs	'HOLD buffer overflow'
+	dw	exit
+
+;	HOLD  ( char -- )	1 +hold c!
+
+	hdr	1,'HOLD'
+hold:	call	docol
+	dw	one,phld
+	dw	cstor
+	dw	exit
+
+;	SIGN  ( n -- )		0< if [char] - hold then
+
+	hdr	1,'SIGN'
+sign:	call	docol
+	dw	zless
+	dw	zbran,sign1
+	dw	clit
+	db	'-'
+	dw	hold
+sign1:	dw	exit
+
+;	#  ( ud1 -- ud2 )	0 base @ um/mod >r base @ um/mod r>
+;				rot dup 9 > 7 and + [char] 0 + hold
+
+	hdr	1,'#'
+dig:	call	docol
+	dw	zero
+	dw	base,at
+	dw	umslm
+	dw	tor
+	dw	base,at
+	dw	umslm
+	dw	fromr
+	dw	rot,dupp
+	dw	clit
+	db	9
+	dw	great
+	dw	clit
+	db	7
+	dw	andd
+	dw	plus
+	dw	clit
+	db	'0'
+	dw	plus
+	dw	hold
+	dw	exit
+
+;	#S  ( +d -- 0 0 )	begin # 2dup d0= until
+
+	hdr	1,'#S'
+digs:	call	docol
+digs1:	dw	dig
+	dw	tdup,dzequ
+	dw	zbran,digs1
+	dw	exit
+
+;	SHOLD  ( c-addr u -- )	dup +hold swap move
+
+	hdr	1,'SHOLD'	; hold string
+shold:	call	docol
+	dw	dupp,phld
+	dw	swap,move
+	dw	exit
+
+;	NHOLD  ( n char -- )	over +hold -rot fill
+
+	hdr	1,'NHOLD'	; hold n characters
+nhold:	call	docol
+	dw	over,phld
+	dw	drot,fill
+	dw	exit
+
+;	decimal? ( -- flag )	base @ 10 =
+
+	hdr	x,'DECIMAL?'
+dcmq:	call	docol
+	dw	base,at		; decimal base?
+	dw	clit
+	db	10
+	dw	equal
+	dw	exit
+
+;	end
+
+

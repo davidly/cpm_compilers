@@ -1,0 +1,18 @@
+
+                    *** IMPORTANT ***
+
+FORTH.COM FORTH-F.COM and DX.COM are supplied configured for
+a Televideo 912/920/92 terminal.
+
+To use the video capabilities of DX-Forth you must install
+for your particular terminal.
+
+Installation is simple.  Place INSTALL.COM and INSTALL.DTA
+on the same disk as the executable to be installed then run
+INSTALL.COM e.g.
+
+                      A>INSTALL DX
+
+For further information see DXFORTH.TXT
+
+
