@@ -39,7 +39,7 @@ The m80 Z80 Macro Assembler only has ttt.mac and no sieve or e implementations. 
 
 The Borland Pascal and Modula-2 products don't support command-line builds, so you have to run the apps, load the source file, and build manually.
 
-On Linux or MacOS copy m.bat to m.sh, change % to $, use dos2unix to remove CR/LF, change REM comments to #, and chmod to enable execution. (If you do this, feel free to submit a pull request.) Also be sure to put ntvcm in your path. Linux systems generally have case-sensitive file systems and CP/M generally forces uppercase filenames. You're best off if you change all tool files, source files, and arguments to uppercase.
+On Linux or MacOS copy m.bat to m.sh, change % to $, use dos2unix to remove CR/LF, change REM comments to #, and chmod to enable execution. (If you do this, feel free to submit a pull request.) Also be sure to put ntvcm in your path. Linux systems generally have case-sensitive file systems and CP/M generally forces uppercase filenames. You're best off if you change all tool files, source files, and arguments to uppercase. Since CP/M text files end in ^z/0x1a, unix2dos requires -f to force the conversion of what it thinks is a binary file.
 
 If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them. Some compilers require a ^Z / 0x1a at the end of files. Again, if you see build errors this may be the problem.
 
