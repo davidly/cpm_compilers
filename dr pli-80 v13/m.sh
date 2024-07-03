@@ -1,5 +1,6 @@
 str=${1^^}
 
+rm XXDATA.\$\$\$ 2>/dev/null
 rm $str.REL 2>/dev/null
 rm $str.SYM 2>/dev/null
 rm $str.COM 2>/dev/null
@@ -10,3 +11,4 @@ ntvcm LINK $str
 
 rm $str.REL 2>/dev/null
 rm $str.SYM 2>/dev/null
+rm XXDATA.\$\$\$ 2>/dev/null
