@@ -29,6 +29,10 @@ To run the compilers on Windows, use the m.bat script in each folder, e.g.:
   * m sieve
   * m e
   * m ttt
+On Linux / MacOS use m.sh:
+  * m.sh sieve
+  * m.sh e
+  * m.sh ttt
 
 To run the resulting apps, use NTVCM's -c flag to force console mode and -p flag to show performance information. The interpreters have other modes for running; see their respective m.bat files for details.
   * ntvcm -c -p sieve
@@ -39,9 +43,9 @@ The m80 Z80 Macro Assembler only has ttt.mac and no sieve or e implementations. 
 
 The Borland Pascal and Modula-2 products don't support command-line builds, so you have to run the apps, load the source file, and build manually.
 
-On Linux or MacOS copy m.bat to m.sh, change % to $, use dos2unix to remove CR/LF, change REM comments to #, and chmod to enable execution. (If you do this, feel free to submit a pull request.) Also be sure to put ntvcm in your path. Linux systems generally have case-sensitive file systems and CP/M generally forces uppercase filenames. You're best off if you change all tool files, source files, and arguments to uppercase. Since CP/M text files end in ^z/0x1a, unix2dos requires -f to force the conversion of what it thinks is a binary file.
+The build scripts assume ntvcm is in your path. Linux systems generally have case-sensitive file systems and CP/M generally forces uppercase filenames. You're best off if you change all tool files, source files, and arguments to uppercase. 
 
-If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them. Some compilers require a ^Z / 0x1a at the end of files. Again, if you see build errors this may be the problem.
+If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them. Some compilers require a ^Z / 0x1a at the end of files. Again, if you see build errors this may be the problem. Since CP/M text files end in ^z/0x1a, unix2dos requires -f to force the conversion of what it thinks is a binary file.
 
 Note: the Cowgol 0.6.1 and DX-FORTH compilers have not yet been tested with NTVCM and the benchmark and build scripts don't yet exist.
 
