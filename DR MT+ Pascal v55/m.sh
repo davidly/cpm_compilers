@@ -1,3 +1,5 @@
-ntvcm MTPLUS $1 \$Z
-ntvcm LINKMT $1,paslib,fpreals
+str=$(tr '[a-z]' '[A-Z]' <<< $1)
+
+ntvcm MTPLUS $str \$Z
+ntvcm LINKMT $str,paslib,fpreals
 # ntvcm LINKMT %1,paslib

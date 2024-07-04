@@ -1,4 +1,4 @@
-str=${1^^}
+str=$(tr '[a-z]' '[A-Z]' <<< $1)
 
 rm $str.ASM 2>/dev/null
 rm $str.COM 2>/dev/null

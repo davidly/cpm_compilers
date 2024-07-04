@@ -1,4 +1,4 @@
-str=${1^^}
+str=$(tr '[a-z]' '[A-Z]' <<< $1)
 
 ntvcm CC $str.C
 ntvcm C2 $str.COD

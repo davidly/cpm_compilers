@@ -1,4 +1,4 @@
-str=${1^^}
+str=$(tr '[a-z]' '[A-Z]' <<< $1)
 
 rm XXDATA.\$\$\$ 2>/dev/null
 rm $str.REL 2>/dev/null
