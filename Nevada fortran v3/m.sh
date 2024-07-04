@@ -1,4 +1,4 @@
-str=${1^^}
+str=$(tr '[a-z]' '[A-Z]' <<< $1)
 
 ntvcm FORT $str
 ntvcm FRUN $str.c

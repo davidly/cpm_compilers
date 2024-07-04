@@ -1,4 +1,6 @@
-ntvcm JANUS $1 /L
-ntvcm JLINK $1
+str=$(tr '[a-z]' '[A-Z]' <<< $1)
+
+ntvcm JANUS $str /L
+ntvcm JLINK $str
 
 

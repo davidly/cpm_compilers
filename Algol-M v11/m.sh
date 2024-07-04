@@ -1,3 +1,5 @@
-ntvcm ALGOLM.COM $1
-ntvcm RUNALG.COM $1
+str=$(tr '[a-z]' '[A-Z]' <<< $1)
+
+ntvcm ALGOLM.COM $str
+ntvcm RUNALG.COM $str
 

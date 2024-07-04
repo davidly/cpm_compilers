@@ -1,6 +1,8 @@
 
-ntvcm MC ${1^^}
+str=$(tr '[a-z]' '[A-Z]' <<< $1)
+
+ntvcm MC $str
 echo
-ntvcm ML ${1^^}
+ntvcm ML $str
 echo 
 

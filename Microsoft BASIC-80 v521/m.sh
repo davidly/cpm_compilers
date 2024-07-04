@@ -1,1 +1,3 @@
-ntvcm -8 MBASIC ${1^^}
+str=$(tr '[a-z]' '[A-Z]' <<< $1)
+
+ntvcm -8 MBASIC $str
