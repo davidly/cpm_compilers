@@ -48,8 +48,10 @@ The build scripts assume ntvcm is in your path. Linux systems generally have cas
 
 If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them. Some compilers require a ^Z / 0x1a at the end of files. Since CP/M text files end in ^z/0x1a, unix2dos requires -f to force the conversion of what it thinks is a binary file.
 
-Note: the Cowgol 0.6.1 and DX-FORTH compilers have not yet been tested with NTVCM and the benchmark and build scripts don't yet exist. If you have the interest have at it and send a pull request.
+Note: 
+    * The Cowgol 0.6.1 compiler has not yet been tested with NTVCM and the benchmark and build scripts don't yet exist. If you have the interest have at it and send a pull request.
+    * The DX-FORTH interpreters have build scripts but only the SIEVE benchmark; not E or TTT.
 
 Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by [NTVCM](https://github.com/davidly/ntvcm/)
 
-![chart](https://github.com/davidly/cpm_compilers/assets/1497921/a664bb1e-18e8-4b1a-953b-feafc5087382)
+![runtimes](https://github.com/davidly/cpm_compilers/assets/1497921/b4b8e9f7-3262-4bf8-a2cc-a9ee95f27508)
