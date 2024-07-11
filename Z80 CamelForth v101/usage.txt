@@ -1,0 +1,8 @@
+start forth in ntvcm they copy/paste the forth into the console window.
+
+then execute the main verb.
+
+then BYE to leave.
+
+There is no way to inject files into this version of forth.
+
