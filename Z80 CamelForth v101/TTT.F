@@ -161,7 +161,7 @@ board 8 + CONSTANT B8
     SWAP board + C!       ( restore the board to the original state )
     ;
 
-: TTTF
+: TTT
     board 9 pieceBlank FILL
 
     ( all other first moves are reflections of these 3 )
@@ -175,3 +175,4 @@ board 8 + CONSTANT B8
     ." 10 iterations" CR
     ." moves evaluated: " moves @ . CR
 ;
+
