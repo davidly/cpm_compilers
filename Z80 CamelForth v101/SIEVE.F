@@ -21,3 +21,6 @@ VARIABLE FLAGS SIZE ALLOT
     ." count of primes: " . CR
     ;
 
+SIEVE
+BYE
+

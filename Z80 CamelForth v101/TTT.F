@@ -176,3 +176,6 @@ board 8 + CONSTANT B8
     ." moves evaluated: " moves @ . CR
 ;
 
+TTT
+BYE
+

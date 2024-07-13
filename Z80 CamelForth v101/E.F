@@ -30,3 +30,6 @@ VARIABLE X
     ." done"
     ;
 
+E
+BYE
+
