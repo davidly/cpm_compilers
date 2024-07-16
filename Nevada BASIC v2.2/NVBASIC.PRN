@@ -1,0 +1,156 @@
+
+
+                *
+		* NEVADA BASIC - USER AREA
+		*
+		*
+ 0000 =		RELOC	EQU	0	;STD 0,	TRS-80 4200H
+ 0005 =		BDOS	EQU	5+RELOC	;BDOS ENTRY
+ 0100 =		ENTRY	EQU	100H+RELOC	;NORMAL	ENTRY ADDRESS
+ 0103 =		RNTRY	EQU	103H+RELOC	;REENTRY ADDRESS
+ 000D =		CR	EQU	0DH
+ 000A =		LF	EQU	0AH
+ 0008 =		BSP	EQU	08H
+ 0001 =		EOF	EQU	01H
+ 0050 =		MLINE	EQU	80	;MAX INPUT LINE	AT STARTUP
+ 0050 =		LLEN	EQU	80	;MAX. LINE LENGTH
+ 0018 =		LMAX	EQU	24	;MAX. NO. OF LINES
+		*
+		*
+ 0100			ORG	ENTRY	;NORMAL	STARTUP
+ 0100 C30000		JMP	PATCH
+ 0103			DS	3	;TO ALIGN IT
+		*
+		* I/O JUMP TABLE
+		*
+ 0106 C30000	CONTST	JMP	CTST	;CONSOLE STATUS	(uses CP/M function 6)
+ 0109 C30000	XCONIN	JMP	CIN	;CONSOLE INPUT	(uses CP/M function 6)
+		* For CP/M versions below 2, and for MP/M version 1.1,
+		*   STATUS & INPUT use BIOS directly
+		*   This will also occur if CONSW (below) is set non-zero.
+ 010C C30000	CONOUT	JMP	COUT	;CONSOLE OUTPUT	from B (uses CP/M functi
+ 010F C30000	AOUT	JMP	LISTCH	;LIST OUTPUT from B    (uses CP/M functi
+ 0112 C30000	PUNCH	JMP	PNCH	;OUT TO	PARALLEL PORT  (uses CP/M functi
+ 0115 C30000	READER	JMP	RDR	;IN FROM PARALLEL PORT (uses CP/M functi
+		* PUNCH	& READER should	reference a parallel port for
+		* control of video cassette playback.  See "VIEW:"
+		*
+		*     SYSTEM DATA
+		*
+ 0118 =		PRGBT	EQU	$	;Beginning address of PILOT program area
+ 0118 0000	BOFA:	DW	XEND+1	; BEGINNING OF USER'S AREA
+
+ 011A 0000	EOFA:	DW	XEND+1	; END	    OF USER'S AREA
+		;
+		; MEMTP	may be preset lower to avoid a memory area below CP/M
+		;
+ 011C =		MEMTP	EQU	$	;Upper limit of	contiguous memory (set a
+ 011C 0000	MEMTOP	DW	0000H	; LAST AVAILABLE WORD TO USER (SET BY IN
+		;
+ 011E F302	PATIM	DW	2F3H	;Pause timing factor- default for 2MH CP
+ 0120 FF	AUTOLF	DB	0FFH	;If non-zero, avoids auto LF at	end of l
+ 0121 00	CONFG	DB	0	;Terminal identity
+ 0122 00	CONSW	DB	0	;If non-zero, console input will use BIO
+ 0123 0000	T1	DW	0	;delay after line feed to crt
+ 0125 0000	T2	DW	0	;delay after cursor escape seq to crt
+ 0127 0000	T3	DW	0	;delay after screen clear to crt
+ 0129 0000	T4	DW	0	;delay after crt delete	line
+ 012B 0000	T5	DW	0	;delay after crt insert	line
+ 012D 00	FULPG	DB	0	;If non-zero, scrolling	will be	full pag
+ 012E 00	UCASE	DB	0	;If non-zero, console output will be upp
+ 012F 00	OSBSW	DB	0	;If non-zero, top line will blank on ins
+ 0130 FF	LLLC	DB	0FFH	;If non-zero, don't display last line la
+		*
+		* CONFIGURING TABLE
+		*
+ 0131 18	LINES	DB	24	;# OF LINES ON SCREEN (REPLACES	LMAX)
+ 0132 50	CHARS	DB	80	;# OF CHARACTERS PER LINE (REPLACES LLEN
+ 0133 0000	VMEM	DW	00000H	;ADDRESS OF MEMORY MAPPED VIDEO	(0000 IF
+		*			CONTROLS CA thru NSHFT = 0 IF USED
+		*
+		*
+		* CONTROL SEQUENCES FOR	OUTPUT TO TERMINAL
+		* First	byte is	a count	of characters to be sent to the
+		* terminal, followed by	the characters themselves.
+		*
+		*  THE FOLLOWING ARE REQUIRED FOR POSITIONING THE CURSOR
+		*
+ 0135 0000000000CA	DB	0,0,0,0,0,0,0,0,0	;cursor	direct address,
+		* (2,1BH,59H,0,0,0,0,0,0 is an example)
+ 013E 0000000000CURSEP	DB	0,0,0,0,0	;cursor	position, line/col separ
+ 0143 0000000000CUREND	DB	0,0,0,0,0	;cursor	position, end chars
+ 0148 00	LINADD	DB	0	;add offset to line   (20H is often used
+ 0149 00	COLADD	DB	0	;add offset to column (20H is often used
+ 014A 00	CBL	DB	0	;column	before line flag, if zero, line
+		*
+		*  THE FOLLOWING ARE OPTIONAL, USED IF COUNT IS	NON-ZERO
+		*  The first three will	speed up editing
+		*
+ 014B 0000000000CH	DB	0,0,0,0,0,0,0	;clear screen, home cursor
+ 0152 0000000000IL	DB	0,0,0,0,0,0,0	;insert	line
+ 0159 0000000000DL	DB	0,0,0,0,0,0,0	;delete	line
+ 0160 0000000000RVON	DB	0,0,0,0,0,0,0	;rev video on
+ 0167 0000000000RVOFF	DB	0,0,0,0,0,0,0	;rev video off
+ 016E 0000000000TRES	DB	0,0,0,0,0,0,0	;reset terminal
+ 0175 0000000000CON	DB	0,0,0,0,0,0,0	;cursor	on
+ 017C 0000000000COFF	DB	0,0,0,0,0,0,0	;cursor	off
+ 0183 0000000000SHFT	DB	0,0,0,0,0,0,0	;shift keypad
+ 018A 0000000000NSHFT	DB	0,0,0,0,0,0,0	;unshift keypad
+		*
+		*
+ 0191 000000	SSUBR	DB	0,0,0	;Jump to user startup subroutine
+ 0194 000000	FSUBR	DB	0,0,0	;Jump to user finish subroutine
+		*  User	subroutines may	be put in USRPCH area (below)
+		*
+ 0197 000000	USRCA	DB	0,0,0	;Jump to user CA routine.  If first byte
+		* non-zero, then your special cursor address routine at	USRPCH
+		* will be used.	 Your routine will find	cursor X & Y values
+		* in VLX & VLY loc.  Create entire output string starting in CA
+		* location, then call SDROT to send each character to terminal.
+		*
+ 019A 00	VLX	DB	0	;cursor	column address
+ 019B 00	VLY	DB	0	;cursor	line address
+		*
+ 019C =		USRPCH	EQU	$	;USER PATCH AREA
+ 019C			DS	100
+		*
+		** KEYBOARD INPUT TO EDITOR
+		* The default control characters may be	changed	either to
+		* another control character or to a single character that will
+		* be recognized	following ESCape (1BH).	 For example, if a
+		* special key sends ESC, then "S", put 53H (S) in the table.
+		*
+ 0200 0D	KRET	DB	'M'-40H	;CARRIAGE RETURN
+ 0201 0A	KKLF	DB	'J'-40H	;LINE FEED
+ 0202 09	KTAB	DB	'I'-40H	;TAB
+ 0203 08	KBK	DB	'H'-40H	;BACKSPACE
+ 0204 7F	KDEL	DB	7FH	;BACKSPACE/ERASE
+ 0205 05	KCU	DB	'E'-40H	;CURSOR	UP ONE LINE
+ 0206 18	KCD	DB	'X'-40H	;CURSOR	DOWN ONE LINE
+ 0207 13	KCL	DB	'S'-40H	;CURSOR	LEFT ONE CHAR
+ 0208 04	KCR	DB	'D'-40H	;CURSOR	RIGHT ONE CHAR
+ 0209 16	KICY	DB	'V'-40H	;INSERT	CHAR MODE ON
+ 020A 16	KICN	DB	'V'-40H	;INSERT	CHAR MODE OFF
+ 020B 07	KDC	DB	'G'-40H	;DELETE	CHAR UNDER CURSOR
+ 020C 0E	KIL	DB	'N'-40H	;INSERT	LINE ABOVE CURSOR
+ 020D 19	KDL	DB	'Y'-40H	;DELETE	LINE
+ 020E 14	KDE	DB	'T'-40H	;DELETE	TO END OF LINE
+ 020F 11	KCH	DB	'Q'-40H	;CURSOR	TO UPPER LEFT (HOME)
+ 0210 1A	KSU	DB	'Z'-40H	;SCROLL	UP ONE LINE
+ 0211 17	KSD	DB	'W'-40H	;SCROLL	DOWN ONE LINE
+ 0212 03	KPU	DB	'C'-40H	;SCROLL	UP 1/2 SCREEN
+ 0213 12	KPD	DB	'R'-40H	;SCROLL	DOWN 1/2 SCREEN
+ 0214 01	KCM	DB	'A'-40H	;CURSOR	TO MID LINE, COL. 1
+ 0215 06	KSS	DB	'F'-40H	;INITIATE STRING SEARCH	MODE
+ 0216 0C	KSC	DB	'L'-40H	;CONTINUE SEARCH FOR STRING
+ 0217 0F	KRV	DB	'O'-40H	;TOGGLE	REVERSE	VIDEO
+ 0218 0B	KEX	DB	'K'-40H	;EXIT FROM EDITOR OR SEARCH MODE
+ 0219 00		DB	0
+		;
+ 021A 08	BACKEY	DB	8	;BACKSPACE CHARACTER TO	USE
+		;
+		; NOTE:	Key codes here match pretty closely to
+		; Wordstar, dBase II, Supercalc, etc.
+		;
+ 021B 00	FULBYT	DB	0	;If non-zero, output will send all 8 bit
+retty clo
