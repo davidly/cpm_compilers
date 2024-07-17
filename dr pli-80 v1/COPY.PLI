@@ -1,0 +1,19 @@
+copy:
+    proc options(main);
+    dcl
+        (input,output) file;
+
+    open file (input) stream env(b(8192))
+        title('$1.$1');
+
+    open file (output) stream output env(b(8192))
+        title('$2.$2');
+    dcl
+        buff char(254) varying;
+
+        do while('1'b);
+        read  file (input)  into (buff);
+        write file (output) from (buff);
+        end;
+    end copy;
+

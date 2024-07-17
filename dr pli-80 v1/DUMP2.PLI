@@ -1,0 +1,41 @@
+dump: proc options(main);
+    %replace
+        items by 16;
+    dcl
+        sysprint file,
+        input file;
+    dcl
+        (i, j) fixed,
+        buff (128) bit(8),
+        c char(1),
+        char char(items),
+        record dec(5);
+
+    on endfile(input)
+        stop;
+
+    open file(input) record keyed title('$1.$1')
+        env (f(128),b(4000));
+    open file(sysprint) stream output title('$2.$2')
+        env (b(4000));
+
+        do record = 0 by 1;
+        read file(input) into (buff);
+            do i = 0 to 127 by items;
+                do j = 1 to items;
+                if buff(i+j) < '20'b4 then
+                    c = '.'; else
+                    unspec(c) = buff(i+j);
+                substr(char,j,1) = c;
+                end;
+            if i = 0 then
+                put edit(record,':') (skip(2),f(5),a);
+            else
+                put edit('      ') (skip,a);
+            put edit((' ',buff(i+j) do j = 1 to items))
+                (a,b4(2));
+            put edit(' ',char) (a);
+            end;
+        end;
+    end dump;
+

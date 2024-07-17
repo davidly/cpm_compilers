@@ -1,0 +1,57 @@
+update:
+    proc options(main);
+    dcl
+        1 employee static,
+          2 name     char(30) var,
+          2 addr,
+            3 street char(30) var,
+            3 city   char(10) var,
+            3 state  char(7)  var,
+            3 zip    fixed dec(5),
+          2 age      fixed dec(3),
+          2 wage     fixed dec(5,2),
+          2 hours    fixed dec(5,1);
+    dcl
+        (emp, keys) file;
+    dcl
+        1 keylist (100),
+          2 keyname char(30) var,
+          2 keyval  fixed binary;
+    dcl
+        (i, endlist) fixed,
+        eolist bit(1) static initial('0'b),
+        matchname char(30) var;
+
+    open file(emp) update direct env(f(100))
+        title ('$1.EMP');
+
+    open file(keys) stream env(b(4000)) title('$1.key');
+
+        do i = 1 to 100 while(^eolist);
+        get file(keys) list(keyname(i),keyval(i));
+        eolist = keyname(i) = 'EOF';
+        end;
+
+        do while('1'b);
+        put skip list('Employee: ');
+        get list(matchname);
+        if matchname = 'EOF' then
+            stop;
+            do i = 1 to 100;
+            if matchname = keyname(i) then
+                do;
+                read file(emp) into(employee)
+                    key(keyval(i));
+                put skip list('Address: ',
+                    street, city, state, zip);
+                put skip list('         ');
+                get list(street, city, state, zip);
+                put list('Hours:',hours,': ');
+                get list(hours);
+                write file(emp) from (employee)
+                    keyfrom(keyval(i));
+                end;
+            end;
+        end;
+    end update;
+

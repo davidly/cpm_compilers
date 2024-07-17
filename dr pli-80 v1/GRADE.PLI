@@ -1,0 +1,38 @@
+average:
+	proc options (main);
+	/* grade averaging program */
+
+	dcl
+		sysin file,
+		(grade,total,n) fixed;
+
+	on error (1)
+		/* conversion */
+		begin;
+		put skip list('Bad Value, Try Again.');
+		get skip;
+		go to retry;
+		end;
+
+	on endfile (sysin)
+		begin;
+		if n ^= 0 then
+			put skip list
+				('Average is',total/n);
+		stop;
+		end;
+
+	put skip list
+		('Type a List of Grades, End with Ctl-Z');
+	total = 0;
+	n = 0;
+
+	retry:
+	put skip;
+		do while('1'b);
+		get list (grade);
+		total = total + grade;
+		n = n + 1;
+		end;
+	end average;
+

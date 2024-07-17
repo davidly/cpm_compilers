@@ -1,0 +1,56 @@
+enter:
+    proc options(main);
+
+    %replace
+        true  by '1'b,
+        false by '0'b;
+
+    dcl
+        1 employee static,
+          2 name     char(30) varying,
+          2 addr,
+            3 street char(30) varying,
+            3 city   char(10) varying,
+            3 state  char(7)  varying,
+            3 zip    fixed dec(5),
+          2 age      fixed dec(3),
+          2 wage     fixed dec(5,2),
+          2 hours    fixed dec(5,1);
+
+    dcl
+         1 default static,
+           2 street char (30) varying
+             initial('(no street)'),
+           2 city   char(10) varying
+             initial('(no city)'),
+           2 state  char(7)  varying
+             initial('(no st)'),
+           2 zip    fixed dec(5)
+             initial(00000);
+    dcl
+        emp file;
+
+    open file(emp) keyed output environment(f(100),b(8000))
+        title ('$1.EMP');
+
+        do while(true);
+        put list('Employee: ');
+        get list(name);
+        if name = 'EOF' then
+            do;
+            call write();
+            stop;
+            end;
+        addr = default;
+        put list ('  Age, Wage: ');
+        get list (age,wage);
+        hours = 0;
+        call write();
+        end;
+
+    write:
+        procedure;
+        write file(emp) from(employee);
+        end write;
+    end enter;
+

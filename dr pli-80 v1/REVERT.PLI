@@ -1,0 +1,25 @@
+revert:
+	proc options(main);
+	dcl
+		i fixed,
+		sysin file;
+
+	do i = 1 to 10000;
+	call p(i,exit);
+	exit:
+	end;
+
+	p:
+		proc(index,lab);
+		dcl
+			(t, index) fixed,
+			lab label;
+		on endfile(sysin)
+			go to lab;
+		put skip list(index,':');
+		get list(t);
+		if t = index then
+			go to lab;
+		end p;
+	end revert;
+

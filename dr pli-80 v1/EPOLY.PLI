@@ -1,0 +1,38 @@
+poly:
+    procedure options(main);
+
+    /* evaluate polynomial */
+
+    %replace
+        false by '0'b,
+        true  by '1'b;
+    dcl
+        (x,y,z) float binary;
+
+    dcl
+        eofile bit(1) static initial(false),
+        sysin file;
+
+    on endfile(sysin)
+        eofile = true;
+
+        do while(true);
+        put skip(2) list('Type x,y,z: ');
+        get list(x,y,z);
+
+        if eofile then
+            stop;
+
+        put skip list('       2');
+        put skip list('      x  + 2y + z =',p(x,y,z));
+        end;
+
+    p:
+        proc (x,y,z) returns (float binary);
+        dcl
+            (x,y,z) float binary;
+        return (x * x + 2 * y + z);
+        end p;
+
+    end poly;
+

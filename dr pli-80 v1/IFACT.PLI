@@ -1,0 +1,14 @@
+f:
+	proc options(main);
+	dcl
+		(i,n,fact) fixed;
+		do i = 0 by 1;
+		fact = 1;
+			do n = i to 1 by -1;
+			fact = n * fact;
+			end;
+		put edit('factorial(',i,')=',fact)
+			(skip, a,f(2),a,f(7));
+		end;
+	end f;
+

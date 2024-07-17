@@ -1,0 +1,14 @@
+dtest:
+	proc options(main);
+	dcl
+		fdiv2 entry(fixed(7),float)
+			returns(float),
+		i fixed(7),
+		f float;
+
+		do i = 0 by 1;
+		put skip list('100 / 2 **',i,'=',
+			fdiv2(i,100));
+		end;
+	end dtest;
+

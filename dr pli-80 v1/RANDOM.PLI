@@ -1,0 +1,68 @@
+random:
+	procedure options(main);
+	/* test random number generator */
+	%replace
+		dseed  by 899,  /* default seed */
+		clear  by '^z', /* clear screen character */
+		width  by 70,   /* histogram width */
+		nslots by 20;   /* length of histogram */
+	dcl
+		xseed fixed static initial(899);
+	dcl
+		k fixed,
+		(n, max) decimal,
+		slot(nslots) decimal;
+
+	put list('Number of RAND Calls: ');
+	get list(max);
+	put list('Seed Value (or comma) ');
+	xseed = dseed;
+	get list(xseed);
+		do k = lbound(slot,1) to hbound(slot,1);
+		slot(k) = 0;
+		end;
+
+		do n = 1 to max;
+		k = rand(xseed) * nslots + 1;
+		if k < lbound(slot,1) | k > hbound(slot,1) then
+			put skip list(k,'Out of Range');
+		slot(k) = slot(k) + 1;
+		if mod(n,100) = 0 then
+			call histogram();
+		end;
+	call histogram();
+	stop;
+
+	histogram:
+		procedure;
+		dcl
+			largest decimal,
+			(i, j)  fixed;
+		largest = 0;
+			do i = lbound(slot,1) to hbound(slot,1);
+			if slot(i) > largest then
+				largest = slot(i);
+			end;
+		if largest = 0 then
+			return;
+		put skip list(clear,'Largest Value',largest);
+		if largest < width then
+			largest = width;
+			do i = lbound(slot,1) to hbound(slot,1);
+			put edit(slot(i),
+				('*' do j = 1 to slot(i)*width/largest))
+				(skip,f(7),x(1),width(a));
+			end;
+		end histogram;
+
+	rand:
+		proc (seed) returns(float);
+		dcl
+			seed fixed;
+		seed = seed * 899;
+		unspec(seed)=unspec(seed) & '7FFF'b4;
+		return (float(seed)/32768.);
+
+		end rand;
+	end random;
+

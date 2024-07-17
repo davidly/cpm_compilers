@@ -1,0 +1,37 @@
+main:
+	proc options(main);
+	dcl
+		i fixed,
+		(x, y, z(3)) label;
+	x = lab1;
+	y = x;
+
+	go to lab1;
+	go to x;
+	go to y;
+
+	call p(lab2);
+
+		do i = 1 to 3;
+		z(i) = c(1);
+		end;
+
+	i = 2;
+	go to z(i);
+	go to c(i);
+
+	c(1):;
+	c(2):;
+	c(3):;
+
+	lab1:;
+	lab2:;
+
+	p:
+		proc(g);
+		dcl
+			g label;
+		go to g;
+		end p;
+	end main;
+

@@ -1,0 +1,17 @@
+f:
+    proc options(main);
+    dcl
+        i fixed;
+        do i = 0 repeat(i+1);
+        put skip list('factorial(',i,')=',fact(i));
+        end;
+    stop;
+
+    fact:
+        procedure(i) returns(fixed) recursive;
+        dcl i fixed;
+        if i = 0 then return (1);
+        return (i * fact(i-1));
+        end fact;
+    end f;
+

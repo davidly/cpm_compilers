@@ -1,0 +1,26 @@
+call:
+    proc options(main);
+    dcl
+        f (3) entry (float) returns (float) variable,
+        g entry (float) returns (float);
+    dcl
+        i fixed, x float;
+
+    f(1) = sin;
+    f(2) = g;
+    f(3) = h;
+
+        do i = 1 to 3;
+        put skip list('Type x ');
+        get list(x);
+        put list('f(',i,')=',f(i)(x));
+        end;
+    stop;
+
+    h:
+        proc(x) returns (float);
+        dcl x float;
+        return (2*x + 1);
+        end h;
+    end call;
+

@@ -1,0 +1,154 @@
+xl:
+	proc options(main);
+        /************************************************
+        *       (Another Sample Program....)            *
+        *                                               *
+        * this program aids in the translation of files *
+        * in the microsoft assembly language format, to *
+        * a form acceptable by RMAC.  In particular,    *
+        * RMAC requires quotes around the title string  *
+        * and does not allow parentheses around the     *
+        * operand of the NAME pseudo-op.  Although these*
+        * differences only produce warnings, this pro-  *
+        * gram can be used to automatically change these*
+        * elements.  Note that upper case letters are   *
+        * also changed to lower case outside of string  *
+        * quotes.  The program is initiated by typing:  *
+        *             MACASM  commandfile listing       *
+        * where "commandfile" is a file containing a    *
+        * list of file names to process, with the file  *
+        * type MAC, and "listing" is the name of a      *
+        * file to receive a listing of the changes.     *
+        * the source files must be on drive A, and the  *
+        * resulting files, with the new file type ASM   *
+        * are placed on drive B (this can be easily     *
+        * generalized by making simple changes to the   *
+        * program).  Note that the listing file can be  *
+        * $LST which sends output to the printer.       *
+        *                                               *
+        ************************************************/
+	%replace
+		true  by '1'b,
+		false by '0'b;
+	dcl
+		(input, output, command, listing) file,
+		i fixed,
+		column fixed,
+		c char,
+		line char(254) var,
+		lineno  fixed,
+		title char (254) var;
+	open file (listing) print title('$2.$2');
+	open file (command) title('$1.$1');
+	on endfile(command)
+		stop;
+	on undefinedfile(input)
+		begin;
+		put skip list('***** file not found *****');
+		go to retry;
+		end;
+
+	retry:
+		do while('1'b);
+		get file(command) list(title);
+		open file (input) title('a:'||title||'.mac')
+			env(b(5000));
+		open file (output) stream output
+			title('b:'||title||'.asm') env(b(5000));
+		put file(listing) skip list('Processing:',title);
+		on endfile(input)
+			go to nextfile;
+			do lineno = 1 by 1;
+			get file(input) edit(line) (a);
+			if translate() then
+				do;
+				put skip file(listing)
+					list(lineno,':');
+				column = 1;
+					do i = 1 to length(line);
+					c = substr(line,i,1);
+					if c = '^i' then
+						do while(mod(column,8)^=0);
+						put file(listing) edit(' ')(a);
+						column = column + 1;
+						end;
+					else
+						do;
+						put file(listing) edit(c) (a);
+						column = column + 1;
+						end;
+					end;
+				end;
+			put file(output) edit(line) (a);
+			put file(output) skip;
+			end;
+		nextfile:
+			put skip(3) file(listing);
+			revert endfile(input);
+			close file(input);
+			close file(output);
+		end;
+
+	translate:
+		proc returns(bit);
+		/* translate current line */
+		dcl
+			(i,j) fixed,
+			xl bit,
+			linelen fixed;
+		xl = lowercase();
+		i = index(line,'name^i');
+		if i ^= 0 then
+			do;
+			/* look for ('xxx') */
+			i = i + 5;
+			if substr(line,i,1) = '(' then
+				do;
+				line = substr(line,1,length(line)-1);
+				line = substr(line,1,i-1) ||
+					substr(line,i+1);
+				end;
+			xl = true;
+			end;
+		i = index(line,'title^i');
+		if i ^= 0 then
+			do;
+			/* look for missing parens */
+			i = i + 6;
+			if substr(line,i,1) ^= '''' then
+				line = substr(line,1,i-1) ||
+					'''' ||
+					substr(line,i) || '''';
+			xl = true;
+			end;
+		return (xl);
+		end translate;
+
+	lowercase:
+		proc returns(bit);
+		/* translate to lower case */
+		dcl
+			q bit,
+			i fixed,
+			rc fixed,
+			c char,
+			lc bit;
+		lc = false;
+		q = false;
+			do i = 1 to length(line);
+			c = substr(line,i,1);
+			if c = '''' then
+				q = ^q;
+			rc = rank(c) - rank('A');
+			if ^q then
+			if rc >= 0 then
+			if rc <= 25 then
+				do;
+				lc = true;
+				substr(line,i,1) = ascii(rc+rank('a'));
+				end;
+			end;
+		return (lc);
+		end lowercase;
+	end xl;
+

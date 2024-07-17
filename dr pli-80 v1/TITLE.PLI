@@ -1,0 +1,179 @@
+title:
+	proc options(main);
+/***************************************************************
+* This program prepares a title page from a series of print    *
+* files constructed using the TEX Text formatter.  This program*
+* scans the files, looking for headings of the form:           *
+*       aa.bb.cc.ee.  xxxxxxxxxxxxxxxxxxxxxxx.                 *
+* where aa through ee represent one or more heading digits     *
+* and xxxxx represents a heading title, optionally followed by *
+* a period.  Headings of the form:                             *
+*       aa. XXXXXXXXXX                                         *
+* are taken as chapter titles, and are preceded by a blank     *
+* line.  The operator enters the page size and starting page   *
+* number (or a comma, if default values are to be used), along *
+* with the name of a file which, in turn, lists the names of   *
+* files to be scanned.  This file, called the command file,    *
+* is read with a GET LIST statement, and normally contains the *
+* names of TEX files with the extension PRN.  The output from  *
+* this program appears as:                                     *
+* 10.  MAJOR TITLE  . . . . . . . . . . . . . . . . . . . 100  *
+*      10.1.  Minor Title . . . . . . . . . . . . . . . . 102  *
+*             10.1.1.  Paragraph Title  . . . . . . . . . 103  *
+*                                                              *
+* The Table of Contents shown in the "PL/I-80 Reference Manual"*
+* was prepared using this program, so it provides a good exam- *
+* of the input and output forms.                               *
+***************************************************************/
+	%replace
+		fw    by  3,   /* starting field width */
+		fi    by  2,   /* field increment */
+		fm    by  30,  /* max field width */
+		lpp   by  66,  /* lines per page */
+		true  by '1'b,
+		false by '0'b;
+	dcl
+		blanks char(30) static initial
+		('                              '),
+		dots char(80) var static initial
+('. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ');
+	dcl
+		(commd, input, output) file,
+		page  decimal(3),
+		fv    fixed,
+		fn    fixed,
+		lppv  fixed,
+		linc  fixed,
+		line  char(254) var,
+		pref  char(254) var,
+		title char(254) var;
+
+	put list ('Output File Name ? ');
+	get list(title);
+	open file (output) title(title) stream output
+		env (b(1000));
+	put list ('Command File Name? ');
+	get list (title);
+	on undefinedfile(commd)
+		begin;
+		put list (title,'command file not present');
+		stop;
+		end;
+	open file (commd) title(title) stream input;
+	lppv = lpp;
+	put list ('Lines Per Page   ? ');
+	get list (lppv);
+	page = 1;
+	put list ('Start Page Number? ');
+	get list (page);
+	page = page - 1;
+	linc = lppv;
+	put file(output) edit('.ce','TABLE OF CONTENTS','.sp 2','.li')
+		(a,skip);
+	on endfile(commd)
+		begin;
+		put file(output) edit('.br') (skip,a);
+		put file(output) skip;
+		stop;
+		end;
+	on undefinedfile(input)
+		begin;
+		put skip list(title,'Not Found, Continue? (Y/N)');
+		get list(title);
+		if title = 'y' | title = 'Y' then
+			go to retry;
+		stop;
+		end;
+	retry:
+		do while(true);
+		get file(commd) list(title);
+		open file (input) title(title) stream input
+			env(b(1000));
+		put skip list('Processing: ',title);
+		on endfile(input)
+			go to nextfile;
+			do while(true);
+			get file(input) edit(line) (a);
+			call deblank();
+			linc = linc + 1;
+			if linc > lpp then
+				do;
+				linc = 1;
+				page = page + 1;
+				end;
+			title = '';
+			fv = 0;
+			fn = fw;
+				do while(numeric());
+				title = title || pref;
+				fn = fn + fi;
+				fv = fv + fn;
+				end;
+			if title ^= '' then
+			if fv <= fm then
+			if substr(line,1,1) = ' ' then
+				do;
+				fv = fv - fn;
+				if fv = 0 then
+					put file(output) skip;
+				else
+					title = substr(blanks,1,fv)
+						|| title;
+				fv = fv + fn;
+				if length(title) < fv then
+					title = title ||
+					substr(blanks,1,fv-length(title));
+				title = title || heading();
+				line = title || substr(dots,length(title)+1);
+				put file(output) edit(line,page) (skip,a,f(3));
+				end;
+			end;
+		nextfile:
+		linc = lpp;
+		revert endfile(input);
+		close file(input);
+		end;
+
+	numeric:
+		proc returns(bit(1));
+		dcl
+			i fixed;
+		i = index(line,'.');
+		if i <= 1 then
+			return (false);
+		if verify(substr(line,1,i-1),'0123456789') = 0 then
+			do;
+			pref = substr(line,1,i);
+			line = substr(line,i+1);
+			return (true);
+			end;
+		return (false);
+		end numeric;
+
+	heading:
+		proc returns (char(254) var);
+		dcl
+			i fixed;
+		call deblank();
+		i = index(line,'.');
+		if i ^= 0 then
+			line = substr(line,1,i-1);
+		i = index(line,'  ');
+			do while (i ^= 0);
+			line = substr(line,1,i) || substr(line,i+2);
+			i = index(line,'  ');
+			end;
+		return (line || ' ');
+		end heading;
+
+	deblank:
+		proc;
+		dcl
+			i fixed;
+		i = verify(line,' ');
+		if i = 0 then
+			return;
+		line = substr(line,i);
+		end deblank;
+	end title;
+

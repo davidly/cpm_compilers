@@ -1,0 +1,30 @@
+keypr:
+    proc options(main);
+
+    /* create key from employee file */
+
+    dcl
+        1 employee static,
+          2 name char(30) varying;
+
+    dcl
+        (input, keys) file;
+
+    dcl
+        k fixed;
+
+    open title('$1.emp') keyed
+      env(f(100),b(10000)) file(input);
+
+    open file (keys) stream output
+        linesize (60) title('$1.key');
+
+        do while('1');
+        read file(input) into(employee) keyto(k);
+        put skip list(k,name);
+        put file(keys) list(name,k);
+        if name = 'EOF' then
+            stop;
+        end;
+    end keypr;
+

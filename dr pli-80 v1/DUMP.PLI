@@ -1,0 +1,27 @@
+dump:
+    proc options(main);
+    /* dump file in hex at terminal */
+    dcl
+        sysprint file,
+        input file;
+    dcl
+        bit(254) bit(8),
+        c char,
+        i fixed,
+        ibuff char(254) varying;
+    open file(input) stream title('$1.$1');
+    open file(sysprint) stream output
+        linesize(78) pagesize(0) title('$con');
+    on endfile(input)
+        stop;
+        do while('1'b);
+        read file(input) into(ibuff);
+            do i = 1 to length(ibuff);
+            c = substr(ibuff,i,1);
+            bit(i) = unspec(c);
+            end;
+        put edit((bit(i) do i = 1 to length(ibuff)))
+                (b4(2));
+        end;
+    end dump;
+

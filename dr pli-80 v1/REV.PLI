@@ -1,0 +1,50 @@
+reverse:
+    proc options(main);
+    dcl
+        sentence ptr,
+        1 wordnode based (sentence),
+          2 word char(30) varying,
+          2 next ptr;
+
+        do while('1'b);
+        call read();
+        if sentence = null then
+            stop;
+        call write();
+        end;
+
+    read:
+        proc;
+        dcl
+            newword char(30) varying,
+            newnode ptr;
+        sentence = null;
+        put skip list('What''s up? ');
+            do while('1'b);
+            get list(newword);
+            if newword = '.' then
+                return;
+            allocate wordnode set (newnode);
+            newnode->next = sentence;
+            sentence      = newnode;
+            word          = newword;
+            end;
+        end read;
+
+    write:
+        proc;
+        dcl
+            p ptr;
+        put skip list('Actually, ');
+            do while (sentence ^= null);
+            put list(word);
+            p = sentence;
+            sentence = next;
+            free p->wordnode;
+            end;
+        put list('.');
+        put skip;
+        end write;
+
+    end reverse;
+

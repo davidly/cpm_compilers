@@ -1,0 +1,28 @@
+        test:
+            proc options(main);
+            dcl
+                (a,b,c) float binary;
+                put list ('Type Three Numbers: ');
+                get list (a,b,c);
+                put list ('The Largest Value is',
+                    max3(a,b,c));
+        
+            max3:
+                proc(x,y,z) returns (float binary);
+                dcl
+                    (x,y,z,max) float binary;
+                /* compute the largest of x, y, and z */
+                if x > y then
+                    if x > z then
+                        max = x;
+                    else
+                        max = z;
+                else
+                    if y > z then
+                        max = y;
+                    else
+                        max = z;
+                return(max);
+                end max3;
+            end test;
+

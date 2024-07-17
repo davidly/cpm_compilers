@@ -1,0 +1,34 @@
+payroll:
+    procedure options(main);
+
+    declare
+        name (100) character(30) varying,
+        hours(100) fixed decimal(5,1),
+        wage (100) fixed decimal(5,2),
+        done bit(1),
+        next fixed;
+
+    declare
+        (grosspay, withhold, netpay) fixed decimal(7,2);
+
+    /* read initial values */
+    done = '0'b;
+        do next = 1 to 100 while(^done);
+        put list('Type ''employee'', hours, wage: ');
+        get list(name(next),hours(next),wage(next));
+        done = (name(next) = 'END');
+        end;
+
+    /* all names have been read, write the report */
+    put list('Adjust Paper to Top of Page, Type return');
+    get skip(2);
+
+        do next = 1 to 100 while(name(next) ^= 'END');
+        grosspay = hours(next) * wage(next);
+        withhold = grosspay * .15;
+        netpay   = grosspay - withhold;
+        put skip(2) list('$',netpay,'for',name(next));
+        end;
+
+    end payroll;
+

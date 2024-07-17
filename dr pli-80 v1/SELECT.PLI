@@ -1,0 +1,78 @@
+select:
+	proc options(main);
+	/*****************************************************
+	*                                                    *
+	*  This program is used to selectively print pages   *
+	*  from a TEX file, using the command shown below    *
+	*                                                    *
+	*       select source destination                    *
+	*                                                    *
+	*  where "source" is a source file, usually a "prn"  *
+	*  file produced by TEX, and "destination" is a file *
+	*  or device (e.g., $lst) to receive the selected    *
+	*  output pages.  The program prompts the console:   *
+	*                                                    *
+	*      Page Length: p (or "," followed by return)    *
+	*                                                    *
+	*  where p is the page length (default is 66).       *
+	*                                                    *
+	*      Range of Pages: n,m                           *
+	*                                                    *
+	*  where n is the first page to print, and m is the  *
+	*  last page.  The range prompt will continue until  *
+	*  the end of the document is encountered, or an end *
+	*  of file is entered at the console.                *
+	*                                                    *
+	*****************************************************/
+	%replace
+		true   by '1'b,
+		false  by '0'b,
+		copy   by true,
+		deflen by 66,
+		nocopy by false;
+	dcl
+		(sysin, input, output) file,
+		(lower, upper, page, pagelen) fixed,
+		linebuff char(254) var;
+
+	open file(input) title('$1.prn') env(b(8000));
+	on endfile(sysin)
+		stop;
+	on endfile(input)
+		stop;
+	open file(output) output title('$2.$2')
+		env(b(8000));
+
+	pagelen = deflen;
+	put list('Page Length: ');
+	get list(pagelen);
+
+	upper = 0;
+	lower = 0;
+	page  = 1;
+		do while(true);
+			do while (page<lower);
+			call readpage(nocopy);
+			end;
+			do while (page<=upper);
+			call readpage(copy);
+			end;
+		put skip list('Range of Pages: ');
+		get list(lower,upper);
+		end;
+
+	readpage:
+		proc (copymode);
+		dcl
+			copymode bit,
+			line fixed;
+			do line = 1 to pagelen;
+			read file(input) into (linebuff);
+			if copymode then
+				write file(output) from (linebuff);
+			end;
+		page = page + 1;
+		end readpage;
+
+	end select;
+
