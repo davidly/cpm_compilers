@@ -45,7 +45,7 @@ PRSTR equ 9
 true   equ 1
 false  equ 0
 loops  equ 10
-size   equ 8190
+size   equ 8190                     ; lots of assumptions about this size below / can't easily change it
 
 sizehi equ size SHR 8
 sizelo equ size AND 0ffh
@@ -54,30 +54,44 @@ sizep1hi equ ( size + 1 ) SHR 8     ; size plus 1 high
 sizep1lo equ ( size + 1 ) AND 0ffh  ; size plus 1 low
 
 org     100h
-        mvi        c, ( afterFlags AND 0ffh ) ; constant for performance
 
   iteragain:                        ; for ( iter = 1; iter <= 10; iter++ )
         lxi        h, 0             ; count = 0
         shld       COUNT
 
         ; set all array entries to true:  for (i = 0; i <= SIZE; i++) flags[i] = TRUE;
+        ; using sp for 2-byte writes is much faster than a loop of writing bytes
+        ; expand the array size to a power of 2 for performance.
 
-        lxi        h, flags
-        lxi        d, afterflags
-        mvi        b, true          ; "mov m, b" is faster than "mvi m, true" by 3 cycles, so set this up
+        lxi        h, 0
+        dad        sp
+        shld       SaveSP           ; save stack pointer
+        lxi        h, afterArray
+        sphl			    ; make sp point to just beyond the array
 
-  nexttrue:
-        mov        m, b
-        inx        h
-        mov        a, l
-        cmp        e
-        jnz        nexttrue
-        mov        a, h
-        cmp        d
-        jnz        nexttrue
+        lxi        h, 0101h	    ; true true
+        lxi        b, 0002h         ; 2 * 256 * 16 = size of the array 8192
+
+  fillagain:
+        push       h                ; write 16 bytes of true
+        push       h		    
+        push       h
+        push       h
+        push       h
+        push       h
+        push       h
+        push       h
+        dcr        b
+        jnz        fillagain	    ; do this 256 times
+        dcr        c
+        jnz        fillagain	    ; do this 2 times
+
+        lhld       SaveSP           ; restore stack pointer
+        sphl
 
         ; iterate through array entries and count primes
 
+        mvi        c, ( afterFlags AND 0ffh ) ; constant for performance
         mvi        b, 0             ; handy place for 0 byte
         lxi        d, 0             ; d is "i" in the outer for loop
 
@@ -122,7 +136,7 @@ org     100h
   flagisoff:                        ; check if outer loop is done
         inx        d
         mvi        a, sizep1hi
-        cmp        d		    ; the high byte will differ almost always. 2x as fast as lxi h -size + dad d + jnc
+        cmp        d                ; the high byte will differ almost always. 2x as fast as lxi h -size + dad d + jnc
         jnz        nextprime
         mvi        a, sizep1lo
         cmp        e
@@ -231,14 +245,16 @@ PUTHL:                              ; print the signed 16-bit number in HL
 PKFLAGS:    dw      0               ; address of flags[ k ]
 COUNT:      dw      0               ; count in C code
 ITER:       dw      0               ; iter in C code
+SaveSP:     dw      0               ; save/restore SP
 NEGF:       db      0               ; Space for negative flag
             db      '-00000'            
 NUM:        db      '$'             ; Space for number. cp/m strings end with a dollar sign
 CRLF:       db      13,10,0
 STRPRIMES:  db     ' primes.', 13, 10, 0
 
-flags:      ds      size + 1
-afterflags:
+flags:      ds      size + 1	    ; 8191 bytes
+afterflags: db      69h		    ; wasted byte so initialization of array is faster
+afterarray:			    ; flags + 8192. 8k array
 
 end
 
