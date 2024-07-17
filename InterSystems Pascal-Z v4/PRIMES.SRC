@@ -1,0 +1,348 @@
+; * THIS IS A DEMONSTATION PROGRAM TO GIVE AN EXAMPLE
+; * OF HOW TO WRITE A PROGRAM IN PASCAL/Z
+; * TO STOP THIS PROGRAM JUST TYPE CTRL-C
+; *
+; * TEST PROGRAM TO GET THE PRIME FACTORS OF NUMBERS 2..32767
+; *)
+; 
+; (*
+;  * DEFINE SOME VARIABLES
+;  *)
+;VAR  A: INTEGER;		(* NUMBER UNDER TEST *)
+;     PRIME: BOOLEAN;		(* IS PRESENT # A PRIME *)
+;     COUNT: INTEGER;		(* # OF PRIMES ALREADY FOUND *)
+;     PRIMES: ARRAY(. 1..5000 .) OF INTEGER;
+;PROCEDURE FACTOR( A: INTEGER );
+;     VAR   I,J,K:  INTEGER;
+;           DIVIDE:  BOOLEAN;	(* WAS DIVISION SUCCESSFUL *)
+;     BEGIN
+L150
+	ENTR	D,2,7
+;           IF A < 4 THEN WRITE( A:1 ) (* #'S < 4 ARE PRIME *)
+	STMT	D,1
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	LXI	D,4
+	LESS	D,0
+	JNC	L152
+	STMT	D,2
+	LXI	H,513
+	PUSH	H
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	PUSH	H
+	LXI	B,4
+;           ELSE BEGIN
+	CALL	L111
+	STMT	M,2
+	JMP	L171
+L152
+	STMT	D,3
+;                J := 1;
+	STMT	D,4
+	MOV	-2(IX),A
+	MVI	-3(IX),1
+;                REPEAT
+	STMT	D,5
+;                     J := J + 1;
+L181
+	STMT	D,6
+	MOV	L,-3(IX)
+	MOV	H,-2(IX)
+	INX	H
+	MOV	-2(IX),H
+	MOV	-3(IX),L
+;                     K := PRIMES(. J .);
+	STMT	D,7
+	MOV	L,-3(IX)
+	MOV	H,-2(IX)
+	RCHK	H,1,5000
+	DADD	C
+	XCHG
+	LXI	H,-3
+	ADDR	IY
+	MOV	D,M
+	DCX	H
+	MOV	E,M
+	MOV	-4(IX),D
+	MOV	-5(IX),E
+;                     I := A DIV K;
+	STMT	D,8
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	MOV	E,-5(IX)
+	MOV	D,-4(IX)
+	DIVD	D,0
+	MOV	0(IX),H
+	MOV	-1(IX),L
+;                     DIVIDE := ( I * K = A )
+	STMT	D,9
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	MOV	E,-5(IX)
+	MOV	D,-4(IX)
+	MULT	D,0
+	MOV	E,8(IX)
+	MOV	D,9(IX)
+	DSB1	D,0
+;                     UNTIL DIVIDE OR (I < K) OR (J = COUNT);
+	JRNZ	L208
+	INR	A
+L208
+	MOV	L,A
+	XRA	A
+	MOV	H,A
+	RCHK	H,0,1
+	MOV	-6(IX),L
+	CTRL
+	CMP	-6(IX)
+	JC	L219
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	MOV	E,-5(IX)
+	MOV	D,-4(IX)
+	LESS	D,0
+	JC	L219
+	MOV	L,-3(IX)
+	MOV	H,-2(IX)
+	MOV	E,-4(IY)
+	MOV	D,-3(IY)
+	DSB1	D,0
+	JNZ	L181
+L180
+L219	EQU	L180
+;                IF DIVIDE THEN BEGIN
+	STMT	D,10
+	CMP	-6(IX)
+	JNC	L238
+	STMT	D,11
+;                     PRIME := FALSE;
+	STMT	D,12
+	MOV	-2(IY),A
+;                     FACTOR( I );
+	STMT	D,13
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	PUSH	H
+	CALL	L150
+	STMT	M,13
+;                     WRITE( '*',K:1 ) 
+	STMT	D,14
+	LXI	H,769
+	PUSH	H
+	LXI	B,1
+	PUSH	B
+	LXI	H,42
+	MOV	H,L
+	PUSH	H
+	INX	S
+	LXI	H,513
+	PUSH	H
+	MOV	L,-5(IX)
+	MOV	H,-4(IX)
+	PUSH	H
+	LXI	B,9
+;                     END
+	CALL	L111
+	STMT	M,14
+;                ELSE WRITE( A:1 )
+	JMP	L275
+L238
+	STMT	D,15
+	LXI	H,513
+	PUSH	H
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	PUSH	H
+	LXI	B,4
+;                END
+	CALL	L111
+	STMT	M,15
+L275
+;           END;
+L171
+	EXIT	D,2
+;(*
+; * MAIN PROGRAM
+; *)
+;     BEGIN
+L99
+	ENTR	D,1,10005
+;          COUNT := 1;			(* INITIALIZE COUNT *)
+	STMT	D,16
+	MOV	-3(IY),A
+	MVI	-4(IY),1
+;          FOR A := 2 TO 32767 DO BEGIN
+	STMT	D,17
+	MOV	0(IY),A
+	MVI	-1(IY),2
+	PUSH	IY
+	LXI	H,32767
+	XTHL
+L302
+	MOV	D,M
+	DCX	H
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L303
+	STMT	D,18
+;               WRITE( A:5, ' = ' );
+	STMT	D,19
+	LXI	H,517
+	PUSH	H
+	MOV	L,-1(IY)
+	MOV	H,0(IY)
+	PUSH	H
+	JR	L331
+L330
+	DB	' = ',3
+L331
+	LXI	H,769
+	PUSH	H
+	LXI	B,3
+	PUSH	B
+	LXI	H,-3
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L330+0
+	LXI	B,3
+	LDIR
+	LXI	B,11
+	CALL	L111
+	STMT	M,19
+;               PRIME := TRUE;
+	STMT	D,20
+	MVI	-2(IY),1
+;               FACTOR( A );
+	STMT	D,21
+	MOV	L,-1(IY)
+	MOV	H,0(IY)
+	PUSH	H
+	CALL	L150
+	STMT	M,21
+;               IF PRIME THEN BEGIN
+	STMT	D,22
+	CMP	-2(IY)
+	JNC	L345
+	STMT	D,23
+;                    WRITE('*1            *****  PRIME  *****');
+	STMT	D,24
+	JR	L359
+L358
+	DB	'*****  EMIRP  *****            1*',33
+L359
+	LXI	H,769
+	PUSH	H
+	LXI	B,33
+	PUSH	B
+	LXI	H,-33
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L358+0
+	LXI	B,33
+	LDIR
+	LXI	B,37
+	CALL	L111
+	STMT	M,24
+;                    COUNT := COUNT + 1;
+	STMT	D,25
+	MOV	L,-4(IY)
+	MOV	H,-3(IY)
+	INX	H
+	MOV	-3(IY),H
+	MOV	-4(IY),L
+;                    PRIMES(. COUNT .) := A
+	STMT	D,26
+	MOV	L,-4(IY)
+	MOV	H,-3(IY)
+	RCHK	H,1,5000
+	DADD	C
+	XCHG
+	LXI	H,-3
+	ADDR	IY
+;                    END;
+	MOV	E,-1(IY)
+	MOV	D,0(IY)
+	MOV	M,D
+	DCX	H
+	MOV	M,E
+L345
+;               WRITELN(' ');
+	STMT	D,27
+	LXI	H,769
+	PUSH	H
+	LXI	B,1
+	PUSH	B
+	LXI	H,32
+	MOV	H,L
+	PUSH	H
+	INX	S
+	LXI	B,5
+	CALL	L109
+	STMT	M,27
+;               END;
+	STMT	D,28
+	CTRL
+	POP	H
+	XTHL
+	INR	M
+	INX	H
+	JRNZ	L387
+	INR	M
+	JV	L388
+L387
+	JMP	L302
+L303
+	POP	D
+L388
+	POP	D
+;          WRITELN(' THERE WERE ', COUNT-1:1, ' PRIMES ' );
+	STMT	D,29
+	JR	L396
+L395
+	DB	' EREW EREHT ',12
+L396
+	LXI	H,769
+	PUSH	H
+	LXI	B,12
+	PUSH	B
+	LXI	H,-12
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L395+0
+	LXI	B,12
+	LDIR
+	MOV	L,-4(IY)
+	MOV	H,-3(IY)
+	DCX	H
+	PUSH	H
+	LXI	H,513
+	XTHL
+	PUSH	H
+	JR	L417
+L416
+	DB	' SEMIRP ',8
+L417
+	LXI	H,769
+	PUSH	H
+	LXI	B,8
+	PUSH	B
+	LXI	H,-8
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L416+0
+	LXI	B,8
+	LDIR
+	LXI	B,32
+	CALL	L109
+	STMT	M,29
+;	  END.
+	STMT	D,30
+	FINI
+

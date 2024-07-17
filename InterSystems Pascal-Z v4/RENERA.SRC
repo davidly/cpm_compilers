@@ -1,0 +1,403 @@
+* RENAME - ERASE v1.d 05/18/81 pec.
+*
+* RENAME external pascal function
+*
+*
+*	rename requires the following declarations in the pascal program:
+*
+*		type	filestring = string 14;
+*
+*		function  rename(oldfile,newfile:filestring):boolean;external;
+*
+*
+*
+*	rename returns true if it successfully renames oldfile to newfile.
+*	It returns false otherwise. reasons for failure include an invalid
+*	cpm file name (detected by the program) and the non-existence of 
+*	oldfile on the disk (detected by cpm).
+*
+*
+
+
+* macros for pascal function environment entry and exit are in EMAIN.SRC
+	include	emain.src
+
+	nmlist
+
+* PAGE 
+* linker information
+	name	renera		;Module name for linker
+				; for REName and ERAse
+	entry	rename
+	entry	erase
+
+* constants etc.
+;cpm	equ	5		;cpm calling address - already in EMAIN.SRC
+rencon	equ	23		;cpm function number for renaming
+delcon	equ	19		;cpm function number for deleting
+fnsize	equ	14		;maximum length of a input parameter file name
+
+* PAGE 
+* enter rename
+rename	entr	0,2,36		;enter at level 2,with 36 byte local storage
+
+* save original ix and iy and set iy to ix
+	push	iy		;save original iy
+	push 	ix
+	pop	iy		;iy gets ix
+	push	ix		;save original ix
+
+* point iy to 1st byte of 1st file name parameter (hi addr)
+	lxi	b,fnsize+1*2+7
+	dady	b
+
+* point ix to 1st byte of file control block (fcb)
+	lxi	b,-35
+	dadx	b
+	push	ix		;save pntr to fcb for cpm call
+	pop	d		;d set up for cpm call
+
+* transfer 1st file name to fcb(0..15)
+	call	fname
+	jc	nogood
+* transfer 2nd file name to fcb(16..31)
+	pop 	iy		;copy original ix
+	push	iy		;save original ix for later (again!)
+	lxi	b,fnsize+1+7	;iy set to point to 2nd file name parameter
+	dady	b
+	lxi	b,4		;move ix up 4 to next file area
+	dadx	b
+	call	fname
+	jc	nogood
+
+* adjust disk specification of 1st file only (2nd ignored by cpm anyway)
+	ldax	d		;load disk select character
+	call	diskcode
+	jc	nogood
+	stax	d		;store disk select code
+
+* call cpm system to rename file
+	mvi	c,rencon	;load rename function number
+	call	cpm
+	pop	ix		;restore original ix and
+	pop	iy		; iy
+	adi	1		;check cpm return code (-1 if rename fails)
+	jrz	ex		;exit if failed
+	inr	2(ix)		;set return to 1 = true if success(set to 0
+				; on entry to procedure
+ex	exit	0,30		;exit rename environment,returning 30 bytes
+nogood	pop	ix
+	pop	iy
+	jr	ex
+				;of parameter space
+
+* PAGE 
+* ERASE external pascal function
+*
+*
+*	erase requires the following declarations in the pascal program:
+*
+*		type	filestring = string 14;
+*
+*		function  erase(oldfile:filestring):boolean;external;
+*
+*
+*
+*	erase returns true if it successfully deletes oldfile.
+*	It returns false otherwise. reasons for failure include an invalid
+*	cpm file name (detected by the program) and the non-existence of 
+*	oldfile on the disk (detected by cpm).
+*
+*
+
+
+
+* enter erase
+erase	entr	0,2,36		;enter at level 2,with 36 byte local storage
+
+* save original ix and iy and set iy to ix
+	push	iy		;save original iy
+	push 	ix
+	pop	iy		;iy gets ix
+	push	ix		;save original ix
+
+* point iy to 1st byte of 1st file name parameter (hi addr)
+	lxi	b,fnsize+1+7
+	dady	b
+
+* point ix to 1st byte of file control block (fcb)
+	lxi	b,-35
+	dadx	b
+	push	ix		;save pntr to fcb for cpm call
+	pop	d		;d set up for cpm call
+
+* transfer 1st file name to fcb(0..15)
+	call	fname
+	jc	dnogood
+
+* adjust disk specification of  file  
+	ldax	d		;load disk select character
+	call	diskcode
+	jc	dnogood
+	stax	d		;store disk select code
+
+* call cpm system to delete file
+	mvi	c,delcon	;load delete function number
+	call	cpm
+	pop	ix		;restore original ix and
+	pop	iy		; iy
+	adi	1		;check cpm return code (-1 if delete fails)
+	jrz	dex		;exit if failed
+	inr	2(ix)		;set return to 1 = true if success(set to 0
+				; on entry to procedure)
+dex	exit	0,15		;exit delete environment,returning 15 bytes
+dnogood	pop	ix
+	pop	iy
+	jr	dex
+				;of parameter space
+
+
+
+* PAGE 
+*DISKCODE subroutine
+* diskcode takes the character passed in a and converts it into
+* a valid cpm disk select code if possible.
+* A thru P are translated into 1 thru 16 respectively. '*' is
+* the default character and is translated into default disk code 0
+* carry is clear(0) if diskcode succeeds and set(1) if it fails
+
+diskcode
+	push	b		;save bc
+	mov	b,a		;save a copy of char
+	cpi	'*'
+	jrz	def		;default drive select
+	sui	'A'		; < A ?
+	jm	badd
+	mov	a,b		; reload character
+	sui	'O'		; > P ?
+	jp	badd
+
+
+*  have valid disk letter. encode it.
+	mov	a,b
+	sui	40H		;subtract 40H from ascii code to get 1..16
+	jr	okret
+
+* default disk specified.
+def	mvi	a,0		;default disk select,give code 0
+
+okret	stc			;return with carry clear
+	cmc
+	jr	bye
+badd	stc			;bad char, return with carry set
+bye	pop 	b		;restore bc
+	ret
+
+
+
+*
+
+* PAGE 
+* FNAME subroutine
+* fname takes any valid cpm file name and expands it to a full length file
+* name for use in a fcb.
+*    iy - points to input string and moves towards low memory as it
+*	  moves along in the string. The 1st byte is the string length.
+*    d  - counts the number of input string characters processed.
+*
+*    ix - points to the output string and moves towards high memory as
+*	  it moves along in the string.
+*    e  - counts the number of output string characters processed.
+*
+* at the successful conclusion of fname ix and iy point 1 byte past
+* the last character in the appropriate direction.
+*
+* carry is clear(0) if fname succeeds,carry set(1) if fname fails.
+*
+
+* save registers 
+fname	push	b
+	push	d
+
+* load byte counters and length of string
+	lxi	d,0101H		;both counts start at 1
+	mov	c,0(iy)		;c gets length
+	dcx	iy		;move iy past length byte
+
+* look for disk specification
+	mov 	a,c		;if length is < 2 no disk can be specified
+	cpi	2
+	jm	deflt		;
+	mov	a,-1(iy)	;':' is 2nd character if disk given
+	cpi	':'		;':' indicates disk specified
+	jnz	deflt		;if no ':' then default disk
+
+* have disk specified
+diskg	mov	a,0(iy)		;pick up disk letter
+	call	upper		;force disk letter to uppercase
+	jc	baddis
+	inr	d		;count 2 input bytes processed
+	inr	d
+	dcx	iy
+	dcx	iy
+	jr	indisk
+
+* default disk to '*'
+deflt	mvi	a,'*'		;default disk
+
+*
+indisk	mov	0(ix),a		;store disk specification
+	inr	e		;count a byte output processed
+	inx	ix
+
+* process file name
+name
+nloop	mov	a,c		;d <= length
+	sub	d
+	jm	endnam
+
+	mvi	a,10		;e < 11
+	sub	e
+	jm	endnam
+	jz	endnam
+
+	mov	a,0(iy)		;pick up an input character
+	cpi	'.'		; if char = '.'
+	jz	endnam		;    then name is ended
+
+*
+nchar	call	upper		;translate next char
+	jc	badnam
+	mov	0(ix),a		;store translated char
+	inr	d		;record a byte in and out
+	inr	e
+	inx	ix
+	dcx	iy
+	jr	nloop
+
+* all of name picked up. add ' 's to make proper length
+endnam	mvi	a,10		; while e < 10
+	sub	e		
+	jrz	ext		;when done go to extension
+	mvi	0(ix),' '
+	inr	e
+	inx	ix		;record another byte output
+	jr	endnam
+
+* process the file extention
+ext	inr	d		;move over '.' even if not really there!
+	dcx	iy
+
+exloop	mov	a,c		; d <= length
+	sub	d
+	jm	endext
+
+	mvi	a,13		; e < 13 ?
+	sub	e
+	jm	endext
+	jz	endext
+
+	mov	a,0(iy)		;pick up input character
+	call	upper		;trnanslate character
+	jc	badnam		;if illegal exit
+	mov	0(ix),a		;store translated character
+	inr	e		;record a character in and out
+	inr	d
+	inx	ix
+	dcx	iy
+	jr	exloop
+
+* all of extension picked up. add ' 's to make field proper length
+endext	mvi	a,13		;while e < 13
+	sub	e
+	jz	done
+	mvi	0(ix),' '	;store blank
+	inr	e		;record byte out
+	inx	ix
+	jr	endext
+
+* success. return with carry = 0
+done:	stc
+	cmc			;carry clear
+	jr	restore
+
+* failure. return with carry = 1
+baddis
+badnam	stc			;carry set
+
+*  mop up and return
+restore	pop	d
+	pop	b
+	ret
+
+
+* PAGE 
+* UPPER subroutine
+* upper translates the character in a to uppercase and
+* checks if it is a legal cpm character for a file name
+* carry is clear(0) if character is legal,set(1) if illegal
+*
+upper	push	b		;save bc
+
+* check if character is already uppercase
+	mov	b,a		;save copy of character
+	sui	41H		; < 'A' ?
+	jm	notup
+	mov	a,b		;reload character
+	sui	5bH		; > 'Z' ?
+	jp	notup
+	mov 	a,b		; have upper return as is
+	jr 	restok
+
+* check if lower case
+notup	mov	a,b		;reload
+	sui	61H		;< 'a'?
+	jm	notlo
+	mov	a,b		;reload
+	sui	7bH		;> 'z' ?
+	jp	notlo
+
+* have a lower case character. make uppercase by subtracting 32
+	mov	a,b
+	sui	32
+	jr	restok
+
+* character is not a letter so check if illegal
+notlo	mov	a,b		;reload
+	sui	3aH		; < ':' ?
+	jm	ok1
+	mov	a,b
+	sui	40H		; > '?' ?
+	jp	ok1
+	jr	illegl
+
+* check scattered illlegals
+ok1:	mov	a,b
+	cpi	20H		; check for control chars (< space)
+	jrc	illegl		; c is set if (A) < space.
+	cpi	','
+	jrz	illegl
+	cpi	'*'
+	jrz	illegl
+	cpi	'['
+	jrz	illegl
+	cpi	']'
+	jrz	illegl
+	cpi	'.'
+	jrz	illegl
+
+* not illegal
+restok	stc		;success so clear carry
+	cmc
+	jr	rest
+
+* illegal character
+illegl	stc			;failure. set carry
+
+* mop up and return
+rest	pop	b
+	ret
+
+
+
+       

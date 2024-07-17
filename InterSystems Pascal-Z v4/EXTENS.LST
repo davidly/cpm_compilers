@@ -1,0 +1,36 @@
+EXTENS                                                                 Page 1
+
+Line Stmt Level
+   1    1    0	program extens;
+   2    1    0	{ this program does not demonstractte file I/O since that is }
+   3    1    0	{ demonstrated in the fileio routine			   }
+   4    1    0	
+   5    1    0	const tabtop = 52;
+   6    1    1	      tabtopp1 = tabtop+1;	{ notice expression of constants }
+   7    1    1	{ use this type to show i/o of enumeration types }
+   8    1    1	
+   9    1    1	type color = ( red, yellow, blue, green, orange, violet );
+  10    1    1	     anstyp = string 20;
+  11    1    1	
+  12    1    1	var  a,b: color;
+  13    1    1	     answer: anstyp;
+  14    1    1	
+  15    1    1	procedure systemok; external;  { external routine to check the system }
+  16    1    1	
+  17    1    1	begin
+  18    1    1	    systemok;		{ verify the system }
+  19    2    1	    repeat
+  20    3    2		write( 'Enter a color (red, yellow, blue, green, orange, violet): ' );
+  21    4    2		readln( a );
+  22    5    2		{ show a case statement with an else clause }
+  23    5    2		case a of
+  24    6    2		    red, yellow, blue: writeln( a:1, ' is a primary color' );
+  25    7    2		    orange: writeln( 'orange is made from yellow and red' );
+  26    8    2		    violet: writeln( 'violet is made from blue and red' );
+  27    9    2		    else:  writeln( 'green is made from blue and yellow' );
+  28   10    2		    end;
+  29   10    2		write( 'Again? ' );
+  30   11    2		readln( answer );
+  31   12    2	    until answer = 'NO';
+  32   13    1	end.
+

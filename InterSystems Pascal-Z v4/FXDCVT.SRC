@@ -1,0 +1,1586 @@
+	NAME FXDCVT
+	ENTRY .FXDCVT
+	EXT .ABS
+	INCLUDE DEFLT.SRC
+;
+;	THIS IS MOD FXDCVT, SO....
+$FXDCVT	SET	0FFFFH
+	INCLUDE FCTMAC.SRC
+;
+; 	const exp = 13;
+; 	      maxlen = 12;
+; 	type sstring = array[1..15] of char;
+; procedure format( var x: sstring );
+; 	var tpowr,z: integer; (* power of ten *)
+; 	    fracln : 0..255;   (* fraction length specified *)
+; 	    i, j: 0..255;
+; 	    y: array[1..22] of char;
+; 	    sign: char;
+; 	    fixed: boolean;
+;
+;  procedure rnd( z : integer );
+;    var k:0..255;
+;    fix : boolean;
+;    begin
+L199
+	ENTR	D,3,2
+;	fix := false;
+	MOV	-1(IX),A
+;	if x[ z ] >= '5' then begin
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	MVI	A,52
+	CMP	E
+	MOV	A,D
+	JNC	L219
+;	  if x[ z-1 ] = '.' then begin 
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	MOV	A,E
+	CMPI	D,46
+	MOV	A,D
+	JNZ	L235
+;	    if x[ z-2 ] <> '9' then begin 
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	DCX	H
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	MOV	A,E
+	CMPI	D,57
+	MOV	A,D
+	JZ	L252
+;		x[ z-2 ] := succ( x[ z-2 ] );
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	DCX	H
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	PUSH	H
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	DCX	H
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	INX	D
+	POP	H
+	MOV	M,E
+;		fix := true
+;		end;
+	MVI	-1(IX),1
+L252
+;	    end
+;	    else begin  { x[ z-2 ] <> '.' }
+	JMP	L302
+L235
+;	        x[ z-1 ] := succ( x[ z-1 ] );
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	PUSH	H
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	INX	D
+	POP	H
+	MOV	M,E
+;      		if x[ z-1 ] <> succ( '9' ) then fix := true;
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	PUSH	D
+	LXI	H,57
+	INX	H
+	POP	D
+	DSB1	D,0
+	JZ	L332
+	MVI	-1(IX),1
+L332
+;		k := 0;
+	MOV	0(IX),A
+;		while x[ z-1-k ] = succ( '9' ) do begin
+L366
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	MOV	D,A
+	MOV	E,0(IX)
+	DSUB	D,0
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	PUSH	D
+	LXI	H,57
+	INX	H
+	POP	D
+	DSB1	D,0
+	JNZ	L365
+;		  x[ z-1-k ] := '0';
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	MOV	D,A
+	MOV	E,0(IX)
+	DSUB	D,0
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MVI	M,48
+;		  k := k + 1;
+	MOV	H,A
+	MOV	L,0(IX)
+	INX	H
+	MOV	0(IX),L
+;		  if x[ z-1-k ] <> '.' then begin
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	MOV	D,A
+	MOV	E,0(IX)
+	DSUB	D,0
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	MOV	A,E
+	CMPI	D,46
+	MOV	A,D
+	JZ	L411
+;		    x[ z-1-k ] := succ( x[ z-1-k ] );
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	MOV	D,A
+	MOV	E,0(IX)
+	DSUB	D,0
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	PUSH	H
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	MOV	D,A
+	MOV	E,0(IX)
+	DSUB	D,0
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	INX	D
+	POP	H
+	MOV	M,E
+;		    if x[ z-1-k ] <> succ( '9' ) then fix := true;
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	MOV	D,A
+	MOV	E,0(IX)
+	DSUB	D,0
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	PUSH	D
+	LXI	H,57
+	INX	H
+	POP	D
+	DSB1	D,0
+	JZ	L457
+	MVI	-1(IX),1
+L457
+;		    end
+;		  else begin  { x[ z-1-k ] = '.' }
+	JMP	L486
+L411
+;		    k := k + 1;
+	MOV	H,A
+	MOV	L,0(IX)
+	INX	H
+	MOV	0(IX),L
+;		    if x[ z-1-k ] <> '9' then begin
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	MOV	D,A
+	MOV	E,0(IX)
+	DSUB	D,0
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	MOV	A,E
+	CMPI	D,57
+	MOV	A,D
+	JZ	L497
+;		      x[ z-1-k ] := succ( x[ z-1-k ] );
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	MOV	D,A
+	MOV	E,0(IX)
+	DSUB	D,0
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	PUSH	H
+	MOV	L,8(IX)
+	MOV	H,9(IX)
+	DCX	H
+	MOV	D,A
+	MOV	E,0(IX)
+	DSUB	D,0
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	POP	IX
+	MOV	D,A
+	MOV	E,M
+	INX	D
+	POP	H
+	MOV	M,E
+;		      fix := true;
+	MVI	-1(IX),1
+;		      end
+;		    else k := k + 1; {point to sign, exit WHILE with fix false}
+	JMP	L550
+L497
+	MOV	H,A
+	MOV	L,0(IX)
+	INX	H
+	MOV	0(IX),L
+L550
+;		    end;
+L486
+;		  end;   { WHILE }
+	JMP	L366
+L365
+;		end;
+L302
+;		{ if not fix then a '9' to right of decimal needs rounding }
+;		{ to a '1' and exp. needs adjustment			   }
+;		if not fix then begin
+	CMP	-1(IX)
+	JC	L565
+;		  x[ 3 ] := '1';
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DCX	H
+	DCX	H
+	POP	IX
+	MVI	M,49
+;		  { incr. exp if positive, decr. if negative }
+;		  if x[ 12 ] = '+' then
+	MIDL	IX,2
+	LXI	H,9
+	ILOD	H,1,-11
+	POP	IX
+	MOV	A,L
+	CMPI	D,43
+	MOV	A,H
+;		    if x[ 14 ] = '9' then begin
+	JNZ	L585
+	MIDL	IX,2
+	LXI	H,9
+	ILOD	H,1,-13
+	POP	IX
+	MOV	A,L
+	CMPI	D,57
+	MOV	A,H
+	JNZ	L599
+;		      x[ 14 ] := '0';
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	LXI	B,-13
+	DADD	B
+	POP	IX
+	MVI	M,48
+;		      x[ 13 ] := succ( x[ 13 ] )
+	MIDL	IX,2
+	LXI	H,9
+	ILOD	H,1,-12
+	POP	IX
+	INX	H
+;		      end
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	LXI	B,-12
+	DADD	B
+	POP	IX
+	MOV	M,E
+;		    else x[ 14 ] := succ( x[ 14 ] )
+	JMP	L650
+L599
+	MIDL	IX,2
+	LXI	H,9
+	ILOD	H,1,-13
+	POP	IX
+	INX	H
+;		  else  { neg exp }
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	LXI	B,-13
+	DADD	B
+	POP	IX
+	MOV	M,E
+L650
+;		    if x[ 14 ] = '0' then begin
+	JMP	L675
+L585
+	MIDL	IX,2
+	LXI	H,9
+	ILOD	H,1,-13
+	POP	IX
+	MOV	A,L
+	CMPI	D,48
+	MOV	A,H
+	JNZ	L677
+;		      x[ 14 ] := '9';
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	LXI	B,-13
+	DADD	B
+	POP	IX
+	MVI	M,57
+;		      x[ 13 ] := pred( x[ 13 ] )
+	MIDL	IX,2
+	LXI	H,9
+	ILOD	H,1,-12
+	POP	IX
+	DCX	H
+;		      end
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	LXI	B,-12
+	DADD	B
+	POP	IX
+	MOV	M,E
+;		    else x[ 14 ] := pred( x[ 14 ] );
+	JMP	L728
+L677
+	MIDL	IX,2
+	LXI	H,9
+	ILOD	H,1,-13
+	POP	IX
+	DCX	H
+	XCHG
+	MIDL	IX,2
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	LXI	B,-13
+	DADD	B
+	POP	IX
+	MOV	M,E
+L728
+L675
+;		  end;
+L565
+;	  end;
+L219
+;    end;  
+	EXIT	D,2
+;
+;
+; 	begin
+.FXDCVT:
+L162
+	ENTR	D,2,31
+; 	    fixed := false; (* assume no success *)
+	MOV	-8(IX),A
+; 	    sign := x[2];
+	LXI	H,9
+	ILOD	H,1,-1
+	MOV	-7(IX),L
+; 	    tpowr := -1;
+	MVI	0(IX),255
+	MVI	-1(IX),255
+;  	    (*$R- *) fracln := ord( x[ tpowr ] ); (*$R+ *)
+R	SET	          0
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	MOV	-4(IX),E
+R	SET	          1
+; 	    tpowr := ord(x[exp]) * 10 + ord(x[exp+1]) -11*ord('0');
+	LXI	H,9
+	ILOD	H,1,-12
+	LXI	D,10
+	MULT	D,0
+	PUSH	H
+	LXI	H,9
+	ILOD	H,1,-13
+	POP	D
+	DADD	D,0
+	PUSH	H
+	LXI	H,48
+	LXI	D,11
+	MULT	D,0
+	POP	D
+	XCHG
+	DSUB	D,0
+	MOV	0(IX),H
+	MOV	-1(IX),L
+; 	    if x[ exp-1 ] = '-' then tpowr := -tpowr;
+	LXI	H,9
+	ILOD	H,1,-11
+	MOV	A,L
+	CMPI	D,45
+	MOV	A,H
+	JNZ	L841
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	NEGT	H
+	MOV	0(IX),H
+	MOV	-1(IX),L
+L841
+; 	    for i := 1 to 22 do y[ i ] := '0';
+	MVI	-5(IX),1
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	LXI	H,22
+	XTHL
+L869
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L870
+	MOV	H,A
+	MOV	L,-5(IX)
+	XCHG
+	LXI	H,-8
+	ADDR	IX
+	MVI	M,48
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L869
+	PUSH	H
+L870
+	POP	D
+L889
+	POP	D
+;    	    if (tpowr >= 0) and (tpowr+2+fracln <=maxlen) then begin
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	MOV	D,A
+	MOV	E,A
+	GE	D,0
+	JNC	L894
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	INX	H
+	INX	H
+	MOV	D,A
+	MOV	E,-4(IX)
+	DADD	D,0
+	LXI	D,12
+	LE	D,0
+	JNC	L891
+; 		fixed := true;
+	MVI	-8(IX),1
+; 		y[ 1 ] := x[ 3 ];
+	LXI	H,9
+	ILOD	H,1,-2
+	MOV	-9(IX),L
+; 		if tpowr > 6 then begin
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	LXI	D,6
+	GRET	D,0
+	JNC	L937
+; 			for i := 5 to 10 do y[ i-3 ] := x[ i ];
+	MVI	-5(IX),5
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	LXI	H,10
+	XTHL
+L954
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L955
+	MOV	H,A
+	MOV	L,-5(IX)
+	DCX	H
+	DCX	H
+	DCX	H
+	XCHG
+	LXI	H,-8
+	ADDR	IX
+	MOV	D,A
+	MOV	E,-5(IX)
+	PUSH	H
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	POP	H
+	MOV	M,E
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L954
+	PUSH	H
+L955
+	POP	D
+L981
+	POP	D
+; 			for i := 7 to tpowr do y[i+1] := '0';
+	MVI	-5(IX),7
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	XTHL
+L990
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L991
+	MOV	H,A
+	MOV	L,-5(IX)
+	INX	H
+	XCHG
+	LXI	H,-8
+	ADDR	IX
+	MVI	M,48
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L990
+	PUSH	H
+L991
+	POP	D
+L1011
+	POP	D
+; 			end
+; 		else begin
+	JMP	L1014
+L937
+; 			for i := 2 to tpowr + 1 do y[ i ] := x[ i+3];
+	MVI	-5(IX),2
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	INX	H
+	XTHL
+L1025
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L1026
+	MOV	H,A
+	MOV	L,-5(IX)
+	XCHG
+	LXI	H,-8
+	ADDR	IX
+	MOV	D,A
+	MOV	E,-5(IX)
+	INX	D
+	INX	D
+	INX	D
+	PUSH	H
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	POP	H
+	MOV	M,E
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L1025
+	PUSH	H
+L1026
+	POP	D
+L1053
+	POP	D
+; 			for i := 3+tpowr to 8 do y[ i ] := x[ i+2];
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	INX	H
+	INX	H
+	INX	H
+	MOV	-5(IX),L
+	XCHG
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	LXI	H,8
+	XTHL
+L1063
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L1064
+	MOV	H,A
+	MOV	L,-5(IX)
+	XCHG
+	LXI	H,-8
+	ADDR	IX
+	MOV	D,A
+	MOV	E,-5(IX)
+	INX	D
+	INX	D
+	PUSH	H
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	POP	H
+	MOV	M,E
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L1063
+	PUSH	H
+L1064
+	POP	D
+L1090
+	POP	D
+; 			end;
+L1014
+; 		end;
+L891
+L893	EQU	L891
+L894	EQU	L893
+;	    if tpowr < 0 then begin
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	MOV	D,A
+	MOV	E,A
+	LESS	D,0
+	JNC	L1096
+;	        fixed := true;
+	MVI	-8(IX),1
+;		if ( tpowr >= -13 ) and(  fracln <= 10 ) then begin
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	LXI	D,-13
+	GE	D,0
+	JNC	L1115
+	MOV	H,A
+	MOV	L,-4(IX)
+	MOV	A,L
+	CMPI	D,11
+	MOV	A,H
+	JNC	L1112
+; 		y[ 2+abs( tpowr ) ] := x[ 3 ];
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	CALL	.ABS
+	INX	H
+	INX	H
+	XCHG
+	LXI	H,-8
+	ADDR	IX
+	XCHG
+	LXI	H,9
+	ILOD	H,1,-2
+	XCHG
+	MOV	M,E
+; 		for i := 3 to 8 do y[ i+abs( tpowr ) ] := x[ i+2 ];
+	MVI	-5(IX),3
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	LXI	H,8
+	XTHL
+L1164
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L1165
+	MOV	H,A
+	MOV	L,-5(IX)
+	PUSH	H
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	CALL	.ABS
+	POP	D
+	DADD	D,0
+	XCHG
+	LXI	H,-8
+	ADDR	IX
+	MOV	D,A
+	MOV	E,-5(IX)
+	INX	D
+	INX	D
+	PUSH	H
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	POP	H
+	MOV	M,E
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L1164
+	PUSH	H
+L1165
+	POP	D
+L1198
+	POP	D
+;		end
+;		else {fudge to allow mutual code later on}
+;		  if fracln > 10 then fracln := 10; 
+	JMP	L1201
+L1112
+L1114	EQU	L1112
+L1115	EQU	L1114
+	MOV	H,A
+	MOV	L,-4(IX)
+	MVI	A,10
+	CMP	L
+	MOV	A,H
+	JNC	L1203
+	MVI	-4(IX),10
+L1203
+L1201
+; 		tpowr := 0; (* fudge to allow mutual code later on *)
+	MOV	0(IX),A
+	MOV	-1(IX),A
+; 		end;
+L1096
+; 	    if fixed then begin
+	CMP	-8(IX)
+	JNC	L1225
+; 		y[ tpowr+2 ] := '.';
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	INX	H
+	INX	H
+	XCHG
+	LXI	H,-8
+	ADDR	IX
+	MVI	M,46
+; 		for i := 1 to 15 do x[ i ] := ' ';
+	MVI	-5(IX),1
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	LXI	H,15
+	XTHL
+L1253
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L1254
+	MOV	H,A
+	MOV	L,-5(IX)
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MVI	M,32
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L1253
+	PUSH	H
+L1254
+	POP	D
+L1273
+	POP	D
+; 		j := tpowr+2+fracln;
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	INX	H
+	INX	H
+	MOV	D,A
+	MOV	E,-4(IX)
+	DADD	D,0
+	MOV	-6(IX),L
+; 		for i := 1 to j do x[ i+(maxlen-j+2) ] := y[ i ];
+	MVI	-5(IX),1
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	MOV	H,A
+	MOV	L,-6(IX)
+	XTHL
+L1290
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L1291
+	MOV	H,A
+	MOV	L,-5(IX)
+	MOV	D,A
+	MOV	E,-6(IX)
+	PUSH	H
+	LXI	H,12
+	DSUB	D,0
+	INX	H
+	INX	H
+	POP	D
+	DADD	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,-5(IX)
+	PUSH	H
+	LXI	H,-8
+	ADDR	IX
+	MOV	D,A
+	MOV	E,M
+	POP	H
+	MOV	M,E
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L1290
+	PUSH	H
+L1291
+	POP	D
+L1323
+	POP	D
+; 		(* round if necessary *)
+; 		if (tpowr <= 6) and ( y[ j+1 ] >= '5' ) then begin
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	LXI	D,6
+	LE	D,0
+	JNC	L1328
+	MOV	H,A
+	MOV	L,-6(IX)
+	INX	H
+	XCHG
+	LXI	H,-8
+	ADDR	IX
+	MOV	D,A
+	MOV	E,M
+	MVI	A,52
+	CMP	E
+	MOV	A,D
+	JNC	L1325
+; 			if x[ maxlen+2 ] = '.' then begin
+	LXI	H,9
+	ILOD	H,1,-13
+	MOV	A,L
+	CMPI	D,46
+	MOV	A,H
+	JNZ	L1352
+;			  x[ maxlen+1 ] := succ( x[ maxlen+1 ] );
+	LXI	H,9
+	ILOD	H,1,-12
+	INX	H
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	LXI	B,-12
+	DADD	B
+	MOV	M,E
+;			  i := 1;
+	MVI	-5(IX),1
+;			  end
+;			else begin
+	JMP	L1402
+L1352
+;			  x[ maxlen+2 ] := succ(x[ maxlen+2 ] );
+	LXI	H,9
+	ILOD	H,1,-13
+	INX	H
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	LXI	B,-13
+	DADD	B
+	MOV	M,E
+; 			  i := 0
+;			  end;
+	MOV	-5(IX),A
+L1402
+; 			while x[ maxlen+2-i ] = succ( '9' ) do begin
+L1439
+	MOV	H,A
+	MOV	L,-5(IX)
+	LXI	D,14
+	XCHG
+	DSUB	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	PUSH	D
+	LXI	H,57
+	INX	H
+	POP	D
+	DSB1	D,0
+	JNZ	L1438
+; 			  x[ maxlen+2-i ] := '0';
+	MOV	H,A
+	MOV	L,-5(IX)
+	LXI	D,14
+	XCHG
+	DSUB	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MVI	M,48
+; 			  i :=i+1;
+	MOV	H,A
+	MOV	L,-5(IX)
+	INX	H
+	MOV	-5(IX),L
+; 			  if x[maxlen+2-i ] = '.' then i := i+1;
+	MOV	H,A
+	MOV	L,-5(IX)
+	LXI	D,14
+	XCHG
+	DSUB	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	MOV	A,E
+	CMPI	D,46
+	MOV	A,D
+	JNZ	L1484
+	MOV	H,A
+	MOV	L,-5(IX)
+	INX	H
+	MOV	-5(IX),L
+L1484
+; 			  if x[maxlen+2-i] = ' ' then x[maxlen+2-i]:='1'
+	MOV	H,A
+	MOV	L,-5(IX)
+	LXI	D,14
+	XCHG
+	DSUB	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	MOV	A,E
+	CMPI	D,32
+	MOV	A,D
+	JNZ	L1507
+	MOV	H,A
+	MOV	L,-5(IX)
+	LXI	D,14
+	XCHG
+	DSUB	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+; 			  else x[maxlen+2-i]:=succ(x[maxlen+2-i]);
+	MVI	M,49
+	JMP	L1536
+L1507
+	MOV	H,A
+	MOV	L,-5(IX)
+	LXI	D,14
+	XCHG
+	DSUB	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	PUSH	H
+	MOV	H,A
+	MOV	L,-5(IX)
+	LXI	D,14
+	XCHG
+	DSUB	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	INX	D
+	POP	H
+	MOV	M,E
+L1536
+; 			  end;
+	JMP	L1439
+L1438
+; 			if i = j then j := j+1
+	MOV	H,A
+	MOV	L,-5(IX)
+	MOV	D,A
+	MOV	E,-6(IX)
+	DSB1	D,0
+	JNZ	L1568
+	MOV	H,A
+	MOV	L,-6(IX)
+; 			end;
+	INX	H
+	MOV	-6(IX),L
+L1568
+L1325
+L1327	EQU	L1325
+L1328	EQU	L1327
+; 		x[ maxlen-j+2 ] := sign;
+	MOV	H,A
+	MOV	L,-6(IX)
+	LXI	D,12
+	XCHG
+	DSUB	D,0
+	INX	H
+	INX	H
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,-7(IX)
+	MOV	M,E
+;		if (maxlen-j+2) > 3 then begin
+	MOV	H,A
+	MOV	L,-6(IX)
+	LXI	D,12
+	XCHG
+	DSUB	D,0
+	INX	H
+	INX	H
+	LXI	D,3
+	GRET	D,0
+	JNC	L1597
+;		  fracln := 3;
+	MVI	-4(IX),3
+;		  for i := ( maxlen - j + 2 ) to 14 do begin
+	MOV	H,A
+	MOV	L,-6(IX)
+	LXI	D,12
+	XCHG
+	DSUB	D,0
+	INX	H
+	INX	H
+	MOV	-5(IX),L
+	XCHG
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	LXI	H,14
+	XTHL
+L1632
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L1633
+;			x[ fracln ] := x[ i ];
+	MOV	H,A
+	MOV	L,-4(IX)
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,-5(IX)
+	PUSH	H
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	POP	H
+	MOV	M,E
+;			fracln := fracln + 1
+	MOV	H,A
+	MOV	L,-4(IX)
+;			end;
+	INX	H
+	MOV	-4(IX),L
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L1632
+	PUSH	H
+L1633
+	POP	D
+L1667
+	POP	D
+; 		  end
+;		else if (maxlen-j+2) = 2 then
+	JMP	L1670
+L1597
+	MOV	H,A
+	MOV	L,-6(IX)
+	LXI	D,12
+	XCHG
+	DSUB	D,0
+	INX	H
+	INX	H
+	LXI	D,2
+	DSB1	D,0
+;		  for i := 14 downto 2 do x[ i + 1 ] := x[ i ];
+	JNZ	L1672
+	MVI	-5(IX),14
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	LXI	H,2
+	XTHL
+L1693
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	LE	D,0
+	JNC	L1694
+	MOV	H,A
+	MOV	L,-5(IX)
+	INX	H
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,-5(IX)
+	PUSH	H
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	POP	H
+	MOV	M,E
+	POP	H
+	XTHL
+	DCR	M
+	MOV	B,M
+	INR	B
+	JNZ	L1693
+	PUSH	H
+L1694
+	POP	D
+L1720
+	POP	D
+L1672
+L1670
+;	    end;
+L1225
+;	    if fixed then begin 
+	CMP	-8(IX)
+	JNC	L1724
+;		x[ 1 ] := chr( 16 - ( maxlen - j + 2 ) ); 
+	MOV	H,A
+	MOV	L,-6(IX)
+	LXI	D,12
+	XCHG
+	DSUB	D,0
+	INX	H
+	INX	H
+	LXI	D,16
+	XCHG
+	DSUB	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	MOV	M,E
+;		if x[ ord( x[1] ) + 1 ] = '.' then 
+	LXI	H,9
+	ILOD	H,1,0
+	INX	H
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	MOV	A,E
+	CMPI	D,46
+	MOV	A,D
+;		  x[ 1 ] := chr( ord( x[ 1 ] ) - 1 );
+	JNZ	L1757
+	LXI	H,9
+	ILOD	H,1,0
+	DCX	H
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	MOV	M,E
+L1757
+; 		end
+;	      else begin   { still in f.p. format }
+	JMP	L1816
+L1724
+;		x[ 1 ] := chr( 14 );
+	LXI	H,14
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	MOV	M,E
+;		{ see if it can be rounded  			}
+;		if ( fracln >= 0 ) and ( fracln <= 6 ) then begin
+	MOV	H,A
+	MOV	L,-4(IX)
+	MOV	D,A
+	MOV	E,A
+	GE	D,0
+	JNC	L1841
+	MOV	H,A
+	MOV	L,-4(IX)
+	MOV	A,L
+	CMPI	D,7
+	MOV	A,H
+	JNC	L1838
+;		  if fracln = 0 then begin
+	MOV	H,A
+	MOV	L,-4(IX)
+	MOV	A,L
+	CMPI	D,0
+	MOV	A,H
+	JNZ	L1858
+;		    tpowr := 4;  { position where Esxx will be shifted }
+	MOV	0(IX),A
+	MVI	-1(IX),4
+;		    x[ 1 ] := chr( 7 );
+	LXI	H,7
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	MOV	M,E
+;		    rnd( 5 );  { check digit in position 5 for rounding }
+	LXI	H,5
+	PUSH	H
+	CALL	L199
+;		    end
+;		  else begin
+	JMP	L1899
+L1858
+;		    tpowr := 5 + fracln;  { position to shift Esxx }
+	MOV	H,A
+	MOV	L,-4(IX)
+	LXI	D,5
+	DADD	D,0
+	MOV	0(IX),H
+	MOV	-1(IX),L
+;		    x[ 1 ] := chr( 8 + fracln );
+	MOV	H,A
+	MOV	L,-4(IX)
+	LXI	D,8
+	DADD	D,0
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	MOV	M,E
+;		    rnd( tpowr );  { check digit at tpowr for rounding }
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	PUSH	H
+	CALL	L199
+;		    end;
+L1899
+;		  { shift Esxx to proper place }
+;		  j := 11;
+	MVI	-6(IX),11
+;		  for i := tpowr to tpowr + 3 do begin
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	MOV	-5(IX),L
+	XCHG
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	MOV	L,-1(IX)
+	MOV	H,0(IX)
+	INX	H
+	INX	H
+	INX	H
+	XTHL
+L1950
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	GE	D,0
+	JNC	L1951
+;		    x[ i ] := x[ j ];
+	MOV	H,A
+	MOV	L,-5(IX)
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,-6(IX)
+	PUSH	H
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	POP	H
+	MOV	M,E
+;		    j := j + 1
+	MOV	H,A
+	MOV	L,-6(IX)
+;		    end;
+	INX	H
+	MOV	-6(IX),L
+	POP	H
+	XTHL
+	INR	M
+	JNZ	L1950
+	PUSH	H
+L1951
+	POP	D
+L1986
+	POP	D
+;		  end;
+L1838
+L1840	EQU	L1838
+L1841	EQU	L1840
+;		{ shift number to right one place and insert a space }
+;		for i := 14 downto 2 do x[ i + 1 ] := x[ i ];
+	MVI	-5(IX),14
+	PUSH	IX
+	POP	H
+	LXI	B,-5
+	DADD	B
+	PUSH	H
+	LXI	H,2
+	XTHL
+L1997
+	MOV	D,A
+	MOV	E,M
+	XTHL
+	PUSH	H
+	LE	D,0
+	JNC	L1998
+	MOV	H,A
+	MOV	L,-5(IX)
+	INX	H
+	XCHG
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,-5(IX)
+	PUSH	H
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DSUB
+	INX	H
+	MOV	D,A
+	MOV	E,M
+	POP	H
+	MOV	M,E
+	POP	H
+	XTHL
+	DCR	M
+	MOV	B,M
+	INR	B
+	JNZ	L1997
+	PUSH	H
+L1998
+	POP	D
+L2024
+	POP	D
+;		end;
+L1816
+;	    x[ 2 ] := ' ';   { must always have leading space }
+	MOV	H,9(IX)
+	MOV	L,8(IX)
+	DCX	H
+	MVI	M,32
+; 	    end;
+	EXIT	D,2
+                                                                               

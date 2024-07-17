@@ -1,0 +1,219 @@
+L151
+	DB	"RED     "
+	DB	"YELLOW  "
+	DB	"BLUE    "
+	DB	"GREEN   "
+	DB	"ORANGE  "
+	DB	"VIOLET  "
+	EXTD	L158,SYSTEMOK
+L99
+	ENTR	D,1,23
+	STMT	D,1
+	CALL	L158
+	STMT	M,1
+	STMT	D,2
+L160
+	STMT	D,3
+	JR	L168
+L167
+	DB	' :)teloiv ,egnaro ,neerg ,eulb ,wolley ,der( roloc a retnE',58
+L168
+	LXI	H,769
+	PUSH	H
+	LXI	B,58
+	PUSH	B
+	LXI	H,-58
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L167+0
+	LXI	B,58
+	LDIR
+	LXI	B,62
+	CALL	L111
+	STMT	M,3
+	STMT	D,4
+	PUSH	IY
+	LXI	H,1024
+	PUSH	H
+	LXI	H,L151+0
+	PUSH	H
+	LXI	D,5
+	PUSH	D
+	LXI	B,2
+	CALL	L110
+	STMT	M,4
+	STMT	D,5
+	MOV	H,A
+	MOV	L,0(IY)
+	MOV	A,L
+	CMPI	D,0
+	JRZ	L185
+	CMPI	D,1
+	JRZ	L185
+	CMPI	D,2
+	JNZ	L183
+L185
+	XRA	A
+	STMT	D,6
+	LXI	H,1025
+	PUSH	H
+	MOV	H,A
+	MOV	L,0(IY)
+	MOV	H,L
+	PUSH	H
+	INX	S
+	LXI	H,L151+0
+	PUSH	H
+	JR	L223
+L222
+	DB	'roloc yramirp a si ',19
+L223
+	LXI	H,769
+	PUSH	H
+	LXI	B,19
+	PUSH	B
+	LXI	H,-19
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L222+0
+	LXI	B,19
+	LDIR
+	LXI	B,28
+	CALL	L109
+	STMT	M,6
+	JMP	L184
+L183
+	CMPI	D,4
+	JNZ	L224
+L225
+	XRA	A
+	STMT	D,7
+	JR	L239
+L238
+	DB	'der dna wolley morf edam si egnaro',34
+L239
+	LXI	H,769
+	PUSH	H
+	LXI	B,34
+	PUSH	B
+	LXI	H,-34
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L238+0
+	LXI	B,34
+	LDIR
+	LXI	B,38
+	CALL	L109
+	STMT	M,7
+	JMP	L184
+L224
+	CMPI	D,5
+	JNZ	L240
+L241
+	XRA	A
+	STMT	D,8
+	JR	L255
+L254
+	DB	'der dna eulb morf edam si teloiv',32
+L255
+	LXI	H,769
+	PUSH	H
+	LXI	B,32
+	PUSH	B
+	LXI	H,-32
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L254+0
+	LXI	B,32
+	LDIR
+	LXI	B,36
+	CALL	L109
+	STMT	M,8
+	JMP	L184
+L240
+L257
+	XRA	A
+	STMT	D,9
+	JR	L265
+L264
+	DB	'wolley dna eulb morf edam si neerg',34
+L265
+	LXI	H,769
+	PUSH	H
+	LXI	B,34
+	PUSH	B
+	LXI	H,-34
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L264+0
+	LXI	B,34
+	LDIR
+	LXI	B,38
+	CALL	L109
+	STMT	M,9
+L256
+	XRA	A
+L184
+	STMT	D,10
+	JR	L274
+L273
+	DB	' ?niagA',7
+L274
+	LXI	H,769
+	PUSH	H
+	LXI	B,7
+	PUSH	B
+	LXI	H,-7
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L273+0
+	LXI	B,7
+	LDIR
+	LXI	B,11
+	CALL	L111
+	STMT	M,10
+	STMT	D,11
+	PUSH	IY
+	POP	H
+	DCX	H
+	DCX	H
+	PUSH	H
+	LXI	D,1812
+	PUSH	D
+	LXI	B,1
+	CALL	L110
+	STMT	M,11
+	STMT	D,12
+	CTRL
+	LXI	H,-21
+	DADD	S
+	SPHL
+	XCHG
+	PUSH	IY
+	POP	H
+	LXI	B,-22
+	DADD	B
+	LXI	B,21
+	LDIR
+	JR	L290
+L289
+	DB	'ON',2
+L290
+	LXI	H,-3
+	DADD	S
+	SPHL
+	XCHG
+	LXI	H,L289+0
+	LXI	B,3
+	LDIR
+	EQUL	S,21,3
+	JNC	L160
+	STMT	D,13
+	FINI
+

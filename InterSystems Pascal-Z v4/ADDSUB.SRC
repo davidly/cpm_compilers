@@ -1,0 +1,55 @@
+; Decimal byte add/subtract procedures for fixed point package
+
+; function addbyte( var carry: carrtyp; a, b: byte ): byte; external;
+
+	entry	addbyte
+
+addbyte pop	h		; hl := return address
+	pop	b		; b := first operand, c := second operand
+	inx	s		; Skip over length byte.
+	pop	d		; de := address of the carry flag
+	ldax	d		; a := carry flag
+	cpi	1
+	cmc			; carry := not carry
+	mov	a,b
+	adc	c		; a := a + c + carry
+	daa
+	mov	b,a
+	mvi	a,0
+	jrnc	NoCarry 	; Branch if carry = 0
+	mvi	a,1
+NoCarry stax	d		; Set passed carry flag to correct value.
+	xra	a
+	mov	d,a
+	mov	e,b
+	pchl
+
+	entry	subbyte
+
+subbyte pop	h
+	pop	b		; b := first operand, c := second operand
+	inx	s		; Skip over length byte.
+	pop	d		; de := address of the carry flag
+	ldax	d		; a := carry flag
+	cpi	1
+	cmc			; carry := not carry
+	mov	a,b
+	sbb	c		; a := a - c - carry
+	daa
+	mov	b,a
+	mvi	a,0
+	jrnc	NoCar		; Branch if carry = 0
+	mvi	a,1
+NoCar	stax	d		; Set passed carry flag to correct value.
+	xra	a
+	mov	d,a
+	mov	e,b
+	pchl
+
+
+
+
+
+
+
+

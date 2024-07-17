@@ -1,0 +1,22 @@
+; This Pascal/Z external function returns the value of the
+; two byte word pointed to by the passed parameter.
+; Written by Robert Bedichek 1980
+
+; The Pascal declaration is:
+
+; function peek( address: integer ): integer; external;
+
+	name	peek
+	entry	peek
+
+peek	pop	b		; The return address.
+	pop	h		; The address to peek.
+	mov	e,m		; Low byte of the word.
+	inx	h
+	mov	d,m		; High byte of the word.
+	mov	h,b
+	mov	l,c
+	pchl
+
+
+

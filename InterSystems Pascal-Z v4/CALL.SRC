@@ -1,0 +1,82 @@
+; General Purpose External Program Interface for Pascal/z
+; Written by Robert Bedichek 1980
+
+; This is an external procedure for use with the Pascal/z compiler
+; version 3.0 and newer.  This procedure loads up most of the Z-80
+; registers and transfers control to a specified address.  Control
+; returns when the external program executes a return instruction.
+; The registers are 'unloaded' and returned to the calling Pascal/z
+; program.  The first parameter is passed by reference.  It is a record
+; containing the Z-80 registers:
+
+; type registers = record
+;		     a: 0..255;
+;		     bc, de, hl: integer
+;		   end;
+
+; The second parameter is the address to which control is transfered after
+; the registers are loaded.
+
+; The Pascal external procedure delaration is:
+
+; procedure call( var x: registers; start: integer ); external;
+
+	name	call
+
+	entry	call
+call	pop	h	; Return address for this procedure.
+	pop	d	; Go address.
+	pop	b	; Points to record containing register values.
+
+; Save the registers for calling procedure.
+	push	h
+	push	ix
+	push	iy
+	exx
+	exaf
+	push	psw
+	push	h
+	push	d
+	push	b
+	exx
+	push	d
+	pop	ix	; IX now has the go address.
+	push	b
+	pop	iy
+	push	iy
+
+; Push the return address for the routine that we are calling onto the stack.
+	lxi	h,RetAddr
+	push	h
+
+; Load the registers from the record pointed to by iy.
+	mov	a,0(iy)
+	mov	b,-1(iy)
+	mov	c,-2(iy)
+	mov	d,-3(iy)
+	mov	e,-4(iy)
+	mov	h,-5(iy)
+	mov	l,-6(iy)
+	pcix			; Cross your toes and hold your breath.
+
+RetAddr pop	iy
+; Alright, put 'em back.
+	mov	0(iy),a
+	mov	-1(iy),b
+	mov	-2(iy),c
+	mov	-3(iy),d
+	mov	-4(iy),e
+	mov	-5(iy),h
+	mov	-6(iy),l
+; restore the register that procedures above this one need.
+	pop	b
+	pop	d
+	pop	h
+	pop	psw
+	exaf
+	exx
+	pop	iy
+	pop	ix
+	xra	a
+	ret
+
