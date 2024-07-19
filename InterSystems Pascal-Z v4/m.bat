@@ -1,7 +1,9 @@
 ntvcm Pascal48 %1
 
-rem pasopt just goes into an infinite loop writing to the output file
-rem ntvcm pasopt %1.SRC
+rem pasopt requires some uninitialized RAM to be non-zero to work. It depends on some other
+rem app having run to initialize that memory. It's not a single byte -- it's bytes per parse
+rem record spread over the array of records. NTVCM has a workaround.
+ntvcm -t pasopt %1.SRC
 
 ntvcm asmbl main,%1/rel
 
