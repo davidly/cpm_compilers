@@ -9,8 +9,8 @@ rm $str.SRC 2>/dev/null
 ntvcm PASCAL48 $str
 
 # pasopt requires some uninitialized RAM to be non-zero to work. It depends on some other
-# app having run to initialize that memory. It's not a single byte -- it's bytes per parse
-# record spread over the array of records. NTVCM has a workaround.
+# app having run to initialize that memory. It's a byte at BDOS - 30eh, which is 0fbeeh
+# for NTVCM, which fills this byte for this app.
 ntvcm PASOPT $str.SRC
 
 ntvcm ASMBL main,$str/rel
