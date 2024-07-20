@@ -1,0 +1,1152 @@
+;
+; FP and LONG functions for floating point and long packages
+;
+
+	INCLUDE "bds.lib"
+
+
+	FUNCTION	fp
+
+	CALL	arghak
+	PUSH	B		; save BC
+ 	LXI	H,COMMON$EXIT	 
+
+	PUSH	H		; save the common exit addr in the stack
+	LDA	arg1		;Get code ptr
+	RAL			;Multiply code by 2
+	MOV	E,A
+	MVI	D,0		;Move result to DE
+	LXI	H,JMPTAB	;Get JMPTAB addr
+	DAD	D		;Add offset to it
+	XCHG			;Store result in DE
+	LDAX	D
+	MOV	L,A
+	INX	D
+	LDAX	D
+	MOV	H,A		;Move table addr to HL
+	PCHL			;Jump to selected routine
+JMPTAB:
+	DW	XNORM
+	DW	XADD
+	DW	XSUB
+	DW	XMULT
+	DW	XDIV
+	DW	XFTOA
+
+COMMON$EXIT:
+	POP	B		; restore BC
+	RET			; return to BDS C
+
+XNORM:
+	CALL	LD$OP1
+	CALL	FPNORM
+EXIT0:
+	CALL	ST$ACC
+	RET
+
+XADD:
+	CALL	LD$OP2
+	CALL	FPADD
+	JMP	EXIT0
+XSUB:
+	CALL	LD$OP2
+	CALL	FPSUB
+	JMP	EXIT0
+XMULT:
+	CALL	LD$OP2
+	CALL	FPMULT
+	JMP	EXIT0
+
+XDIV:
+	CALL	LD$OP2
+	CALL	FPDIV
+	JMP	EXIT0
+
+XFTOA:
+	CALL	LD$OP1
+	CALL	FTOA
+	RET
+
+LD$OP1:
+	LHLD	arg3
+	XCHG
+	LXI	H,FPACC-1
+	MVI	M,0
+	INX	H
+	MVI	C,5
+	CALL	MOVE
+	RET
+
+LD$OP2:
+	CALL	LD$OP1
+	LHLD	arg4
+	XCHG
+	LXI	H,FPOP-1
+	MVI	M,0
+	INX	H
+	MVI	C,5
+	CALL	MOVE
+	RET
+
+ST$ACC:
+	LHLD	arg2
+	LXI	D,FPACC
+	MVI	C,5
+	CALL	MOVE
+	RET
+
+FPNORM:
+	LDA	FPACC+3		;Get MS byte of FPACC
+	STA	SIGN		;Save SIGN byte of FPACC
+	ANA	A		;If number is positive
+	JP	NZERO$TEST	;.. go test for zero
+	LXI	H,FPACC-1	;Load addr of FPACC (+ xtra byte)
+	MVI	C,5		;Load precision register
+	CALL	NEGATE		;Negate FPACC
+
+NZERO$TEST:
+	LXI	H,FPACC-1
+	MVI	C,5
+	CALL	ZERO$TEST	;If FPACC not zero
+	JNZ	NOTZERO		;.. go normalize
+	STA	FPACCX		;make sure exponent is zero
+	RET
+
+NOTZERO:
+	LXI	H,FPACC-1
+	MVI	C,5
+	CALL	SHIFTL		;shift FPACC left
+	LXI	H,FPACCX
+	DCR	M		;subtract 1 from FPACC exponent
+	LDA	FPACC+3		;get MS byte of FPACC
+	ANA	A		;if high order bit not no
+	JP	NOTZERO		;.. go do again
+
+;compensate for last shift
+
+	LXI	H,FPACCX
+	INR	M
+	DCX	H
+	MVI	C,5
+	CALL	SHIFTR
+	LDA	SIGN		;fetch original sign
+	RAL			;shift sign bit into carry
+	RNC			;exit if orig # was positive
+	LXI	H,FPACC-1
+	MVI	C,5
+	CALL	NEGATE		;2's complement FPACC
+	RET			;Exit FPNORM
+FPADD:
+	LXI	H,FPACC
+	MVI	C,4
+	CALL	ZERO$TEST		;if FPACC not = zero
+	JNZ	TEST$FPOP		;.. go test FPOP for zero
+	LXI	H,FPACC
+	LXI	D,FPOP
+	MVI	C,5
+	CALL	MOVE		;Move FPOP to  FPACC
+	RET			;Exit FPADD
+TEST$FPOP:
+	LXI	H,FPOP
+	MVI	C,4
+	CALL	ZERO$TEST	;if FPOP = 0
+	RZ			;.. exit FPADD
+	LDA	FPACCX
+	LXI	H,FPOPX
+	SUB	M		;if exponents are equal
+	JZ	ADD$SETUP	;.. go to add setup
+	JP	RANGE$TEST	;if diff of exp >=0,goto range test
+	CMA
+	INR	A		;ABS of difference
+
+RANGE$TEST:
+	CPI	32		;if diff < 32
+	JM	ALGN$OPRNDS	;.. we can go align the operands
+	LXI	H,FPACCX
+	LDA	FPOPX
+	SUB	M		;if exp of FPACC > exp of FPOP
+	RM			;.. exit FPADD
+	LXI	D,FPOP
+	LXI	H,FPACC
+	MVI	C,5
+	CALL	MOVE		;move FPOP to FPACC
+	RET			;Exit FPADD
+
+ALGN$OPRNDS:
+	LDA	FPACCX
+	LXI	H,FPOPX
+	SUB	M		;subt exponents
+	MOV	B,A		;save difference of exponents
+	JM	SHFT$FPACC	;if diff neg, go shift FPACC
+
+ALGN$FPOP:
+	LXI	H,FPOPX
+	CALL	SHFT$LOOP	;shift FPOP & increment exponent
+	DCR	B		;Decrement diff register
+	JNZ	ALGN$FPOP	;loop until exponents are equal
+	JMP	ADD$SETUP	;go to add setup
+
+SHFT$FPACC:
+	LXI	H,FPACCX
+	CALL	SHFT$LOOP	;shift FPACC & increment exponent
+	INR	B		;increment difference register
+	JNZ	SHFT$FPACC	;loop until exponents are equal
+
+ADD$SETUP:
+	XRA	A
+	STA	FPACC-1
+	STA	FPOP-1
+	LXI	H,FPACCX
+	CALL	SHFT$LOOP	;shift FPACC right
+	LXI	H,FPOPX
+	CALL	SHFT$LOOP	;shift FPOP right
+	LXI	H,FPACC-1
+	LXI	D,FPOP-1
+	MVI	C,5
+	CALL	ADDER		;add FPOP to FPACC
+	CALL	FPNORM		;normalize result
+	RET			;exit FPADD
+
+SHFT$LOOP:
+	INR	M		;increment exponent
+	DCX	H		;decrement ptr
+	MVI	C,4
+	MOV	A,M		;get MS byte
+	ANA	A		;if negative number
+	JM	SHFT$MINUS	;.. goto negative shift
+	CALL	SHIFTR		;shift mantissa
+	RET
+
+SHFT$MINUS:
+	STC			;set carry
+	CALL	SHFTR		;shift mantissa progatating sign
+	RET			;exit
+
+FPSUB:
+	LXI	H,FPACC
+	MVI	C,4
+	CALL	NEGATE
+	JMP	FPADD
+
+FPMULT:
+	CALL	SIGNJOB		;process the signs
+	LXI	H,WORK
+	MVI	C,8
+	CALL	ZERO$MEMORY	;WORK := 0 (partial product)
+	LXI	H,FPACCX
+	LDA	FPOPX
+	ADD	M
+	INR	A		;compensate for algolrithm
+	MOV	M,A		;add FPOP exp to FPACC exponent
+	LXI	H,FPACC-4
+	MVI	C,4
+	CALL	ZERO$MEMORY	;clear multiplicand extra bytes
+	LXI	H,BITS
+	MVI	M,31
+
+MULT$LOOP:
+	LXI	H,FPOP+3
+	MVI	C,4
+	CALL	SHIFTR		;shift multiplier right
+	CC	ADD$MULTIPLICAND ;add multiplicand if carry
+	LXI	H,WORK+7
+	MVI	C,8
+	CALL	SHIFTR		;shift partial product right
+	LXI	H,BITS
+	DCR	M		;decrement BITS counter
+	JNZ	MULT$LOOP	;if not zero, do again
+	LXI	H,WORK+7
+	MVI	C,8
+	CALL	SHIFTR		;shift once more for rounding
+	LXI	H,WORK+3
+	MOV	A,M
+	RAL			;fetch 32th bit
+	ANA	A		;if it is a 1
+	CM	ROUND$IT	;.. round the result
+	LXI	D,WORK+3
+	LXI	H,FPACC-1
+	MVI	C,5
+EXMLDV:
+	CALL	MOVE
+	LDA	SIGN		;fetch SIGN and save it on the stack
+	PUSH	PSW
+	CALL	FPNORM
+	POP	PSW
+	ANA	A
+	RP
+	LXI	H,FPACC
+	MVI	C,4
+	CALL	NEGATE
+	RET
+
+ADD$MULTIPLICAND:
+	LXI	H,WORK
+	LXI	D,FPACC-4
+	MVI	C,8
+	CALL	ADDER
+	RET
+ROUND$IT:
+	MVI	A,40H
+	ADD	M
+	MVI	C,4
+RND$LOOP:
+	MOV	M,A
+	INX	H
+	MVI	A,0
+	ADC	M
+	DCR	C
+	JNZ	RND$LOOP
+	MOV	M,A
+	RET
+FPDIV:
+	LXI	H,FPOP
+	MVI	C,4
+	CALL	ZERO$TEST
+	JNZ	DIV$SIGN
+	LXI	H,FPACC
+	MVI	C,5
+	CALL	ZERO$MEMORY
+	RET
+
+DIV$SIGN:
+	CALL	SIGNJOB
+	LXI	H,WORK
+	MVI	C,12
+	CALL	ZERO$MEMORY
+	MVI	A,31
+	STA	BITS
+	LXI	H,FPACCX
+	LDA	FPOPX
+	MOV	B,A
+	MOV	A,M
+	SUB	B
+	INR	A
+	MOV	M,A
+DIVIDE:
+	CALL	SETSUB		;WORK2 := dividend - divisor
+	JM	NOGO		;if minus, go put 0 in quotient
+	LXI	H,FPACC
+	LXI	D,WORK2
+	MVI	C,4
+	CALL	MOVE		;move subt results to dividend
+	STC
+	JMP	QUOROT
+
+NOGO:
+	ANA	A
+QUOROT:
+	LXI	H,WORK+4
+	MVI	C,4
+	CALL	SHFTL		;Insert carry flag into quotient
+	LXI	H,FPACC
+	MVI	C,4
+	CALL	SHFTL		;shift dividend left
+	LXI	H,BITS
+	DCR	M		;decrement BITS counter
+	JNZ	DIVIDE		;loop until BITS = zero
+	CALL	SETSUB		;1 more time for rounding
+	JM	DVEXIT		;if 24th bit = 0, goto exit
+	LXI	H,WORK+4
+	LXI	D,ONE
+	MVI	C,4
+	CALL	ADDER
+	LXI	H,WORK+7
+	MOV	A,M
+	ANA	A
+	JP	DVEXIT
+	MVI	C,4
+	CALL	SHIFTR
+	LXI	H,FPACCX
+	INR	M
+DVEXIT:
+	LXI	H,FPACC
+	LXI	D,WORK+4
+	MVI	C,4
+	JMP	EXMLDV
+
+SETSUB:
+	LXI	D,FPACC
+	LXI	H,WORK2
+	MVI	C,4
+	CALL	MOVE		;move dividend to work2
+	LXI	H,WORK2
+	LXI	D,FPOP
+	MVI	C,4
+	CALL	SUBBER		;subtract divisor from work2
+	LDA	WORK2+3
+	ANA	A
+	RET
+
+FTOA:
+	LHLD	arg2
+	SHLD	ASCII$PTR
+	MVI	M,' '
+	LDA	FPACC+3
+	ANA	A
+	JP	BYSIGN
+	MVI	M,'-'
+	LXI	H,FPACC
+	MVI	C,4
+	CALL	NEGATE
+BYSIGN:
+	LHLD	ASCII$PTR
+	INX	H
+	MVI	M,'0'
+	INX	H
+	MVI	M,'.'
+	INX	H
+	SHLD	ASCII$PTR
+	XRA	A
+	STA	EXP
+	LXI	H,FPACC
+	MVI	C,4
+	CALL	ZERO$TEST
+	JNZ	SU$FTOA
+	MVI	C,7
+	LHLD	ASCII$PTR
+ZERO$LOOP:
+	MVI	M,'0'
+	INX	H
+	DCR	C
+	JNZ	ZERO$LOOP
+	SHLD	ASCII$PTR
+	JMP	EXPOUT
+SU$FTOA:
+	LXI	H,FPACCX
+	DCR	M
+DECEXT:
+	JP	DECEXD
+	MVI	A,4
+	ADD	M
+	JP	DECOUT
+	CALL	FPX10
+DECREP:
+	LXI	H,FPACCX
+	MOV	A,M
+	ANA	A
+	JMP	DECEXT
+
+DECEXD:
+	CALL	FPD10
+	JMP	DECREP	
+
+DECOUT:
+	LXI	H,FPACC
+	LXI	D,ADJ
+	MVI	C,4
+	CALL	ADDER
+	LXI	H,OUTAREA
+	LXI	D,FPACC
+	MVI	C,4
+	CALL	MOVE
+	LXI	H,OUTAREA+4
+	MVI	M,0
+	LXI	H,OUTAREA
+	MVI	C,4
+	CALL	SHIFTL
+	CALL	OUTX10
+COMPEN:
+	LXI	H,FPACCX
+	INR	M
+	JZ	OUTDIG
+	LXI	H,OUTAREA+4
+	MVI	C,5
+	CALL	SHIFTR
+	JMP	COMPEN
+OUTDIG:
+	MVI	A,7
+	STA	DIGCNT
+	LXI	H,OUTAREA+4
+	MOV	A,M
+	ANA	A
+	JZ	ZERODG
+OUTDGS:
+	LXI	H,OUTAREA+4
+	MVI	A,'0'
+	ADD	M
+	LHLD	ASCII$PTR
+	MOV	M,A
+	INX	H
+	SHLD	ASCII$PTR
+DECRDG:
+	LXI	H,DIGCNT
+	DCR	M
+	JZ	EXPOUT
+	CALL	OUTX10
+	JMP	OUTDGS
+
+ZERODG:
+	LXI	H,EXP
+	DCR	M
+	LXI	H,OUTAREA
+	MVI	C,5
+	CALL	ZERO$TEST
+	JNZ	DECRDG
+	XRA	A
+	STA	DIGCNT
+	JMP	DECRDG
+
+OUTX10:
+	XRA	A
+	STA	OUTAREA+4
+	LXI	H,WORK
+	LXI	D,OUTAREA
+	MVI	C,5
+	CALL	MOVE
+	LXI	H,OUTAREA
+	MVI	C,5
+	CALL	SHIFTL
+	LXI	H,OUTAREA
+	MVI	C,5
+	CALL	SHIFTL
+	LXI	D,WORK
+	LXI	H,OUTAREA
+	MVI	C,5
+	CALL	ADDER
+	LXI	H,OUTAREA
+	MVI	C,5
+	CALL	SHIFTL
+	RET
+EXPOUT:
+	LHLD	ASCII$PTR
+	MVI	M,'E'
+	INX	H
+	LDA	EXP
+	ANA	A
+	JP	EXPOT
+	CMA
+	INR	A
+	STA	EXP
+	MVI	M,'-'
+	INX	H
+	LDA	EXP
+EXPOT:
+	MVI	C,0
+EXPLOOP:
+	SUI	10
+	JM	TOMUCH
+	STA	EXP
+	INR	C
+	JMP	EXPLOOP
+
+TOMUCH:
+	MVI	A,'0'
+	ADD	C
+	MOV	M,A
+	INX	H
+	LDA	EXP
+	ADI	'0'
+	MOV	M,A
+	INX	H
+	MVI	M,0
+	RET
+FPX10:
+	LXI	H,FPOP
+	LXI	D,TEN
+	MVI	C,5
+	CALL	MOVE
+	CALL	FPMULT
+	LXI	H,EXP
+	DCR	M
+	RET
+
+FPD10:
+	LXI	H,FPOP
+	LXI	D,ONE$TENTH
+	MVI	C,5
+	CALL	MOVE
+	CALL	FPMULT
+	LXI	H,EXP
+	INR	M
+	RET
+
+NEGATE:
+	STC			;CARRY forces an add of 1
+NEGAT$LOOP:
+	MOV	A,M		;fetch byte
+	CMA			;complement it
+	ACI	0		;make it two's complement
+	MOV	M,A		;store the result
+	INX	H		;bump ptr
+	DCR	C		;decrement precision register
+	JNZ	NEGAT$LOOP	;if not done, go do it again
+	RET			;Return to caller
+
+ZERO$TEST:
+	XRA	A		;clear A
+	ORA	M		;'OR' A with next byte
+	INX	H		;bump ptr
+	DCR	C		;decrement precision register
+	JNZ	ZERO$TEST+1	;loop until done
+	ANA	A		;set flags
+	RET
+
+SHIFTL:
+	ANA	A		;clear CARRY
+SHFTL:
+	MOV	A,M		;get next byte
+	RAL			;shift it left
+	MOV	M,A		;store result
+	INX	H		;bump ptr
+	DCR	C		;decrement precision register
+	JNZ	SHFTL		;loop until done
+	RET
+
+SHIFTR:
+	ANA	A
+SHFTR:
+	MOV	A,M
+	RAR
+	MOV	M,A
+	DCX	H
+	DCR	C
+	JNZ	SHFTR
+	RET
+
+ADDER:
+	ANA	A
+ADD$LOOP:
+	LDAX	D
+	ADC	M
+	MOV	M,A
+	INX	D
+	INX	H
+	DCR	C
+	JNZ	ADD$LOOP
+	RET
+
+SUBBER:
+	ANA	A
+	XCHG
+SUB$LOOP:
+	LDAX	D
+	SBB	M
+	STAX	D
+	INX	D
+	INX	H
+	DCR	C
+	JNZ	SUB$LOOP
+	XCHG
+	RET
+
+ZERO$MEMORY:
+	MVI	M,0
+	INX	H
+	DCR	C
+	JNZ	ZERO$MEMORY
+	RET
+
+MOVE:
+	LDAX	D
+	MOV	M,A
+	INX	D
+	INX	H
+	DCR	C
+	JNZ	MOVE
+	RET
+
+SIGNJOB:
+	LDA	FPACC+3
+	STA	SIGN
+	ANA	A
+	JP	CKFPOP
+	LXI	H,FPACC
+	MVI	C,4
+	CALL	NEGATE
+CKFPOP:
+	LXI	H,SIGN
+	LDA	FPOP+3
+	XRA	M
+	MOV	M,A
+	LDA	FPOP+3
+	ANA	A
+	RP
+	LXI	H,FPOP
+	MVI	C,4
+	CALL	NEGATE
+	RET
+
+	DS	4
+FPACC:	DS	4
+FPACCX:	DS	1
+	DS	4
+FPOP:	DS	4
+FPOPX:	DS	1
+SIGN:	DS	1
+WORK:	DS	8
+WORK2:	DS	4
+BITS:	DS	1
+ASCII$PTR:	DS	2
+EXP:	DS	1
+OUTAREA:	DS	5
+DIGCNT:	DS	1
+ONE$TENTH:	DB	66H,66H,66H,66H,0FDH
+TEN:	DB	0,0,0,50H,4
+ADJ:	DB	5,0,0,0
+ONE:	DB	80H,0,0,0
+
+	ENDFUNC
+
+ 	FUNCTION long
+
+; temporary storage is allocated in the
+; "args" area of the run-time environment
+
+u	equ  args	;temporary quad storage (4 bytes)
+uh	equ  u		;high word of u
+ul	equ  u+2	;low word of u
+mq	equ  u+4	;temporary quad storage used by
+			;multiplication and division routines
+temp	equ  mq+4	;temporary storage byte used by div'n routine
+
+
+; long is main routine which dispatches to the various functions
+; of the package according to the value of its first argument
+
+long:	push b		;save for benefit of caller
+	call ma2toh	;get 1st arg (function code) into HL and A
+	mov  d,h
+	mov  e,l
+	dad  h
+	dad  d		;HL now has triple the function code
+	lxi  d,jtab	;base of jump table
+	dad  d
+	pchl		;dispatch to appropriate function
+
+jtab:	jmp  lmake	;jump table for quad functions
+	jmp  lcomp
+	jmp  ladd
+	jmp  lsub
+	jmp  lmul
+	jmp  ldiv
+	jmp  lmod
+
+
+; lmake converts integer (arg3) to a long (arg2)
+
+lmake:	call ma4toh	;get arg3 into HL
+	mov  a,h	;look at sign first
+	ora  a
+	push psw	;save it
+	cm   cmh	;take abs value
+	xchg		;into (DE)
+	lxi  b,0	;zero out high word
+	pop  psw
+	cm   qneg	;complement if necessary
+	jmp  putarg	;copy result into arg2 and return
+
+;all other routines copy their arguments into the quad register (BCDE)
+;and the temporary quad storage location u  (note that temporary storage
+;must be used to keep the routines from clobbering the user's arguments)
+
+
+;lcomp compares arg2 with arg3, returns -1, 0, 1 for <, =, >, resp
+
+lcomp:  call ma3toh	;get pointer to arg2
+	call qld	
+	lxi  h,u
+	call qst	;arg2 now in u
+	call ma4toh	;get pointer to arg3
+	call qld	;arg3 now in (BCDE)
+	lxi  h,-1	;presume <
+	call qsub
+	call qtst
+	pop  b		;restore bc for caller
+	rm
+	inx  h
+	rz
+	inx  h
+	ret
+
+; long addition
+
+ladd:	call getargs	;get args into (BCDE) and u
+	call qadd	;do the addition
+	jmp  putarg	;copy result into arg2 and return
+
+lsub:	call getargs
+	call qsub
+	jmp  putarg
+
+lmul:	call getargs
+	call qmul
+	jmp  putarg
+
+ldiv:	call getargs
+	call qdiv
+	jmp  putarg
+
+lmod:	call getargs
+	call qmod
+	jmp  putarg
+
+;getargs gets arg3 into u, arg4 into (BCDE)
+
+getargs:
+	call ma5toh		;get ptr to arg3 (note use ma5 cause of 
+				;return addr on stack)
+	call qld		;arg3 now in (BCDE)
+	lxi  h,u
+	call qst		;now in u
+	call ma6toh		;get ptr to arg4
+	jmp  qld		;arg4 now in (BCDE)
+
+
+; putarg copies (BCDE) into result arg (arg2) and cleans up
+
+putarg:	call ma3toh		;get pointer to arg2
+	call qst		;copy (BCDE) into it
+	pop  b			;restore BC for caller
+	ret
+
+
+
+; quad subtraction  u - (BCDE) -> (BCDE)
+
+qsub:	call qneg  	;complement (BCDE) and fall thru to add
+
+; quad addition     u + (BCDE) -> (BCDE)
+
+qadd:   push h
+	lxi  h,u+3	;tenSHUN
+	mov  a,m	;hup
+	add  e		;two
+	mov  e,a	;three
+	dcx  h		;four
+	mov  a,m	;hup
+	adc  d		;two
+	mov  d,a	;three
+	dcx  h		;four
+	mov  a,m	;hup
+	adc  c		;two
+	mov  c,a	;three
+	dcx  h		;four
+	mov  a,m	;hup
+	adc  b		;two
+	mov  b,a	;three
+	pop  h		;four
+	ret		;at ease	
+	
+
+; two's complement (BCDE)
+
+qneg:	push h
+	xra  a
+	mov  l,a
+	sbb  e
+	mov  e,a
+	mov  a,l
+	sbb  d
+	mov  d,a
+	mov  a,l
+	sbb  c
+	mov  c,a
+	mov  a,l
+	sbb  b
+	mov  b,a
+	pop  h
+	ret
+
+
+qneghl: push b
+	push d
+	call qld
+	call qneg
+	call qst
+	pop  d
+	pop  b
+	ret
+
+; signed quad multiplication
+; u * (BCDE) --> (BCDE)
+
+qmul:	call csign			;take abs values and compute signs
+	push psw			;save result sign
+	call uqmul			;compute product
+qmul1:	pop  psw
+	jm   qneg			;complement product if needed
+	ret
+
+; csign takes abs vals of u, (BCDE), and computes product of their signs
+
+csign:	mov  a,b			;look at (BCDE) first
+	ora  a
+	push psw			;save flags
+	cm   qneg			;complement if needed
+	lxi  h,u			;now look at u
+	mov  a,m
+	ora  a
+	jp   csign1
+	call qneghl
+	pop  psw
+	xri  80h			;flip sign
+	ret
+csign1:	pop psw
+	ret
+
+; unsigned quad multiplication 
+; u * (BCDE) --> (BCDE)	    (expects ptr. to u in (HL)
+
+uqmul:	lxi  h,u
+	push h				;put pointer to u on stack
+	lxi  h,mq
+	call qst			;(BCDE) -> mq
+	lxi  b,0			;init product to 0
+	lxi  d,0
+uqmul1:	call qtsthl			;test if mq is 0
+	jz   uqmul2			;if so, done
+	xra  a				;clear carry
+	call qrarhl			;shift mq over
+	cc   qadd			;add u to (BCDE) if lsb=1
+	xthl				;get pointer to u
+	xra  a				;clear carry
+	call qralhl			;double u
+	xthl				;get back pointer to mq
+	jmp  uqmul1
+uqmul2:	pop  h				;restore stack
+	ret
+
+; signed division  u / (BCDE) --> (BCDE)
+
+qdiv:	call qtst			;first test for zero divisor
+	rz
+	call csign			;take care of signs
+	push psw			;save quotient sign
+	call uqdiv
+	call qld			;get quotient in (BCDE)
+	jmp  qmul1			;adjust sign of result
+
+;  signed remainder  u mod (BCDE) --> (BCDE)
+
+qmod:	call qtst			;test for zero modulus
+	rz
+	lda  u				;sign of u is that of result
+	ora  a
+	push psw			;save flags
+	call csign			;get abs val of args
+	call uqdiv			;remainder in (BCDE)
+	jmp  qmul1
+
+
+;  unsigned division  u / (BCDE) --> mq, remainder in (BCDE)
+
+
+
+uqdiv:	lxi  h,mq			;mq will contain quotient
+	call qclrhl			;clear it
+	push h				;save it on the stack
+
+	mvi  l,1			;now normalize divisor
+uqdiv1:	mov  a,b			;look at most signif non-sign bit
+	ani  40h
+	jnz   uqdiv2
+	call qral			;if not 1, shift left
+	inr  l
+	jmp  uqdiv1
+uqdiv2:	mov  a,l
+	sta  temp			;save normalization count
+	lxi  h,u			
+	call qxchg			;want divid in (BCDE), divisor in u
+	xthl				;pointer to mq in (HL), u on stack
+
+;main loop
+
+uqdiv3: call trial			;trial subtraction of divisor
+	call qralhl			;shift in the carry
+	lda  temp			;get the count
+	dcr  a
+	jz   uqdiv4			;done
+	sta  temp			;save count again
+	xthl				;divisor in (HL)
+	xra  a
+	call qrarhl			;shift it right one
+	xthl				;quotient in (HL)
+	jmp  uqdiv3
+
+uqdiv4: inx  sp
+	inx  sp				;clean off top of stack
+	ret
+
+
+trial:	call qsub			;subtract divid from divisor
+	call qneg			;actually want divisor from divid
+	stc				;assume was positive
+	rp
+	call qadd			;else must restore dividend
+	xra  a				;clear carry
+	ret
+
+
+;
+; routines to manipulate quads
+;
+; qld loads the quad pointed to by (HL) into (BCDE)
+
+qld:	push h
+	mov  b,m
+	inx  h
+	mov  c,m
+	inx  h
+	mov  d,m
+	inx  h
+	mov  e,m
+	pop  h
+	ret
+
+; qst is inverse of qld
+
+qst:	push h
+	mov  m,b
+	inx  h
+	mov  m,c
+	inx  h
+	mov  m,d
+	inx  h
+	mov  m,e
+	pop  h
+	ret
+
+
+
+; rotate  (BCDE) right thru carry
+
+qrar:	mov a,b
+	rar
+	mov b,a
+	mov a,c
+	rar
+	mov c,a
+	mov a,d
+	rar
+	mov d,a
+	mov a,e
+	rar
+	mov e,a
+	ret
+
+; same for quad pointed to by (HL)
+
+qrarhl:	push h
+	mov  a,m
+	rar
+	mov  m,a
+	inx  h
+	mov  a,m
+	rar
+	mov  m,a
+	inx  h
+	mov  a,m
+	rar
+	mov  m,a
+	inx  h
+	mov  a,m
+	rar
+	mov  m,a
+	pop  h
+	ret
+
+
+; rotate (BCDE) left thru carry
+
+qral:	mov a,e
+	ral
+	mov e,a
+	mov a,d
+	ral
+	mov d,a
+	mov a,c
+	ral
+	mov c,a
+	mov a,b
+	ral
+	mov b,a
+	ret
+
+; qralhl does it for quad pointed to by (HL)
+
+qralhl:	inx  h
+	inx  h
+	inx  h				;get to rightmost byte
+	mov  a,m
+	ral
+	mov  m,a
+	dcx  h
+	mov  a,m
+	ral
+	mov  m,a
+	dcx  h
+	mov  a,m
+	ral
+	mov  m,a
+	dcx  h
+	mov  a,m
+	ral
+	mov  m,a
+	ret
+	
+
+;qclrhl clears quad pointed to by (HL)
+
+qclrhl:	push h
+	xra  a
+	mov  m,a
+	inx  h
+	mov  m,a
+	inx  h
+	mov  m,a
+	inx  h
+	mov  m,a
+	pop  h
+	ret
+
+
+; qtst tests sign of (BCDE), setting the usual flags
+
+qtst:	mov  a,b			;look at most signif byte
+	ora  a
+	rnz
+	ora  c				;test for zero
+	ora  d
+	ora  e
+qtst1:	rp
+	mvi  a,1
+	ora  a  
+	ret
+	
+qtsthl:	mov  a,m
+	ora  a
+	rnz
+	push h
+	inx  h
+	ora  m
+	inx  h
+	ora  m
+	inx  h
+	ora  m
+	pop  h
+	jmp  qtst1
+
+; swap (BCDE) with thing pointed to by HL
+
+qxchg:	push h
+	mov  a,m
+	mov  m,b
+	mov  b,a
+	inx  h
+	mov  a,m
+	mov  m,c
+	mov  c,a
+	inx  h
+	mov  a,m
+	mov  m,d
+	mov  d,a
+	inx  h
+	mov  a,m
+	mov  m,e
+	mov  e,a
+	pop  h
+	ret
+
+	ENDFUNCTION
+
+

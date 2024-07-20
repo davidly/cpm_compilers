@@ -1,0 +1,4 @@
+casm $1
+asm $1.aaz  ;The "aa" should be changed to the proper disk for your system
+cload $1
+

@@ -1,0 +1,362 @@
+;
+;	BD Software C Compiler v1.50
+;	Standard Library Machine Language Functions (part B)
+;	Copyright (c) 1982 by Leor Zolman
+;
+; This file is in "CSM" format; to convert to CRL format,
+; use CASM.SUB in conjunction with CASM.COM, ASM.COM and DDT.COM.
+; 
+; Functions appearing in this file:
+;
+;	index	getline
+;	setjmp	longjmp
+;	setplot	clrplot	line	plot	txtplot
+;
+
+	INCLUDE "bds.lib"
+
+
+;
+; Index(str,substr)
+; char *str, *substr;
+;
+; Returns index of substr in str, or -1 if not found.
+;
+
+	FUNCTION	index
+	call	arghak
+	lhld	arg1
+	xchg		;main str ptr in DE
+	lhld	arg2	;substr ptr in HL
+	dcx	d
+index1:	inx	d
+	ldax	d	;end of str?
+	ora	a
+	jnz	index2
+	lxi	h,-1	;yes. not found.
+	ret
+index2:	cmp	m	;quick check for dissimilarity
+	jnz	index1	;loop if not same right here
+	push	d	;else do long compare
+	push	h
+index3:	inx	h
+	inx	d
+	mov	a,m	;end of substr?
+	ora	a
+	jnz	index4	;if not, go on testing
+	pop	d	;else matches
+	pop	d	;get starting address of substr in DE
+	lhld	arg1	;subtract beginning of str
+	call	cmh
+	dad	d	;and return the result
+	ret
+
+index4:	ldax	d	;current char match?
+	cmp	m
+	jz	index3	;if so, keep testing
+	pop	h	;else go on to next char in str
+	pop	d
+	jmp	index1
+	ENDFUNC
+
+;
+; Getline(str,lim)
+; char *str;
+;
+; Gets a line of text from the console, up to 'lim' characters.
+;
+
+	FUNCTION	getline
+	push	b	;save BC
+	call	ma3toh	;get max no. of chars
+	mov	c,a	;save max length in C
+	dcr	c	;allow room for final terminating null
+	lxi	d,10	;allow a bit extra stack for good measure
+	dad	d
+	call	cmh	;save amount of space to allocate on stack
+	push	h
+	call	ma3toh	;get destination address
+	xthl		;push dest addr, get back stack offset
+	dad	sp	;allocate space on stack
+	push	h	;save buffer address
+	mov	m,c	;Set max # of characters
+	mvi	c,getlin
+	xchg		;put buffer addr in DE
+	call	bdos	;get the input line
+	mvi	c,conout
+	mvi	e,lf	;put out a LF
+	call	bdos
+	pop	h	;get back buffer address
+	inx	h	;point to returned char count
+	mov	b,m	;set B equal to char count
+	inx	h	;HL points to first char of line
+	pop	d	;DE points to start destination area
+	mov	c,b	;save char count in C
+copyl:	mov	a,b	;copy line to start of buffer
+	ora	a
+	jz	gets2
+	mov	a,m
+	stax	d
+	inx	h
+	inx	d
+	dcr	b
+	jmp	copyl
+	
+gets2:	xra	a	;store terminating null
+	stax	d
+	mov	l,c	;return char count in HL
+	mvi	h,0
+	pop	b
+	ret
+	ENDFUNC
+
+	FUNCTION	setjmp
+	call	ma1toh
+	mov	m,c	;save BC
+	inx	h
+	mov	m,b
+	inx	h
+	xchg
+	lxi	h,0
+	dad	sp
+	xchg
+	mov	m,e	;save SP
+	inx	h
+	mov	m,d
+	inx	h
+	pop	d	;save return address
+	push	d
+	mov	m,e
+	inx	h
+	mov	m,d
+	lxi	h,0	;and return 0
+	ret
+	ENDFUNC
+
+	FUNCTION	longjmp
+	call	ma1toh	;get buffer address
+	mov	c,m	;restore BC
+	inx	h
+	mov	b,m
+	inx	h
+	mov	e,m	;restore SP...first put it in DE
+	inx	h
+	mov	d,m
+	inx	h
+	shld	tmp2	;save pointer to return address
+	call	ma2toh	;get return value
+	xchg		;put return val in DE, old SP in HL
+	sphl		;restore SP with old value
+	pop	h	;pop retur address off stack
+	lhld	tmp2	;get back ptr to return address
+	mov	a,m
+	inx	h
+	mov	h,m
+	mov	l,a	;HL holds return address
+	xchg		;put ret addr in DE, get return value in HL
+	push	d	;push return address on stack
+	ret		;and return...
+	ENDFUNC
+
+
+	FUNCTION	setplot
+	call	arghak
+	push	b
+ 	lhld	arg1	;get base address
+	shld	pbase	;	initialize
+	lhld	arg3	;get y size
+	shld	ysize	;	initialize
+	xchg		;leave it in DE
+	lhld	arg2	;get x size
+	shld	xsize	;	initialize
+	call	usmul	;figure out screen size
+	shld	psize	;	initialize
+	pop	b
+	ret
+	ENDFUNC
+
+	FUNCTION	clrplot
+	lhld	psize	;put screen size
+	xchg		;	in DE
+	lhld	pbase	;get screen base in HL
+clr2:	mvi	m,' '	;and
+	inx	h	;   clear
+	dcx	d	; 	each
+	mov	a,d	;	  location
+	ora	e	;		(all DE of 'em)
+	jnz	clr2
+	ret
+	ENDFUNC
+
+	FUNCTION	line
+	call	arghak	;get args
+	push	b
+	lda	arg2	;put one set of endpoint data in DE in
+	mov	c,a	;format:  D = x = arg2, E = y = arg3
+	lda	arg3
+	mov	b,a
+	mov	d,b
+	mov	e,c
+	call	put	; put up one endpoint at BC
+	lda	arg4	;put other endpoint data in HL
+	mov	c,a
+	lda	arg5
+	mov	b,a
+	call	put	;(but first put up the point from BC)
+	mov	h,b
+	mov	l,c
+	call	liner	;now connect them...
+	pop	b
+	ret		;all done.
+
+liner:	mov	a,d
+	sub	h
+	call	abs
+	cpi	2
+	jnc	line2	;are points far enough apart
+			;in both dimensions to warrant
+	mov	a,e	;drawing a line?
+	sub	l
+	call	abs
+	cpi	2
+	jnc	line2
+	ret		;if not, return.
+
+line2:	call	midp	;find midpoint
+	call	put	;put it up
+	push	d	;set up recursive calls
+	mov	d,b
+	mov	e,c
+	call	liner
+	xthl
+	call	liner
+	xchg
+	pop	h
+	ret		;and we are done!
+
+midp:	push	h
+	push	d
+
+	mov	a,h
+	sub	d
+	ani	1
+	jz	mid3
+
+	mov	a,h
+	cmp	d
+	jc	mid2a
+	inr	d
+	jmp	mid3
+
+mid2a:	dcr	h
+
+mid3:	mov	a,l
+	sub	e
+	ani	1
+	jz	mid4
+
+	mov	a,l
+	cmp	e
+	jc	mid3a
+	inr	e
+	jmp	mid4
+
+mid3a:	dcr	l
+
+mid4:	mov	a,h
+	add	d
+	ora	a
+	rrc
+	mov	b,a
+	mov	a,l
+	add	e
+	ora	a
+	rrc
+	mov	c,a
+	pop	d
+	pop	h
+	ret
+
+put:	push	h
+	push	d
+	mov	a,b
+	lhld	ysize
+	xchg
+	lhld	pbase
+	inr	a
+put1:	dcr	a
+	jz	 put2
+	dad	d
+	jmp	put1
+
+put2:	mov	e,c
+	mvi	d,0
+	dad	d
+	lda	arg1
+	mov	m,a
+	pop	d
+	pop	h
+	ret
+
+abs:	ora	a
+	rp
+	cma
+	inr	a
+	ret
+	ENDFUNC
+
+	FUNCTION	plot
+	call	arghak
+	lda	arg1
+	lhld	ysize
+	xchg
+	lhld	pbase
+	inr	a
+plot1:	dcr	a
+	jz	plotc
+	dad	d
+	jmp	plot1
+
+plotc:	lda	arg2
+	mov	e,a
+	mvi	d,0
+	dad	d
+	lda	arg3
+	mov	m,a
+	ret
+	ENDFUNC
+
+	FUNCTION	txtplot
+	call	arghak
+	push	b
+	lhld	arg2
+	xchg
+	lhld	ysize
+	call	usmul
+	xchg
+	lhld	arg3
+	dad	d
+	xchg
+	lhld	pbase
+	dad	d
+	xchg
+	lhld	arg1
+	mvi	b,0
+	lda	arg4
+	ora	a
+	jz	txt2
+	mvi	b,80h
+txt2:	mov	a,m
+	ora	a
+	jnz	txt3
+	pop	b
+	ret
+
+txt3:	ora	b
+	stax	d
+	inx	h
+	inx	d
+	jmp	txt2
+	ENDFUNC
+
+
