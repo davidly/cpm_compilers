@@ -1,8 +1,8 @@
 ntvcm Pascal48 %1
 
 rem pasopt requires some uninitialized RAM to be non-zero to work. It depends on some other
-rem app having run to initialize that memory. It's not a single byte -- it's bytes per parse
-rem record spread over the array of records. NTVCM has a workaround.
+rem app having run to initialize that memory. It's a byte at BDOS - 30eh, which is 0fbeeh
+rem for NTVCM, which fills this byte for this app.
 ntvcm pasopt %1.SRC
 
 ntvcm asmbl main,%1/rel
