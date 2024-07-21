@@ -1,0 +1,42 @@
+Package IO Is
+
+-- The I/O package for JANUS V. 1.4.5
+-- Last Modified  10/13/82
+
+
+    -- Copyright 1982  RR Software, P.O. Box 1512, Madison WI 53701
+    -- Permission is hereby given to distribute Object Code produced from
+    -- these libraries.
+
+
+Type File_Mode Is (No_Access,Read_Only,Write_Only,Read_Write);
+
+IOresult : Integer; -- The result of the IO operation
+
+Procedure Open(Fyle : In Out File; Name : In String; Mode : In File_Mode);
+    -- Open the file name and give it the mode mode
+Procedure Create(Fyle : In Out File; Name : In String; Mode : In File_Mode);
+    -- Create the file name and give it the mode mode
+Procedure Delete(Name : In String);
+    -- Delete the file name
+Procedure Close(Fyle : In Out File);
+    -- Close the file fyle
+Function Name(Fyle : In File) Return String;
+    -- Return the name of the Open file
+Function Is_open(Fyle : In File) Return Boolean;
+    -- Is the file fyle open?
+Function Get_Line(Fyle : In File) Return String;
+    -- Get a line from the file fyle
+Procedure Put_Hex(Fyle : In File; val : In Integer);
+    -- Write the integer in hexidecimal (no special format)
+Function End_of_file(fyle : In File) Return Boolean;
+    -- End of File Reached (in a text file)?
+Function EOF(fyle : In File) Return Boolean;
+    -- End of File Reached (in a binary file)?
+Function Disk_full(fyle : In File) Return Boolean;
+    -- Is the Disk full ?
+Function End_of_Line(fyle : In File) Return Boolean;
+    -- End of Line Reached?
+
+End IO;
+

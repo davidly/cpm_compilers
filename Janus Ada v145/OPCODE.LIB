@@ -1,0 +1,98 @@
+Package Opcode Is
+    -- 8080/Z80 opcodes
+
+    -- Copyright 1982  RR Software, P.O. Box 1512, Madison WI 53701
+    -- Permission is hereby given to distribute Object Code produced from
+    -- these libraries.
+
+    LXIB : Constant := 16#01#;
+    LXID : Constant := 16#11#;
+    LXIH : Constant := 16#21#;
+    INRA : Constant := 16#3C#;
+    DCRB : Constant := 16#05#;
+    DCRE : Constant := 16#1D#;
+    DCRA : Constant := 16#3D#;
+    MVIB : Constant := 16#06#;
+    MVIC : Constant := 16#0E#;
+    MVIH : Constant := 16#26#;
+    MVIM : Constant := 16#36#;
+    MVIA : Constant := 16#3E#;
+    INXD : Constant := 16#13#;
+    INXH : Constant := 16#23#;
+    DCXB : Constant := 16#0B#;
+    DCXD : Constant := 16#1B#;
+    DCXH : Constant := 16#2B#;
+    DADB : Constant := 16#09#;
+    DADD : Constant := 16#19#;
+    DADH : Constant := 16#29#;
+    LDAXD: Constant := 16#1A#;
+    STAXD: Constant := 16#12#;
+    LHLD : Constant := 16#2A#;
+    SHLD : Constant := 16#22#;
+    LDA  : Constant := 16#3A#;
+    STA  : Constant := 16#32#;
+    CMA  : Constant := 16#2F#;
+    RAL  : Constant := 16#17#;
+    RAR  : Constant := 16#1F#;
+    MOVBH: Constant := 16#44#;
+    MOVBA: Constant := 16#47#;
+    MOVCL: Constant := 16#4D#;
+    MOVDM: Constant := 16#56#;
+    MOVEM: Constant := 16#5E#;
+    MOVHB: Constant := 16#60#;
+    MOVHA: Constant := 16#67#;
+    MOVLC: Constant := 16#69#;
+    MOVLA: Constant := 16#6F#;
+    MOVMB: Constant := 16#70#;
+    MOVMC: Constant := 16#71#;
+    MOVMD: Constant := 16#72#;
+    MOVME: Constant := 16#73#;
+    MOVMA: Constant := 16#77#;
+    MOVAC: Constant := 16#79#;
+    MOVAE: Constant := 16#7B#;
+    MOVAH: Constant := 16#7C#;
+    MOVAL: Constant := 16#7D#;
+    MOVAM: Constant := 16#7E#;
+    ANAB : Constant := 16#A0#;
+    XRAB : Constant := 16#A8#;
+    XRAA : Constant := 16#AF#;
+    ORAB : Constant := 16#B0#;
+    ORAA : Constant := 16#B7#;
+    CMPB : Constant := 16#B8#;
+    CMPD : Constant := 16#BA#;
+    CMPE : Constant := 16#BB#;
+    POPB : Constant := 16#C1#;
+    POPD : Constant := 16#D1#;
+    POPH : Constant := 16#E1#;
+    POPPSW:Constant := 16#F1#;
+    PUSHB: Constant := 16#C5#;
+    PUSHD: Constant := 16#D5#;
+    PUSHH: Constant := 16#E5#;
+    PUSHPSW:Constant:= 16#F5#;
+    JNZ  : Constant := 16#C2#;
+    JMP  : Constant := 16#C3#;
+    JZ   : Constant := 16#CA#;
+    JNC  : Constant := 16#D2#;
+    JC   : Constant := 16#DA#;
+    CALL : Constant := 16#CD#;
+    ADI  : Constant := 16#C6#;
+    ACI  : Constant := 16#CE#;
+    SUI  : Constant := 16#D6#;
+    SBI  : Constant := 16#DE#;
+    ANI  : Constant := 16#E6#;
+    XRI  : Constant := 16#EE#;
+    ORI  : Constant := 16#F6#;
+    CPI  : Constant := 16#FE#;
+    XTHL : Constant := 16#E3#;
+    XCHG : Constant := 16#EB#;
+    
+End Opcode;
+ : Constant := 16#C3#;
+    JZ   : Constant := 16#CA#;
+    JNC  : Constant := 16#D2#;
+    JC   : Constant := 16#DA#;
+    CALL : Constant := 16#CD#;
+    ADI  : Constant := 16#C6#;
+    ACI  : Constant := 16#CE#;
+    SUI  : Constant := 16#D6#;
+    SBI
