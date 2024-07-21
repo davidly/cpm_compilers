@@ -1,0 +1,32 @@
+Date   : Wed, 18 Jan 1984 07:14:34-PST (Wed)
+From   : hplabs!hao!seismo!rlgvax!plunkett@ucb-vax
+Subject: Demise of JRT Pascal
+
+-
+JRT Systems, makers of the $29.95 JRT Pascal compiler, have filed Ch. 11
+Bankruptcy.  For some time I have been reading various letters-to-editors
+complaining that JRT was slow to respond to orders, if at all.  Other
+complaints, most notably from J. Pournelle of Byte, mentioned that
+JRT Pascal was not Standard, and that it was a shoddy piece of work,
+viz., easily crashable.  Yet "a bargain at $29.95".
+
+The pricing seems to have been its undoing.  JRT was flooded with orders
+it could not handle, the revenue received is now shown to have been
+insufficient to support the software firm, yet almost everywhere I
+read reviews commending Mr. Tyson for the courage of pricing it at
+$29.95; that it was a "steal" for the Pascal programmer.  It strikes
+me as a foolish act of irresponsibility to price a compiler so low,
+and somewhat negligent on the part of reviewers to be seduced by the
+mere $29.95.  (One exception was Dr. Dobbs that rightly said it was
+*not* a bargain regardless of price.)
+
+If the reports of JRT developing a Modula-2 compiler are true, I hope
+that they will invest alot more effort into the product, price it
+accordingly, and price it to support their company in maintaining and
+improving it.  And in filling orders promptly.
+
+JRT has committed a disservice to the software industry with their
+JRT Pascal.
+
+Scott Plunkett
+..seismo!rlgvax!plunkett
