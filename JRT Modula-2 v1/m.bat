@@ -1,4 +1,4 @@
-rem I can't find documentation and I can't figure out to generate an .int file. So this is a workaround:
+rem I can't find documentation and I can't figure out how to generate an .int file. So this is a workaround:
 
 copy modula.lib %1.lib
 
