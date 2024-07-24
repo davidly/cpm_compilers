@@ -17,7 +17,7 @@ In some cases I've included user manuals in PDF form that I've found online for 
 
 I can vouch that the m.bat script in each folder builds working benchmark binaries. In the cases of tools that can't be invoked via the command-line (e.g. Turbo Pascal), those tools also produce working benchmark binaries.
 
-It is my intention to show each tool in its best light with respect to the benchmarks. If you know of better optimization flags or ways to improve the benchmark source code for a given tool, please feel free to submit a pull request or open an issue. That said, I want to avoid cheap hacks like using peek/poke in BASIC instead of local variables.
+It is my intention to show each tool in its best light with respect to the benchmarks. If you know of better optimization flags or ways to improve the benchmark source code for a given tool, please feel free to submit a pull request or open an issue. That said, I want to avoid cheap hacks like using peek/poke in BASIC instead of variables.
 
 The benchmarks include:
   * sieve: The classic from BYTE Magazine that counts prime numbers.
