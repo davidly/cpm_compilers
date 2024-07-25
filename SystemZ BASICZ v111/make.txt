@@ -6,9 +6,9 @@ delete these or bz will give errors
     del e.bzs
     del e.com
 
-run bz load/save/compile/bind/exit
+run bz load/save/compile/bind/exit:
 
-    ntvcm bz.com
+    ntvcm BZ.COM
     load e.bas
     save e
     compile e
@@ -18,3 +18,5 @@ run bz load/save/compile/bind/exit
     e
     dos
 
+run e.com:
+    ntvcm -c -p E.COM
