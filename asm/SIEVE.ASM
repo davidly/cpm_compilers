@@ -47,9 +47,6 @@ false  equ 0
 loops  equ 10
 size   equ 8190                     ; lots of assumptions about this size below / can't easily change it
 
-sizehi equ size SHR 8
-sizelo equ size AND 0ffh
-
 sizep1hi equ ( size + 1 ) SHR 8     ; size plus 1 high
 sizep1lo equ ( size + 1 ) AND 0ffh  ; size plus 1 low
 
@@ -67,14 +64,14 @@ org     100h
         dad        sp
         shld       SaveSP           ; save stack pointer
         lxi        h, afterArray
-        sphl			    ; make sp point to just beyond the array
+        sphl                        ; make sp point to just beyond the array
 
-        lxi        h, 0101h	    ; true true
+        lxi        h, 0101h         ; true true
         lxi        b, 0002h         ; 2 * 256 * 16 = size of the array 8192
 
   fillagain:
         push       h                ; write 16 bytes of true
-        push       h		    
+        push       h                
         push       h
         push       h
         push       h
@@ -82,17 +79,16 @@ org     100h
         push       h
         push       h
         dcr        b
-        jnz        fillagain	    ; do this 256 times
+        jnz        fillagain        ; do this 256 times
         dcr        c
-        jnz        fillagain	    ; do this 2 times
+        jnz        fillagain        ; do this 2 times
 
         lhld       SaveSP           ; restore stack pointer
         sphl
 
         ; iterate through array entries and count primes
 
-        mvi        c, ( afterFlags AND 0ffh ) ; constant for performance
-        mvi        b, 0             ; handy place for 0 byte
+        lxi        b, afterFlags    ; handy place for this constant
         lxi        d, 0             ; d is "i" in the outer for loop
 
   nextprime:                        ; for (i = 0; i <= SIZE; i++) {
@@ -111,20 +107,25 @@ org     100h
         xchg
         lhld       PKFLAGS
 
-  kloop:                            ; hl = pointer to k'th element in flags. dc = prime
-        dad        d                ; k += prime
-
         ; check if pointer to after last item in flags < pointer to k'th element in flags (hl)
-        ; then exit k loop. both values are guaranteed to be positive numbers given where the app is loaded by cp/m
+        ; then exit k loop. both values are guaranteed to be positive numbers given where the app is loaded by cp/m.
+        ; this is duplicate code to that in kloop, but it avoids an extra instruction in the loop.
 
+        dad        d                ; k += prime
         mov        a, l
         sub        c                ; c has ( afterFlags AND 0ffh ) because sub is faster than sui.
         mov        a, h
-        sbi        ( ( afterFlags SHR 8 ) AND 0ffh )
+        sbb        b                ; b has ( afterFlags SHR 8 ) because sbb is faster than sbi.
         jnc        inccount
 
-        mov        m, b             ; flags[ k ] = false
-        jmp        kloop
+  kloop:                            ; hl = pointer to k'th element in flags. dc = prime
+        mvi        m, 0             ; flags[ k ] = false
+        dad        d                ; k += prime
+        mov        a, l
+        sub        c                ; bc has afterFlags; see if we've moved there or beyond
+        mov        a, h
+        sbb        b
+        jc         kloop
 
   inccount:                         
         lhld       COUNT            ; count++
@@ -252,9 +253,9 @@ NUM:        db      '$'             ; Space for number. cp/m strings end with a 
 CRLF:       db      13,10,0
 STRPRIMES:  db     ' primes.', 13, 10, 0
 
-flags:      ds      size + 1	    ; 8191 bytes
-afterflags: db      69h		    ; wasted byte so initialization of array is faster
-afterarray:			    ; flags + 8192. 8k array
+flags:      ds      size + 1        ; 8191 bytes
+afterflags: db      69h             ; wasted byte so initialization of array is faster
+afterarray:                         ; flags + 8192. 8k array
 
 end
 

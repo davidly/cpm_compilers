@@ -212,20 +212,17 @@ PUTHL:                              ; print the signed 16-bit number in HL
         stax    d                   
         jmp     bdos                ; And only then print the string. bdos will return to caller
 
-; unsigned multiply de by hl, result in hl. overflow is lost.
+; unsigned multiply de by l, result in hl. overflow is lost.
 umul:
         mov     a, l
-        ora     h
+        cpi     0
         rz
         push    b
-        mov     b, h
         mov     c, l
         lxi     h, 0
   umul$loop:
         dad     d
-        dcx     b
-        mov     a, b
-        ora     c
+        dcr     c
         jnz     umul$loop
         pop     b
         ret
