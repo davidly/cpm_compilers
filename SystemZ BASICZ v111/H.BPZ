@@ -1,0 +1,16 @@
+YS OFF 
+
+2350 RETURN 
+
+>
+R%=R%+1
+
+2300 GOTO 2170
+
+2310 LET R%=R%-1
+
+2320 PRINT "<8>";
+
+2330 RETURN 
+
+2340 REM K

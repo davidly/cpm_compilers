@@ -1,0 +1,20 @@
+To generate e.com from e.bas:
+
+delete these or bz will give errors
+
+    del e.bzo
+    del e.bzs
+    del e.com
+
+run bz load/save/compile/bind/exit
+
+    ntvcm bz.com
+    load e.bas
+    save e
+    compile e
+    bind
+    rz
+    e
+    e
+    dos
+
