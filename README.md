@@ -20,9 +20,9 @@ I can vouch that the m.bat script in each folder builds working benchmark binari
 It is my intention to show each tool in its best light with respect to the benchmarks. If you know of better optimization flags or ways to improve the benchmark source code for a given tool, please feel free to submit a pull request or open an issue. That said, I want to avoid cheap hacks like using peek/poke in BASIC instead of variables.
 
 The benchmarks include:
-  * sieve: The classic from BYTE Magazine that counts prime numbers.
-  * e: Computes the irrational number e to 192 digits.
-  * ttt: proves you can't win at tic-tac-toe if the opponent is competent
+  * sieve: The classic from BYTE Magazine that counts prime numbers. Measures array and loop performance.
+  * e: Computes the irrational number e to 192 digits. Measures integer multiply/divide along with array and loop performance.
+  * ttt: proves you can't win at tic-tac-toe if the opponent is competent. Measures function call and stack access along with array and loop performance.
   * tm: test malloc. This calls malloc/calloc/free in the C runtime to measure performance. It's C only and many compilers can't run it.
 
 To run the compilers on Windows, use the m.bat script in each folder. e.g.:
