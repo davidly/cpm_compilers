@@ -20,9 +20,9 @@ I can vouch that the m.bat script in each folder builds working benchmark binari
 It is my intention to show each tool in its best light with respect to the benchmarks. If you know of better optimization flags or ways to improve the benchmark source code for a given tool, please feel free to submit a pull request or open an issue. That said, I want to avoid cheap hacks like using peek/poke in BASIC instead of variables.
 
 The benchmarks include:
-  * sieve: The classic from BYTE Magazine that counts prime numbers.
-  * e: Computes the irrational number e to 192 digits.
-  * ttt: proves you can't win at tic-tac-toe if the opponent is competent
+  * sieve: The classic from BYTE Magazine that counts prime numbers. Measures array and loop performance.
+  * e: Computes the irrational number e to 192 digits. Measures integer multiply/divide along with array and loop performance.
+  * ttt: proves you can't win at tic-tac-toe if the opponent is competent. Measures function call and stack access along with array and loop performance.
   * tm: test malloc. This calls malloc/calloc/free in the C runtime to measure performance. It's C only and many compilers can't run it.
 
 To run the compilers on Windows, use the m.bat script in each folder. e.g.:
@@ -47,6 +47,8 @@ The Borland Pascal and Modula-2 products don't support command-line builds, so y
 The build scripts assume ntvcm is in your path. Linux systems generally have case-sensitive file systems and CP/M generally forces uppercase filenames. You're best off if you change all tool files, source files, and arguments to uppercase on Linux.
 
 If you're running Linux or MacOS and see perplexing compilation errors, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them. Some compilers require a ^Z / 0x1a at the end of files. Since CP/M text files end in ^z/0x1a, unix2dos requires -f to force the conversion of what it thinks is a binary file.
+
+The BA compiler is in the [tic-tac-toe and its applicability to nuclear war](https://github.com/davidly/ttt) repo. It generates code for 6502, 8080, 8086, x86, x64, arm32, arm64, and 64-bit RISC-V.
 
 The Cowgol 0.6.1 compiler has not yet been tested with NTVCM and the benchmark and build scripts don't yet exist. If you have the interest have at it and send a pull request.
 
