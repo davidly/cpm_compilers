@@ -1,0 +1,111 @@
+
+  /*
+      System Data: byte assignments
+      -----------------------------
+
+      000-000 Mem$top, top page of memory
+      001-001 Nmb$cns, number of consoles
+      002-002 Brkpt$RST, breakpoint RST #
+      003-003 Add system call user stacks, boolean
+      004-004 Bank switched, boolean
+      005-005 Z80 version, boolean
+      006-006 banked bdos, boolean
+      007-007 RESBDOS top+1 (BNKBDOS XIOS jmp tbl) base page
+      008-008 RESBDOS base page
+      009-010 used by CP/NET for mstr cfg tbl addr
+      011-011 XDOS base page
+      012-012 RSP's (BNKXIOS top+1) base page
+      013-013 BNKXIOS base page
+      014-014 BNKBDOS base page
+      015-015 Max$mem$seg, max memory segment number
+      016-047 Memory segment table, filled in by GENSYS if
+                memory bank switched, otherwise by MPMLDR
+      048-063 Breakpoint vector table, filled in by DDTs
+      064-079 Unassigned
+      080-095 System call user stacks
+      096-119 Unassigned
+      120-121 Nmb records in MPM.SYS
+      122-122 # ticks/sec
+      123-123 System Drive
+      124-124 Common Memory Base Page
+      125-125 Number of Rsp's
+      126-127 Listcp Address
+      128-143 Subflg, submit flag array
+      144-180 Copyright message
+      181-186 Serial #
+      187-187 Max locked records/process
+      188-188 Max open files/process
+      189-190 # list items
+      191-192 Pointer to base of lock table free space
+      193-193 Total system locked records
+      194-194 Total system open files
+      195-195 Dayfile logging
+      196-196 Temporary file drive
+      197-197 Number of printers
+      198-240 Unassigned
+      241-241 Common Xdos base
+      242-242 Banked Xdos base
+      243-243 Tmp pd base
+      244-244 Console dat base
+      245-246 Bdos/Xdos address
+      247-247 Tmp base address
+      248-248 Nmbrsps
+      249-249 Brsp base address
+      250-251 Brspl, non-resident rsp process link
+      252-253 Sysdatadr, MP/M data page address
+      254-255 Rspl, resident system process link, the address
+                of the next Rsp, list terminates with a zero.
+  */
+
+  declare mem$top byte at (.system$data(000));
+  declare nmb$cns byte at (.system$data(001));
+  declare brkpt$RST byte at (.system$data(002));
+  declare sys$call$stks boolean at (.system$data(003));
+  declare bank$switched boolean at (.system$data(004));
+  declare z80$cpu boolean at (.system$data(005));
+  declare banked$bdos boolean at (.system$data(006));
+  declare xios$jmp$tbl$base byte at (.system$data(007));
+  declare resbdos$base byte at (.system$data(008));
+  declare xdos$base byte at (.system$data(011));
+  declare rsp$base byte at (.system$data(012));
+  declare bnkxios$base byte at (.system$data(13));
+  declare bnkbdos$base byte at (.system$data(14));
+  declare nmb$mem$seg byte at (.system$data(015));
+  declare mem$seg$tbl (8) structure (
+    base byte,
+    size byte,
+    attrib byte,
+    bank byte  )
+    at (.system$data(016));
+  declare breakpoint$vector (8) address at (.system$data(048));
+  declare user$stacks (8) address at (.system$data(080));
+  declare nmb$records address at (.system$data(120));
+  declare ticks$per$second byte at (.system$data(122));
+  declare system$drive byte at (.system$data(123));
+  declare common$base byte at (.system$data(124));
+  declare nmb$rsps byte at (.system$data(125));
+  declare listcpadr address at (.system$data(126));
+  declare submit$flags (16) address at (.system$data(128));
+/*declare copyright (37) byte at (.system$data(144));*/
+/*declare serial$number (6) byte at (.system$data(181));*/
+  declare max$locked$records byte at (.system$data(187));
+  declare max$open$files byte at (.system$data(188));
+  declare total$list$items address at (.system$data(189));
+  declare lock$free$space$adr address at (.system$data(191));
+  declare total$system$locked$records byte at (.system$data(193));
+  declare total$system$open$files byte at (.system$data(194));
+  declare day$file byte at (.system$data(195));
+  declare temp$file$drive byte at (.system$data(196));
+  declare nmb$printers byte at (.system$data(197));
+  declare cmnxdos$base byte at (.system$data(241));
+  declare bnkxdos$base byte at (.system$data(242));
+  declare tmpd$base byte at (.system$data(243));
+  declare console$dat$base byte at (.system$data(244));
+  declare bdos$xdos$adr address at (.system$data(245));
+  declare tmp$base byte at (.system$data(247));
+  declare nmb$brsps byte at (.system$data(248));
+  declare brsp$base byte at (.system$data(249));
+  declare brspl address at (.system$data(250));
+  declare rspl address at (.system$data(254));
+
+

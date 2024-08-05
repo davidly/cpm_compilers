@@ -1,0 +1,44 @@
+$nolist
+/*
+    Proces Literals
+*/
+
+  declare process$header literally
+    'structure (pl address,
+                status byte,
+                priority byte,
+                stkptr address';
+  declare bdos$save literally
+               'disk$set$dma address,
+                disk$slct byte,
+                dcnt address,
+                searchl byte,
+                searcha address,
+                drvact address,
+                registers (20) byte,
+                scratch (2) byte)';
+  declare process$descriptor literally
+               'process$header,
+                name (8) byte,
+                console byte,
+                memseg byte,
+                b address,
+                thread address,
+                bdos$save';
+
+  declare rtr$status       literally '0',
+          dq$status        literally '1',
+          nq$status        literally '2',
+          poll$status      literally '3',
+          FlgWt$status     literally '4',
+          Delay$status     literally '5',
+          Swap$status      literally '6',
+          Terminate$status literally '7',
+          Set$Prior$status literally '8',
+          Dispatch$status  literally '9',
+          Attach$status    literally '10',
+          Detach$status    literally '11',
+          Set$cns$status   literally '12';
+
+$list
+

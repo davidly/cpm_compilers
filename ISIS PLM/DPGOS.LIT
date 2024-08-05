@@ -1,0 +1,25 @@
+$nolist
+
+  declare
+    ostod      literally '0000h',
+    osrlr      literally '0005h',
+    osdlr      literally '0007h',
+    osdrl      literally '0009h',
+    osplr      literally '000bh',
+    osslr      literally '000dh',
+    osqlr      literally '000fh',
+    osthrdrt   literally '0011h',
+    osnmbcns   literally '0013h',
+    oscnsatt   literally '0014h',
+    oscnsque   literally '0034h',
+    osnmbflags literally '0054h',
+    ossysfla   literally '0055h',
+    osnmbsegs  literally '0095h',
+    osmsegtbl  literally '0096h',
+    ospdtbl    literally '00b6h',
+    osnmblst   literally '0256h',
+    oslstatt   literally '0257h',
+    oslstque   literally '0277h';
+
+$list
+

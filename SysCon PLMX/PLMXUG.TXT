@@ -1,0 +1,2500 @@
+PLMXUG.WS4      (= PLMX User's Guide)
+----------
+
+CP/M 1.4 -- PLMX User's Guide, System Consultants, Inc., 1980
+
+(Retyped by Emmanuel ROCHE.)
+
+
+                              PLMX User's Guide
+
+                                8080/8085/Z-80
+                                  (CP/M 1.4)
+
+           PLMX User's Guide, 8080/8085/Z-80 (CP/M) - SCI-PDG-100B
+
+
+Table of Contents
+-----------------
+
+Section
+-------
+
+   1    Introduction
+
+   2    References
+
+   3    Creation of Source Files
+
+   4    Modular Programming
+
+   5    Invocation of the Compiler
+
+   6    File Names Used by PLMX
+
+   7    Error Message Formats
+
+   8    Error Recovery
+
+   9    Output of the Compiler
+
+   10   Linkage of Programs
+
+   11   Implementation Specifics
+
+        11.1    RE-ENTRANT Procedures
+        11.2    INTERRUPT Attribute
+        11.3    Variable Initialization
+        11.4    Macro Declarations
+        11.5    EXTERNAL and PUBLIC Names
+        11.6    Restrictions on Names
+        11.7    DO-CASE Restrictions
+        11.8    Maximum Nesting Levels
+        11.9    Optimization
+        11.10   Maximum Parameter List Size
+        11.11   INCLUDE Pseudo-operation
+        11.12   Size Limits
+        11.13   AT Attribute
+        11.14   Compile-Time Stack Checking
+        11.15   Label Declarations
+        11.16   Run-Time Library
+
+   12   Built-In Procedures and Predeclared Variables
+
+        12.1    INPUT Procedure
+        12.2    LENGTH, LAST, and SIZE Procedures
+        12.3    LOW, HIGH, and DOUBLE Procedures
+        12.4    ROL and ROR Procedures
+        12.5    SHR and SHL Procedures
+        12.6    MOVE Procedure
+        12.7    TIME Procedure
+        12.8    OUTPUT Array
+        12.9    MEMORY Array
+        12.10   STACKPTR Variable
+
+   13   Features Involving Hardware Flags
+
+        13.1    PLUS and MINUS Operators
+        13.2    CARRY and ROTATION Procedures
+        13.3    DEC Procedure
+        13.4    CARRY, SIGN, ZERO, and PARITY procedures
+
+   14   Producing an Executable Object File
+
+
+Appendix
+--------
+
+   A    Command Line and Command Line Switches
+
+        A.1     Command Line
+        A.2     Command Line Switches
+
+   B    Semantic Errors of PLMX
+
+   C    System Error Procedure
+
+   D    I/O Procedures
+
+        D.1     CP/M system-Level Procedures
+        D.2     Read and Write Line Procedures
+
+                D.2.1   Procedure READ
+                D.2.2   Procedure WRITE
+
+        D.3     Disk I/O Procedures
+
+                D.3.1   Procedure DRCHR
+                D.3.2   Procedure DWCHR
+                D.3.3   Procedure DRLIN
+                D.3.4   Procedure DWLIN
+                D.3.5   Procedure OPENR
+                D.3.6   Procedure CLOSR
+                D.3.7   Procedure OPENW
+                D.3.8   Procedure CLOSW
+
+        D.4     Other Procedures
+
+                D.4.1   Procedure NUMIN
+                D.4.2   Procedure NMOUT
+
+        E       Sample Output
+
+        F       IOCLD.SRC Listing
+
+        G       PLMX Advertisements
+
+        H       ROCHE Addenda
+
+
+Section 1: Introduction
+-----------------------
+
+This  document  provides guidelines for use of the PLMX compiler on  the  CP/M 
+1.4  Operating  System.  The  PLMX language is identical  to  the  Intel  PL/M 
+programming  language.  Familiarity with PL/M and CP/M is  assumed  throughout 
+this  document.  Detailed descriptions of the PL/M  programming  language  are 
+found in the publications listed in Section 2. Notational conventions used  in 
+this document are:
+
+      - Anything enclosed in angle brackets < > is a generic name.
+
+      - Anything enclosed in square brackets [] is optional.
+
+      - ::= means "is defined as".
+
+      - | means "or".
+
+The  output  of the PLMX compiler must be assembled, linked, and  loaded.  The 
+Microsoft  M80  Utility  Software Package is provided for  this  purpose.  See 
+Reference 5, Section 2, for the M80 software package documentation.
+
+
+Section 2: References
+---------------------
+
+The following publications pertain to the PL/M programming language:
+
+     1. Daniel D. McCracken
+        "A Guide to PL/M Programming for Microcomputer Applications"
+        Addison-Wesley, 1978.
+
+(References  in  this  publication to the ISIS-II  Operating  System  are  not 
+pertinent to PLMX.)
+
+     2. "PL/M-80 Programming Manual"
+        Intel Corporation, 3065 Bowers Avenue, Santa Clara,
+        California 95051, 1976-1977.
+
+The following publications pertain to the CP/M 1.4 Operating System:
+
+     3. "An Introduction to CP/M Features and Facilities"
+        Digital Research, P. 0. Box 579,
+        Pacific Grove, CA 93950, 1976, 1977, 1978.
+
+     4. "CP/M Interface Guide"
+        Digital Research, 1975, 1976.
+
+The  M80  Utility  Software  Package for use  on  CP/M  Operating  Systems  is 
+described in:
+
+     5. "MICROSOFT Utility Software Manual"
+        Microsoft, 10800 NE Eighth, Suite 819,
+        Bellevue, WA 98004, 1978.
+
+
+Section 3: Creation of Source Files
+-----------------------------------
+
+Source  files for PLMX may be created using the CP/M ED editor or  any  editor 
+which produces ED-compatible text files.
+
+The  source text for PLMX is free format. Spaces, tabs, Carriage-Returns,  and 
+Line-Feeds  are  ignored,  except when within the body of  a  string  literal. 
+Comments may occur anywhere in the source text, except within reserved  words, 
+identifier names, and numbers. Comments may not be nested. Tabs are assumed to 
+be at eight-column intervals.
+
+
+Section 4: Modular Programming
+------------------------------
+
+PLMX is well suited to good programming practices such as modular  programming 
+and structured program design. Modules may be compiled separately and used  as 
+necessary.  Several  people may work on the same program  independently.  Data 
+structures  may be designed independently of other modules. Modules  and  data 
+structures may be modified easily without affecting the entire program.
+
+The size of modules which can be compiled with PLMX depends on the size of the 
+CP/M  system. A minimum of 56K of RAM is recommended, although small  programs 
+can be compiled in a 48K system.
+
+References  1  and 2 contain detailed information on  modular  programming  in 
+PL/M.
+
+
+Section 5: Invocation of the Compiler
+-------------------------------------
+
+The PLMX compiler disk may be located on any disk drive. The PLMX compiler  is 
+invoked  at the command level of CP/M by typing a command line which may  take 
+one of the following forms:
+
+     1. PLMX x
+
+     2. PLMX x.y
+
+     3. PLMX x ; S
+
+     4. PLMX x.y ; S
+
+If  form 1 is used, the source file is x.SRC and the default  switch  settings 
+are in effect.
+
+If form 2 is used, the source file is x.y and the default switch settings  are 
+in effect.
+
+If  form 3 is used, the source file is x.SRC and the switch settings S are  in 
+effect where they differ from the default switch settings.
+
+If  form  4 is used, the source file is x.y and the switch settings S  are  in 
+effect where they differ from the default switch settings.
+
+Switch  S  is  actually a list of switches, each separated  by  zero  or  more 
+spaces. Individual switches consist of a letter followed immediately by a  "+" 
+or a "-".
+
+The  output  file is always stored on the same disk as the  source  file.  The 
+source file need not be on the same disk as compiler files.
+
+See Appendix A for a modified BNF description of the command line, examples of 
+command lines, and the meaning of command line switches.
+
+
+Section 6: File Names Used by PLMX
+----------------------------------
+
+PLMX  creates several temporary files during compilation. If the  source  file 
+name is SFNAME.X, the temporary file names will be SFNAME.TOK, SFNAME.RAM, and 
+SFNAME.ROM.  Any existing files of these names will be erased if they  are  on 
+the same disk as the source file.
+
+PLMX  produces an assembly language output file, unless that option is  turned 
+off by a command line switch. If the source file name is SFNAME.X, the  output 
+file  name will be SFNAME.MAC. Any existing file with this name will  also  be 
+erased if it is on the same disk as the source file.
+
+There is a PLMX compiler patch facility built into the PLMX compiler. A  patch 
+file  may  be associated with each PLMX compiler file. As each  PLMX  compiler 
+file  is loaded, the compiler disk is searched for its associated patch  file. 
+If  found,  it is loaded, and the PLMX compiler file is patched.  Patch  files 
+have  the names PL.HEX, PP.HEX, PI.HEX, and PF.HEX. If files with these  names 
+exist on the compiler disk, they will be treated as patch files. No files with 
+these  names  should  be  created  for use  with  the  PLMX  compiler,  unless 
+specifically recommended by SCI.
+
+Included  on  the master disk is a file, IOCLD.SRC,  containing  the  external 
+procedure  declaration for all I/O procedures from which the user  may  choose 
+for  his  application.  A description of each of the procedures  is  given  in 
+Appendix D and Digital Research "CP/M 1.4 Interface Guide".
+
+
+Section 7: Error Message Formats
+--------------------------------
+
+PLMX  recognizes syntactic errors in a table-driven manner, and indicates  the 
+approximate location of errors on the console device and/or on the listing.
+
+Other  errors result from semantic restrictions to the language. For  example, 
+variables must be defined before they are used. PLMX handles these errors in a 
+case-by-case  manner,  and displays their numbers as shown below  in  type  4. 
+Refer to Appendix B for the semantic errors and error numbers.
+
+Error  messages are displayed on the console if the C+ and L+ switches are  in 
+effect.  Error  messages  will be displayed on the printer if the  L+  and  C- 
+switches are in effect.
+
+There are several formats for error messages printed by the PLMX compiler:
+
+      Type 1.   Errors  detected  at the PLMX compiler's executive  level  are 
+                indicated  by  messages such as "FILE  ERROR",  which  usually 
+                means a non-existent file.
+
+      Type 2.   Low-level syntactic errors are printed as a statement of   the 
+                error  type, followed by an indication of where the error  was 
+                detected.  For  example: "ILLEGAL CHARACTER ON LINE  xxx  NEAR 
+                COLUMN yyy".
+
+      Type 3.   Other syntactic errors are printed as "ERROR ON LINE xxx  NEAR 
+                COLUMN yyy".
+
+      Type 4.   Semantic  errors are printed as "SEMANTIC ERROR NUMBER  nn  ON 
+                LINE xxx NEAR COLUMN yyy".
+
+      Type 5.   The illegal GOTO error message is printed as "ILLEGAL GOTO  ON 
+                LINE xxx".
+
+      Type 6.   The system error message is printed as "SYSTEM ERROR AT nnnn".
+
+For  error  types 3 and 4, the PLMX compiler will write a list of  up  to  ten 
+tokens  to  the  console, and terminate in the token  which  precipitated  the 
+error.   Since  these  tokens  represent  a  reformatting  of   the   internal 
+representation of the compiled program, the list will not appear as it does in 
+the  source  file.  In  particular, comments are  not  included,  and  numeric 
+constants are all in hexadecimal notations.
+
+The  first  ten errors of types 3 and 4 are also flagged  in  the  interleaved 
+output listing in the following manner:
+
+             IF FLAG THEN X = Y;
+             A + B = 5;
+     **************?
+             FLAG = FALSE;
+
+A type 6 error message indicates that the PLMX compiler has encountered one of 
+a general class of conditions from which it cannot recover. See Appendix C for 
+the procedure to follow in this case.
+
+
+Section 8: Error Recovery
+-------------------------
+
+The  PLMX  compiler  attempts  to  recover  from  errors  as  the  errors  are 
+encountered.  If possible, the statement in which the error occurred  will  be 
+ignored,  and the compilation will continue with the following  statement.  If 
+recovery from the error is not possible, the compilation will be aborted,  and 
+a message printed to indicate at which phase the compilation was aborted.
+
+
+Section 9: Output of the Compiler
+---------------------------------
+
+The PLMX compiler produces an assembly language source file as output. The  Z-
+80  PLMX  compiler produces MOSTEK mnemonics. The output file  may  be  edited 
+before assembling, if fine tuning is required.
+
+The  following pseudo-ops are used in the assembly language file: DB, DW,  DS, 
+ORG, END, CSEG, ASEG, DSEG, and "$", which has the same meaning as defined  by 
+the Microsoft M80 Assembler.
+
+The  output includes simple expressions involving the operators "+"  and  "-". 
+The  operands  are  hexadecimal constants or "$".  The  hexadecimal  constants 
+consist  of up to four hexadecimal digits preceded by a zero and  followed  by 
+the letter "H".
+
+The PLMX compiler will also produce a listing if the "L" switch is set to "+". 
+If  the "I" switch is set to "+" (the default state), the listing will  be  an 
+assembly language listing with PLMX source statements interleaved as comments. 
+If  the  "I" switch is set to "-", the listing will be a source  file  listing 
+with line numbers added, and will include the text of included files.
+
+The  "C" switch affects the destination of the listing. If the "C"  switch  is 
+set to "-" (the default state), the listing will go to the printer. If set  to 
+"+",  the  listing  will  go to the console.  See  Appendix  A.2  for  further 
+definition of command line switches. See Appendix E for a sample output file.
+
+
+Section 10: Linkage of Programs
+-------------------------------
+
+Assembly  language programs may be linked to programs compiled by PLMX. It  is 
+possible  to  call  assembly  language procedures from  a  PLMX  program  and, 
+likewise, to call PLMX procedures from assembly language programs.
+
+Parameters are passed to procedures as follows:
+
+  1. One-parameter case:
+
+     a. A BYTE parameter is passed in register C.
+
+     b. An  ADDRESS  parameter is passed in register pair BC, with  the  high-
+        order byte in register B.
+
+  2. Two-parameter case:
+
+     a. The first parameter is passed as described in 1 above.
+
+     b. The second parameter is passed in register E if it is a BYTE parameter 
+        and in register pair DE if it is an ADDRESS parameter, with the  high-
+        order byte in register D.
+
+  3. More-than-two-parameter case:
+
+     a. The last parameter is passed in register pair DE.
+
+     b. The next-to-last parameter is passed in register pair BC.
+
+     c. The  remaining  parameters  are passed on the stack,  with  the  first 
+        parameter being PUSHed first.
+
+     d. When  extracting parameters from the stack, remember that  the  return 
+        address will be on the top of the stack, then the parameters.
+
+Parameters are returned from function procedures in the following manner:
+
+     1. A BYTE procedure returns its parameters in register A.
+
+     2. An ADDRESS procedure returns its result in register pair HL, with  the 
+        high-order byte in register H.
+
+
+Section 11: Implementation Specifics
+------------------------------------
+
+This  section  presents aspects of PLMX which differ from  the  Intel  PL/M-80 
+compiler. Some items are specific to this release version.
+
+
+11.1 RE-ENTRANT Procedures
+--------------------------
+
+This  version  of  PLMX  does not  implement  the  translation  of  RE-ENTRANT 
+procedures.  Although this feature will be included in a future  release,  the 
+programmer should be aware that procedure linkages and data references  within 
+such  a  procedure are extremely space and time  inefficient.  Furthermore,  a 
+time-  and  I/O-independent  algorithm can always be restructured  in  a  non-
+recursive  manner. The run-time routines are all re-entrant, so that the  user 
+may easily create a multiprogramming environment.
+
+
+11.2 INTERRUPT Attribute
+------------------------
+
+This version of PLMX does not implement the INTERRUPT attribute of  procedures 
+because  of  the  many ways in which interrupts can  be  serviced.  Since  the 
+assembly language output of the PLMX compiler is available to the  programmer, 
+and  PLMX allows linkage to assembly language routines,  interrupt  procedures 
+can be specified for many types of architectures.
+
+
+11.3 Variable Initialization
+----------------------------
+
+When  the programmer uses text strings to initialize variables in  a  factored 
+variable  declaration, he should be aware that, if the string is  longer  than 
+the  datum currently being initialized, the rest of the string will  be  lost. 
+For instance:
+
+        DECLARE (A, B) (5) BYTE INITIAL ('123456789');
+
+would initialize A to '12345' but would leave B un-initialized. The  following 
+declaration should be used to initialize B also:
+
+        DECLARE (A, B) (5) BYTE INITIAL ('12345', '6789');
+
+
+11.4 Macro Declarations
+-----------------------
+
+Macro declarations may be nested. For instance:
+
+        DECLARE CHI BYTE;
+        DECLARE OMEGA LITERALLY 'LITERALLY ''IF CHI''; 
+        DECLARE OMICRON OMEGA;
+        OMICRON THEN DO;
+                ----
+                ----
+                ----
+        END;
+
+
+11.5 EXTERNAL and PUBLIC Names
+------------------------------
+
+All identifiers declared to be PUBLIC or EXTERNAL, and all module names,  will 
+be  truncated  to five letters, and used by the PLMX compiler  in  that  form. 
+Thus,  the user should ensure that these identifiers are unique in  the  first 
+five letters.
+
+
+11.6 Restrictions on Names
+--------------------------
+
+Compiler-generated  names may occasionally conflict with names declared to  be 
+PUBLIC  or  EXTERNAL.  A complete list of names which the  PLMX  compiler  may 
+generate follows:
+
+     1. The letter A, T, L, or G, followed by four hexadecimal digits. 
+        For example: G0004.
+
+     2. Names  of the form BPnn@, where n is a decimal digit. One or  more  of 
+        these names will be created upon reference to a built-in procedure  or 
+        predeclared variable.
+
+     3. Any of the following names:
+
+            INIT@   EXIT@   AAAAA@   AAAAB@   SCAT@
+
+     4. Names reserved for I/O procedures. See Appendix D.
+
+Do  not use global identifier names which conflict with register names of  the 
+target microprocessor, because the output of PLMX must be assembled. 
+
+
+11.7 DO-CASE Restrictions
+-------------------------
+
+There may not be more than 32,767 branches on a DO-CASE statement.
+
+If  a conditional statement is used as a unit of a DO-CASE block, it  must  be 
+bracketed by a DO-BLOCK of some sort. For example:
+
+        DO CASE J:
+                X=Y;
+                DO;
+                   IF P=Q THEN J=F;
+                END;
+        END;
+
+
+11.8 Maximum Nesting Levels
+---------------------------
+
+DO blocks may be nested to 32 levels. Conditional statements may be nested  to 
+32 levels.
+
+
+11.9 Optimization
+-----------------
+
+This  version  of PLMX performs peephole optimization, constant  folding,  and 
+temporary  minimization  by  default.  Other types  of  optimization  will  be 
+implemented in a future release.
+
+
+11.10 Maximum Parameter List Size
+---------------------------------
+
+A procedure declaration may have up to 11 formal parameters.
+
+
+11.11 INCLUDE Pseudo-Operation
+------------------------------
+
+This  version  implements  only the INCLUDE  pseudo-operation.  Other  pseudo-
+operations  may be implemented in future releases. The INCLUDE pseudo-op  must 
+occur on a line by itself, and consists of five elements:
+
+        - "$" in column 1
+
+        - The word "INCLUDE"
+
+        - A left parenthesis "("
+
+        - A CP/M file name, with default type of SRC
+
+        - A right parenthesis ")"
+
+There  may be zero or more spaces between each of the five items. The  nesting 
+of INCLUDE files is limited to 4, counting the main file as one level.
+
+The INCLUDE pseudo-op can be placed on any line in the user program, and  will 
+be recognized.
+
+
+11.12 Size Limits
+-----------------
+
+String  constants are limited to 255 characters. The input line is limited  to 
+80 characters.
+
+
+11.13 AT Attribute
+------------------
+
+If the programmer uses the AT attribute with the DATA form of  initialization, 
+the  restricted expression following AT must refer to a  previous  declaration 
+with  a DATA initialization. The reason for this restriction is that the  word 
+DATA  implies that the datum is to be placed with the executable code  in  its 
+SECTION,  instead  of in the SECTION where variables are usually  placed.  Not 
+adhering  to  this restriction would mean that the PLMX compiler will  try  to 
+overlay  a  RAM  datum  with a ROM datum,  which  is  an  obviously  illogical 
+condition.
+
+The AT attribute should never be used with the dot operator and an  externally 
+declared variable. Some assemblers (including Microsoft's M80) cannot  resolve 
+that  condition.  Based  variables  can be used to  overlay  one  variable  on 
+another.
+
+
+11.14 Compile-Time Stack Checking
+---------------------------------
+
+There is no compile-time checking for stack overflow in PLMX, and there is  no 
+PLMX  compiler  option to change the size of the stack. The Stack  Pointer  is 
+initially  set  to the top of the Temporary Program Area (TPA). To  modify  or 
+examine  the  Stack  Pointer, use the  pseudo-variable  or  built-in  variable 
+STACKPTR.
+
+
+11.15 Label Declarations
+------------------------
+
+Labels  with no attributes need not be declared. Factored  label  declarations 
+are not recognized in this version. They must be declared individually.
+
+
+11.16 Run-Time Library
+----------------------
+
+The  run-time  library  provides  code  for  all  operators  and  byte/address 
+combinations,  built-in procedures, and procedures using hardware  flags.  The 
+source  code  for the run-time library is available from SCI. It  enables  the 
+user  to  substitute  or  add to these routines,  as  desired.  The  following 
+routines are included in the library:
+
+     a. Operations
+        ----------
+        (Byte/Byte, 2-Byte/Byte, Byte/2-Byte, and 2-Byte/2-Byte cases)
+
+        ADD                             SUBTRACT     
+        OR                              EQUAL        
+        AND                             LESS THAN    
+        XOR                             GREATER THAN 
+        MOD                             DIVIDE       
+        LESS THAN OR EQUAL              MULTIPLY     
+        GREATER THAN OR EQUAL           NOT EQUAL    
+
+     b. Built-In Procedures:
+
+        Procedure                       Type
+        ---------                       ----
+        ROL                             Byte       
+        ROR                             Byte       
+        SHL                             Byte/2-Byte       
+        SHR                             Byte/2-Byte
+        MOVE                            Byte
+        TIME                            Byte
+
+     c. Procedures Utilizing Hardware Flags:
+
+        Procedure                       Type
+        ---------                       ----                
+        PLUS                            (Same as Operations)
+        MINUS                           (Same as Operations)
+        SCL                             Byte/2-Byte         
+        SCR                             Byte/2-Byte         
+        DEC                             Byte                
+
+The register usage for interfacing with the library is:
+
+     a. Operations
+        ----------
+
+        (1) 2-Byte/2-Byte case:
+
+            Parameters located in DE and HL.
+
+        (2) 2-Byte/Byte case:
+
+            Byte parameters in A, 2-Byte parameters located located in HL.
+
+        (3) Byte/Byte case:
+
+            Parameters located in A and L.
+
+     b. Built-In Procedures and Flag Procedures
+        ---------------------------------------
+
+        Register usage for built-in procedures follow the convention described 
+        in Section 10. Consider the MOVE procedure, for example:
+
+        (1) Last parameter    (DESTINATION) in DE
+        (2) Next-to-last parameter (SOURCE) in BC
+        (3) Remaining parameter  (COUNT) on stack
+
+
+Section 12: Built-in Procedures and Predeclared Variables
+---------------------------------------------------------
+
+Built-in  procedures  and  predeclared variables need  not  be  declared.  If, 
+however,  the  identifier of a built-in procedure or predeclared  variable  is 
+used  in  a  declaration  within the program, the  scope  of  the  predeclared 
+variable or built-in procedure is interrupted by the scope of the  declaration 
+in  the  program. This distinguishes these identifiers  from  reserved  words, 
+which cannot be used as identifiers in declarations.
+
+The built-in procedures provided by PLMX are:
+
+        INPUT           DOUBLE
+        LENGTH          ROL
+        LAST            ROR
+        SIZE            MOVE
+        LOW             TIME
+        HIGH
+
+The predeclared variables are:
+
+        OUTPUT
+        STACKPTR
+
+A  detailed  description  of these procedures and variables is  given  in  the 
+"PL/M-80  Programming  Manual" (Reference 2). Only those which are  not  fully 
+described in Reference 1 are described here.
+
+
+12.1 INPUT Procedure
+--------------------
+
+INPUT is a BYTE procedure. It is called by a function reference with the form: 
+INPUT (numeric *constant*). It must appear on the right side of an  assignment 
+statement.  The constant must be in the range 0 to 255 to specify one  of  the 
+256  input ports of the 8080 or Z-80 CPU. The value returned by INPUT  is  the 
+BYTE quantity latched into the specified input port.
+
+
+12.2 LENGTH, LAST, and SIZE Procedures
+--------------------------------------
+
+(See Reference 1 or 2.)
+
+
+12.3 LOW, HIGH, and DOUBLE Procedures
+-------------------------------------
+
+Two  built-in BYTE procedures convert ADDRESS values to BYTE values. Calls  to 
+these procedures are function references with the forms:
+
+        LOW  (expression)
+        HIGH (expression)
+
+If  the  expression  has an ADDRESS value, LOW returns  the  low-order  (least 
+significant)  byte  of the value, whereas HIGH returns  the  high-order  (most 
+significant)  byte of the value. If the expression has a BYTE value, LOW  will 
+return this value unchanged. HIGH will return zero.
+
+The address procedure DOUBLE converts a BYTE value to an ADDRESS value. A call 
+to DOUBLE is a function reference with the form:
+
+        DOUBLE (expression)
+
+If  the expression has a BYTE value, the procedure appends 8 high-order  zeros 
+to  convert  it to an ADDRESS value, and returns this ADDRESS  value.  If  the 
+expression has an ADDRESS value, the procedure returns this value unchanged.
+
+There  is  no  uniformity among microprocessors regarding which  is  the  most 
+significant  byte  and  which  is the least significant  byte  of  an  ADDRESS 
+identifier.  For  this reason, the use of the HIGH and LOW procedures  may  be 
+more  useful  than  shift procedures for extraction of  bytes  of  an  ADDRESS 
+identifier. Source code will then be microprocessor-independent.
+
+
+12.4 ROL and ROR Procedures
+---------------------------
+
+ROL and ROR are BYTE rotation procedures. Bits are moved off one end and moved 
+onto the other end. They are called by function references with the forms:
+
+        ROL (pattern, count)
+        ROR (pattern, count)
+
+where  "pattern"  and  "count"  are both  expressions.  The  values  of  these 
+expressions  are converted, if necessary, to BYTE values. The first  parameter 
+is handled as an 8-bit pattern which is rotated to the left (by ROL) or to the 
+right  (by ROR). The bit count is given by the second parameter. If the  value 
+of  this expression is 0, the result is undefined. The following are  examples 
+of the action of these procedures:
+
+        ROR (10011101B, 1) returns a value of 11001110B
+        ROL (10011101B, 2) returns a value of 01110110B
+
+
+12.5 SHR and SHL Procedures
+---------------------------
+
+These procedures shift bits off one end of the pattern and zeros move into the 
+pattern  from  the other end. The procedure type depends on the value  of  the 
+expression given as the actual parameter. (See Reference 1 or 2).
+
+
+12.6 MOVE Procedure
+-------------------
+
+The  untyped procedure MOVE is used to transfer a set of contiguous  bytes  of 
+information from one location in memory to another. The form of the call is:
+
+        CALL MOVE (count, source, destination)
+
+where   "count",  "source",  and  "destination"  are  expressions  which,   if 
+necessary, are converted to ADDRESS values. The source parameter is the memory 
+address  to  which this type is to be moved. Subsequent bytes are  taken  from 
+subsequent  addresses  following  source, and moved  to  subsequent  addresses 
+following destination.
+
+
+12.7 TIME Procedure
+-------------------
+
+(See Reference 1 or 2).
+
+
+12.8 OUTPUT Array
+-----------------
+
+This, and the remaining two items of this section, are predeclared variables.
+
+Each element corresponds to one of the 256 output ports of the 8080 CPU.
+
+A  reference to OUTPUT must always be subscripted with a numeric  constant  in 
+the  range  0 to 255, and may only appear as the left part  of  an  assignment 
+statement or embedded assignment. (Anywhere else it is illegal.) The effect of 
+such  an assignment is to latch the BYTE value of the expression on the  right 
+side of the assignment into the specified output port. Since OUTPUT is a  BYTE 
+array,  the  value of the expression will be automatically converted  to  type 
+BYTE, if necessary.
+
+
+12.9 MEMORY Array
+-----------------
+
+The  PL/M-80  MEMORY array is not implemented. However,  a  memory  management 
+suite of subroutines will be available from SCI.
+
+
+12.10 STACKPTR Variable
+-----------------------
+
+STACKPTR  is  a  predeclared ADDRESS variable which  provides  access  to  the 
+Stack  Pointer register. The current value of the Stack Pointer register  will 
+be  returned  when STACKPTR is used on the right side of  an  assignment.  For 
+example:
+
+        R = STACKPTR
+
+Cautious  use  of STACKPTR on the left side of an assignment  is  recommended, 
+since  taking  control  of  the stack can  confuse  compile-time  checks.  The 
+Stack Pointer register will be set to the value provided. For example:
+
+        STACKPTR = .STACK (LENGTH (STACK))
+
+
+Section 13: Features Involving Hardware Flags
+---------------------------------------------
+
+The  PLMX features described in this section make use of hardware  flags.  The 
+programmer should use them with caution, however, since the exact sequence  of 
+machine  code  produced from a sequence of PLMX source  statements  cannot  be 
+predicted accurately. This uncertainty is caused by PLMX compiler optimization 
+of machine code. In addition, the setting and clearing of hardware flags  vary 
+among microprocessors.
+
+
+13.1 PLUS and MINUS Operators
+-----------------------------
+
+The  operators  PLUS  and  MINUS  perform similarly  to  +  and  -  arithmetic 
+operators,  and  have the same precedence. However, they utilize  the  current 
+setting of the 8080 CPU hardware CARRY flag to perform the operation.
+
+
+13.2 CARRY and ROTATION Procedures
+----------------------------------
+
+SCL and SCR are built-in procedures whose type depends on the parameter  type. 
+They  also  utilize the current setting of the 8080 CPU hardware  CARRY  flag. 
+They are called by function references with the forms:
+
+        SCL (pattern, count)
+        SCR (pattern, count)
+
+where  "pattern" and "count" are both expressions. The value of count will  be 
+converted,  if necessary, to a BYTE quantity. If the value of count  is  zero, 
+the  result is undefined. The value of the pattern may be either a BYTE  value 
+or  an  ADDRESS value, and will not be converted. If it is a BYTE  value,  the 
+procedure  will return a BYTE value. If it is an ADDRESS value, the  procedure 
+will return an ADDRESS value.
+
+The  value of the first parameter (pattern) is rotated left (by SCL) or  right 
+(by SCR). The bit count is given by the second parameter (count). The rotation 
+includes  the  CARRY  flag: the bit rotated off one end  of  the  argument  is 
+rotated  into CARRY, and the old value of CARRY is rotated into the other  end 
+of  the  argument.  In effect, SCL and SCR perform 9-bit  rotations  on  8-bit 
+values, and 17-bit rotations on 16-bit values.
+
+
+13.3 DEC Procedure
+------------------
+
+DEC  is a built-in BYTE procedure which uses the value of the  hardware  CARRY 
+flag internally. It is called by a function reference with the form:
+
+        DEC (expression)
+
+where  the value of the expression will be converted, if necessary, to a  BYTE 
+value.  This  procedure  performs a decimal adjust  operation  on  the  actual 
+parameter value, and returns the result.
+
+
+13.4 CARRY, SIGN, ZERO, and PARITY Procedures
+---------------------------------------------
+
+There  are  four  built-in procedures that return the logical  values  of  the 
+hardware  flags.  These  procedures  take no parameters,  and  are  called  by 
+function references with the forms:
+
+        CARRY
+        ZERO
+        SIGN
+        PARITY
+
+The occurrence of one of these calls in an expression initiates a test of  the 
+corresponding  condition  flag. If the flag is set (= 1), a value of  0FFH  is 
+returned. If the flag is clear (= 0), a value of 00H is returned.
+
+
+Section 14: Producing an Executable Object File
+-----------------------------------------------
+
+PLMX produces an assembly language source file as its output. Refer to section 
+5  for the name of the output file. To produce an executable object file,  the 
+output  file must be assembled with MACRO-80, linked with all other  relevant, 
+relocatable  object  files by LINK-80, and the linked program saved  to  disk, 
+either  by LINK-80 or the CP/M 1.4 SAVE command. RLIB will almost always  need 
+to  be linked, and IOLIB will be required if any of its procedures  are  used. 
+IOLIB  should  precede RLIB when they are linked. Because RLIB and  IOLIB  are 
+libraries, the /S switch should be used with them, to search for and link only 
+those  procedures which are required. The link program is then run  by  typing 
+its name.
+
+See  reference 5 for details of the syntax and use of the  Microsoft  MACRO-80 
+relocatable macro assembler, LINK-80 linker, LIB-80 library manager, and CREF-
+80 cross-reference facility.
+
+
+Appendix A: Command Line and Command Line Switches
+--------------------------------------------------
+
+A.1 Command Line
+----------------
+
+The PLMX command line, using an extended BNF notation, is as follows:
+
+        PLMX <file name>[<switch delimiter>[<switches>]]CR
+
+where:
+
+        <file name> ::= <CP/M file name>[.<CP/M file type>]
+        <Switch delimiter> ::= ;
+        <switches> ::= <switch identifier><switch state>
+                       <switch identifier><switch state><switches>
+
+        <switch identifier> ::= A|L|I|M|O|C|S|F
+        <Switch state> ::= +|-
+
+Examples of valid PLMX command lines are:
+
+        PLMX MYFILE ; M+L
+
+        PLMX MYFILE.SRC;    A- C+
+
+        PLMX YOURFILE;
+
+        PLMX YOURFILE
+
+Examples of invalid PLMX command lines are:
+
+        PLMXMYFILE
+
+        PLMX MYFILE; +I
+
+        PLMX ; M+L-
+
+
+A.2 Command Line Switches
+-------------------------
+
+Command line switches have the following meanings:
+
+Switch  State  Default  Meaning
+------  -----  -------  -------
+   A      +       +     Generate an assembly language file on the diskette  on 
+                        which the source file resides.
+
+          -             Do not generate an assembly language file.
+
+   L      +       +     Generate  a listing. Send it and error information  to 
+                        the  LST:  device if the C switch is  in  its  default 
+                        state; otherwise, send the listing to the CON: device.
+
+          -             Do not generate a listing.
+
+   I      +       +     Interleave  source  statements and  assembly  language 
+                        statements in the listing.
+
+          -             Print source statements only.
+
+   M      +       -     Make this module a Main Program module (see Ref 1,  p. 
+                        225).
+
+          -             Do not make this module a Main Program module.
+
+   O      +       +     Optimize  assembly  language  output,  i.e.,  register 
+                        analysis and peephole optimization.
+
+          -             Do not optimize.
+
+   S      +        +    Optimize for minimum space, i.e., replace in-line code 
+                        with CALLs whenever possible.
+
+          -             Optimize for speed, i.e., do not use CALLs.
+
+   C      +        -    Send the listing to the CON: device.
+
+          -             Send the listing to the LST: device.
+
+   F      +        -    Perform a "fast" compilation. Check for syntax errors, 
+                        but do not optimize or produce an output file.
+
+          -             Perform a normal compilation.
+
+
+If  no  CP/M  file type is supplied, the default is  "SRC".  This  applies  to 
+included  files  as well. The absence of a compilation switch means  that  the 
+default condition is in effect for the duration of the compilation.
+
+
+Appendix B: Semantic Errors of PLMX
+-----------------------------------
+
+Error   Meaning
+-----   -------
+   1    An  EXTERNAL or PUBLIC factored label declaration which is not at  the 
+        outermost level.
+
+   2    An EXTERNAL or PUBLIC unfactored label declaration which is not at the 
+        outermost level.
+
+   3    An implicit dimension without an initialization.
+
+   4    A PUBLIC or EXTERNAL variable is declared to be BASED.
+
+   5    An  undefined  base  specifier in a declaration.  The  base  specifier 
+        should be <id> or <id>.<id>.
+
+   6    An  EXTERNAL  or  PUBLIC  variable declaration which  is  not  at  the 
+        outermost level.
+
+   7    The   first  <id>  in  a  restricted  reference  is  undefined  in   a 
+        declaration.
+
+   8    An undefined restricted reference in a declaration.
+
+   9    A declaration has a reference to an undefined name in a locator.
+
+  10    A declaration has a reference to an EXTERNAL name in a locator.
+
+  11    A variable declaration with a locator is declared EXTERNAL.
+
+  12    Array declaration error.
+
+  13    An EXTERNAL procedure is not declared at the outermost level.
+
+  14    There are undeclared formal parameters in a procedure declaration.
+
+  15    There is an undefined name in a procedure call.
+
+  16    There  is  an  illegal  argument to LENGTH,  LAST,  or  SIZE  built-in 
+        procedures.
+
+  17    There is an undefined name in a procedure call.
+
+  18    The  number  of formal parameters does not match the  number  of  real 
+        parameters in a procedure call.
+
+  19    The same as 16.
+
+  20    A  RETURN  statement without an argument is encountered outside  of  a 
+        procedure.
+
+  21    There is no argument to a RETURN statement within a typed procedure.
+
+  22    A RETURN statement with an argument is outside of a procedure.
+
+  23    A RETURN statement with an argument is in an untyped procedure.
+
+  24    The  name  following  an END statement is not the  same  as  the  name 
+        preceding the DO statement.
+
+  25    An undefined function reference (without parameters).
+
+  26    A procedure referenced in a function call (without parameters) is  not 
+        typed.
+
+  27    System error.
+
+  28    An undefined function reference (with parameters).
+
+  29    The  procedure referenced in a function call (with parameters) is  not 
+        typed.
+
+  30    System error.
+
+  31    The  number  of formal parameters does not match the  number  of  real 
+        parameters in a function call.
+
+  32    The same as 16.
+
+  33    An undefined subscripted structure reference.
+
+  34    An undefined unsubscripted structure reference.
+
+  35    An undefined subscripted variable reference.
+
+  36    A function reference having one real parameter references a  procedure 
+        which is untyped.
+
+  37    The same as 16.
+
+  38    An undefined unsubscripted variable reference.
+
+  39    An  undefined  simple variable in the index part of  an  iterative  DO 
+        statement.
+
+  40    An EXTERNAL variable occurs in an INITIAL statement.
+
+  41    A BASED variable occurs in an INITIAL statement.
+
+  42    An   undefined  structure  reference  occurs  in  a   BASED   variable 
+        declaration.
+
+  43    An undefined structure reference.
+
+  44    An undefined procedure or function reference with parameters.
+
+  45    The argument to the INPUT function is not an integer.
+
+  46    The argument to the OUTPUT array is not an integer.
+
+  47    A variable or macro is defined twice at the same nesting level.
+
+  48    A procedure is defined twice at the same nesting level.
+
+  49    A function which requires more than one argument has been called  with 
+        one argument.
+
+  50    A  function reference appears on the left-hand side of  an  assignment 
+        statement.
+
+
+Appendix C: System Error Procedure
+----------------------------------
+
+If a system error message is printed by the PLMX compiler, the following steps 
+should be taken. Review your source program for illegal syntax which may  have 
+escaped diagnostic detection. If the source program is syntactically  correct, 
+send a letter to SCI describing the circumstances under which the system error 
+was  encountered. Include with the letter a listing of the program  which  was 
+being  compiled when the system error occurred and, if possible, send  a  disk 
+with the source file of the program which was being compiled.
+
+If a PLMX compiler error is found, SCI will return an updated PLMX compiler in 
+accordance with our warranty.
+
+
+Appendix D: I/O Procedures
+--------------------------
+
+A library of I/O procedures is supplied with the PLMX compiler. These external 
+procedures  provide  a  link  to the Basic  I/O  Facilities  and  Disk  Access 
+Primitives of CP/M 1.4. Additionally, there are procedures to do line-oriented 
+I/O to non-disk peripherals, procedures to do character- and line-oriented I/O 
+to the disk, and utility routines to convert numbers between ASCII and  binary 
+representations.
+
+
+D.1 CP/M System-Level Procedures
+--------------------------------
+
+All  of  the  CP/M 1.4 basic I/O facilities and  disk  access  primitives  are 
+provided,  with  the exception of the Interrogate  Allocation  primitive.  The 
+procedures  are presented below by CP/M function number. In the  typical  call 
+examples, "A" is an ADDRESS variable and "B" is a BYTE variable. See reference 
+4 for descriptions of the entry parameters and returned values.
+
+CP/M Function Number    Typical Call
+--------------------    ------------
+  0                     ----
+  1                     B = RD$CON;
+  2                     CALL WR$CON (B);
+  3                     B = RD$RDR;
+  4                     CALL PUNCH (B);
+  5                     CALL PRINT (B);
+  6                     ----
+  7                     B = G$STAT;
+  8                     CALL S$STAT (B);
+  9                     CALL PR$BUF (A);
+ 10                     CALL RD$BUF (A);
+ 11                     B = CN$RDY; 
+ 12                     CALL LFT$HD;
+ 13                     CALL INIT;
+ 14                     CALL LOGIN (B);
+ 15                     B = OPEN   (A);
+ 16                     B = CLOSE  (A);
+ 17                     B = SRCH   (A);
+ 18                     B = SR$NXT (A);
+ 19                     CALL DLETE (A);
+ 20                     B = RD$DSK (A);
+ 21                     B = WR$DSK (A);
+ 22                     B = MAKE   (A);
+ 23                     B = RNAME  (A);
+ 24                     B = LG$VEC;
+ 25                     B = DRIVE;
+ 26                     CALL STDMA (A);
+
+
+D.2 Read and Write Line Procedures
+----------------------------------
+
+Two  procedures  are  provided  for reading and  writing  lines  for  non-disk 
+devices. All arguments to both procedures are ADDRESS parameters.
+
+
+D.2.1 Procedure READ
+--------------------
+
+This procedure reads a line of characters.
+
+Arguments are:
+
+     1. Function:
+        0 means read from the CON: device;
+        1 means read from the RDR: device.
+
+     2. Destination buffer address.
+
+     3. Maximum number of bytes to read.
+
+     4. Address of the actual number of bytes read.
+
+     5. Address of the status word.
+
+The  status  returned  is 00H if no error occurred, and  0FFH  if  an  illegal 
+function  number was given or an error occurred. Procedure READ stops  reading 
+when either of two conditions is met:
+
+     1. The number of characters read equals the number specified by  argument 
+        3.
+
+     2. A  Carriage-Return  is read. In this case, the Carriage-Return  and  a 
+        Line-Feed are placed in the read buffer, and a Line-Feed is echoed  if 
+        the function number is 0.
+
+Procedure READ does not check for destination buffer overflow.
+
+The following is an example of the declaration and use of procedure READ:
+
+        READ:
+        PROCEDURE (FUNCTION, BUFFER, COUNT, ACTUAL, STATUS) EXTERNAL; 
+          DECLARE (FUNCTION, BUFFER, COUNT, ACTUAL, STATUS) ADDRESS;
+        END READ;
+
+        DECLARE STRING (128) BYTE;
+        DECLARE (COUNT, STATUS) ADDRESS;
+
+        ----
+        ----
+
+        CALL READ (0, .STRING, 128, .COUNT, .STATUS);
+
+
+D.2.2 Procedure WRITE
+---------------------
+
+This procedure writes a line of characters.
+
+Arguments are:
+
+     1. Function:
+        0 means write to the CON: device;
+        1 means write to the LST: device;
+        2 means write to the PUN: device.
+
+     2. Source buffer address.
+
+     3. Number of bytes to write.
+
+     4. Address of the status word.
+
+The following is an example of the declaration and use of procedure WRITE:
+
+        WRITE:
+        PROCEDURE (FUNCTION, BUFFER, COUNT, STATUS) EXTERNAL; 
+          DECLARE (FUNCTION, BUFFER, COUNT, STATUS) ADDRESS;
+        END WRITE;
+
+        DECLARE BUFFER (128) BYTE;
+        DECLARE STATUS ADDRESS;
+
+        ----
+        ----
+
+        CALL WRITE (0, .BUFFER, 2, .STATUS);
+
+
+D.3 Disk I/O Procedures
+-----------------------
+
+Disk  I/O procedures are provided for character-oriented reading and  writing, 
+line-oriented reading and writing, file opening, and file closing.
+
+There  are several arguments which are common to the disk I/O  procedures  and 
+which  are  required by CP/M. All the procedures in this section  require  the 
+address  of the File Control Block. The FCB address must be initialized  in  a 
+declaration.  Examples are provided with each procedure in this  section.  See 
+section 3.2 of reference 4 for more information on the File Control Block.
+
+Another  argument  required by most of the procedures in this section  is  the 
+address of the DMA buffer. The DMA buffer is a BYTE array of 128 bytes used by 
+the  CP/M disk access primitives for transferring a sector at a time from  and 
+to  disk.  Examples  of  the declaration of the DMA  buffer  occur  with  each 
+procedure in this section which requires it as an argument.
+
+A  third  argument  common to many of the procedures in this  section  is  the 
+number  of bytes remaining in the DMA buffer. This variable is  maintained  by 
+the procedures in this section, and should never be altered by user programs.
+
+A  fourth  argument  common to all these procedures in  this  section  is  the 
+address  of  the  status word. The status word is an  output  parameter  which 
+should be tested after a procedure is CALLed. The information returned in this 
+status word is described with each procedure.
+
+All  the arguments of the procedures in this section are  ADDRESS  parameters. 
+Parameters  whose addresses are passed must be the same type as shown  in  the 
+examples  associated with each function below. In argument  descriptions,  the 
+term "word" refers to an ADDRESS identifier.
+
+
+D.3.1 Procedure DRCHR
+---------------------
+
+This  procedure  reads a character from a disk file. The first CALL  to  DRCHR 
+must  be preceded by a CALL to procedure OPENR (see D.3.5). The last  CALL  to 
+DRCHR must be followed by a CALL to procedure CLOSR (see D.3.6).
+
+Arguments are:
+
+     1. File Control Block address.
+
+     2. CP/M DMA buffer address.
+
+     3. Address of the number of bytes in the DMA buffer.
+
+     4. Address at which the byte is to be stored.
+
+     5. Address of the status word.
+
+The character is returned to the address specified in argument 4. If the  end-
+of-file  (EOF)  is  encountered, a Control-Z (1AH)  is  returned.  The  status 
+returned  is 00H if no error occurred and the EOF was not encountered; 01H  if 
+no error occurred and the EOF was encountered; and 0FFH if an error  occurred. 
+The message "READ ERROR" is printed at the console if an error occurred.
+
+The following is an example of the declaration and use of procedure DRCHR:
+
+        DRCHR:
+        PROCEDURE (FCB, SECTOR$BUFFER, SECTOR$COUNT, CHAR, STATUS) EXTERNAL;
+          DECLARE (FCB, SECTOR$BUFFER, SECTOR$COUNT, CHAR, STATUS) ADDRESS;
+        END DRCHR;
+
+        DECLARE (SCNT, DSTAT) ADDRESS;
+        DECLARE RFCB (33) BYTE INITIAL (0, 'INDEXS  ', 'TXT') ;
+        DECLARE SBUFF (128) BYTE;
+        DECLARE CHR BYTE;
+
+        ----
+        ----
+
+        CALL DRCHR (.RFCB, .SBUFF, .SCNT, .CHR, .DSTAT);
+
+
+D.3.2 Procedure DWCHR
+---------------------
+
+This  procedure writes a byte to a disk file. The first CALL to DWCHR must  be 
+preceded by a CALL to procedure OPENW (see D.3.7). The last CALL to DWCHR must 
+be  followed by a CALL to procedure CLOSW (see D.3.8) or the last sector  will 
+not be written to disk.
+
+Arguments are:
+
+     1. File Control Block address.
+
+     2. CP/M DMA buffer address.
+
+     3. Address of the number of bytes in the DMA buffer.
+
+     4. Address at which the byte to be written is stored.
+
+     5. Address of the status word.
+
+The  status  returned is 00H if no error occurred, or 0FFH if  a  write  error 
+occurred. The message "WRITE ERROR" is printed at the console if a write error 
+occurred.
+
+The following is an example of the declaration and use of procedure DWCHR:
+
+        DWCHR:
+        PROCEDURE (FCB, SECTOR$BUFFER, SECTOR$COUNT, CHAR, STATUS) EXTERNAL;
+          DECLARE (FCB, SECTOR$BUFFER, SECTOR$COUNT, CHAR, STATUS) ADDRESS; 
+        END DWCHR;
+
+        DECLARE (SCNT, DSTAT) ADDRESS;
+        DECLARE WFCB (33) BYTE INITIAL (0, 'OUTFILE ', 'TXT');
+        DECLARE SBUFF (128) BYTE;
+        DECLARE CHR BYTE;
+
+        ----
+        ----
+
+        CALL DWCHR (.WFCB, .SBUFF, .SCNT, .CHR, .DSTAT);
+
+
+D.3.3 Procedure DRLIN
+---------------------
+
+This  procedure  reads a line from the disk. The first CALL to DRLIN  must  be 
+preceded  by  a  CALL to OPENR (see D.3.5). The last CALL  to  DRLIN  must  be 
+followed by a CALL to CLOSR (see D.3.6).
+
+Arguments are:
+
+     1. File Control Block address.
+
+     2. CP/M DMA buffer address.
+
+     3. Address of the number of bytes in the DMA buffer.
+
+     4. Address of the buffer into which the line is to be placed.
+
+     5. Address of the count of bytes transferred to the input buffer.
+
+     6. Address of the status word.
+
+Characters  are  transferred from the disk file to the input  buffer  until  a 
+Line-Feed  is  encountered. No check is made for input  buffer  overflow.  The 
+status returned is the same as for procedure DRCHR. Procedure DRLIN prints the 
+message "READ ERROR" at the console if an error occurs.
+
+The following is an example of the declaration and use of procedure DRLIN:
+
+        DRLIN:
+        PROCEDURE (FCB, SECTOR$BUFFER, SECTOR$COUNT, BUFFER, COUNT,
+           STATUS) EXTERNAL;
+          DECLARE (FCB, SECTOR$BUFFER, SECTOR$COUNT, BUFFER, COUNT,
+           STATUS) ADDRESS;
+        END DRLIN;
+
+        DECLARE RFCB (33) BYTE INITIAL (0, 'INDEXS  ', 'TXT');
+        DECLARE (SBUFF, TEXT) (128) BYTE;
+        DECLARE (SCNT, COUNT, DSTAT) ADDRESS;
+
+        ----
+        ----
+
+        CALL DRLIN (.RFCB, .SBUFF, .SCNT, .TEXT., .COUNT, .DSTAT);
+
+
+D.3.4 Procedure DWLIN
+---------------------
+
+This procedure writes a line to a disk file. The first CALL to procedure DWLIN 
+must  be preceded by a CALL to procedure OPENW (see D.3.6). The last  CALL  to 
+procedure  DWLIN must be followed by a CALL to procedure CLOSW (see D.3.7)  or 
+the last sector will not be written to disk.
+
+Arguments are:
+
+     1. File Control Block address.
+
+     2. CP/M DMA buffer address.
+
+     3. Address of the number of bytes in the DMA buffer.
+
+     4. Address of the buffer from which the line is to be taken.
+
+     5. Count of bytes to be written to the disk file.
+
+     6. Address of the status word.
+
+The status returned and the error message printed at the console are the  same 
+as for procedure DWCHR (see D.3.2).
+
+The following is an example of the declaration and use of procedure DWLIN:
+
+        DWLIN:
+        PROCEDURE (FCB, SECTOR$BUFFER, SECTOR$COUNT, BUFFER, COUNT, 
+           STATUS) EXTERNAL;
+          DECLARE (FCB, SECTOR$BUFFER, SECTOR$COUNT, BUFFER, COUNT, 
+           STATUS) ADDRESS;
+        END DWLIN;
+
+        DECLARE WFCB (33) BYTE INITIAL (0, 'QFILE   ', 'XY ');
+        DECLARE (SBUFF, TEXT) (128) BYTE;
+        DECLARE (SCNT, COUNT, DSTAT) ADDRESS;
+
+        ----
+        ----
+
+        CALL DWLIN (.WFCB, .SBUFF, .SCNT, .TEXT., .COUNT, .DSTAT);
+
+
+D.3.5 Procedure OPENR
+---------------------
+
+This procedure opens a disk file for reading. Procedure OPENR initializes  the 
+last  21 bytes of the File Control Block to zeroes, and initializes the  count 
+of bytes in the DMA buffer to 0. This procedure does not read the first sector 
+into the DMA buffer.
+
+Arguments are:
+
+     1. File Control Block address.
+
+     2. Address of the number of bytes in the CP/M DMA buffer.
+
+     3. Address of the status word.
+
+The following is an example of the declaration and use of procedure OPENR:
+
+        OPENR:
+        PROCEDURE (FCB, SECTOR$COUNT, STATUS) EXTERNAL;
+          DECLARE (FCB, SECTOR$COUNT, STATUS) ADDRESS;
+        END OPENR;
+
+        DECLARE RFCB (33) BYTE INITIAL (0, 'INDEXS   ', 'TXT');
+        DECLARE (SCNT, DSTAT) ADDRESS;
+
+        ----
+        ----
+
+        CALL OPENR (.RFCB, .SCNT, .DSTAT);
+
+
+D.3.6 Procedure CLOSR
+---------------------
+
+This  procedure closes a file used for disk reading. A file must be closed  if 
+it is to be re-read. The file is closed and a status of 00H is returned if  no 
+error occurred; otherwise, a status of 0FFH is returned.
+
+Arguments are:
+
+     1. File Control Block address.
+
+     2. Address of the status word.
+
+The following is an example of the declaration and use of procedure CLOSR:
+
+        CLOSR:
+        PROCEDURE (FCB, STATUS) EXTERNAL;
+          DECLARE (FCB, STATUS) ADDRESS;
+        END CLOSR;
+
+        DECLARE RFCB (33) BYTE INITIAL (0, 'INDEXS   ', 'TXT');
+        DECLARE DSTAT ADDRESS;
+
+        ----
+        ----
+
+        CALL CLOSR (.RFCB, .DSTAT);
+
+
+D.3.7 Procedure OPENW
+---------------------
+
+This procedure opens a file to be used for output.
+
+Arguments are:
+
+     1. File Control Block address.
+
+     2. Address of the number of bytes in the CP/M DMA buffer.
+
+     3. Address of the status word.
+
+Procedure  OPENW must be CALLed before any CALLs to procedures DWCHR or  DWLIN 
+are made. Files of the same name as the file being opened will be erased.  The 
+status  returned  is 00H if no error occurred; otherwise, 0FFH.  The  last  21 
+bytes  of  the File Control Block are initialized to zeroes and the  count  of 
+bytes in the DMA buffer is initialized to 0. This procedure does not read  the 
+first sector into the DMA buffer.
+
+The following is an example of the declaration and use of procedure OPENW:
+
+        OPENW:
+        PROCEDURE (FCB, SECTOR$COUNT, STATUS) EXTERNAL;
+          DECLARE (FCB, SECTOR$COUNT, STATUS) ADDRESS;
+        END OPEN;
+
+        DECLARE WFCB (33) BYTE INITIAL (0, 'QFILE   ', 'XY ');
+        DECLARE (SCNT, DSTAT) ADDRESS;
+
+        ----
+        ----
+
+        CALL OPENW (.WFCB, .SCNT, .DSTAT);
+
+
+D.3.8 Procedure CLOSW
+---------------------
+
+This procedure closes a file used for output.
+
+Arguments are:
+
+     1. File Control Block address.
+
+     2. CP/M DMA buffer address.
+
+     3. Address of the number of bytes in the DMA buffer.
+
+     4. Address of the status word.
+
+Procedure CLOSW writes the last sector to the disk file, and closes the  file. 
+The last sector is padded with Control-Zs (1AH, CP/M's End-Of-File indicator). 
+If  the last sector contains 128 bytes prior to padding, an additional  sector 
+full  of  Control-Zs (1AHs) is not written. The status returned is 00H  if  no 
+error occurred; otherwise, 0FFH.
+
+The following is an example of the declaration and use of procedure CLOSW:
+
+        CLOSW:
+        PROCEDURE (FCB, SECTOR$BUFFER, SECTOR$COUNT, STATUS) EXTERNAL;
+          DECLARE (FCB, SECTOR$BUFFER, SECTOR$COUNT, STATUS) ADDRESS;
+        END CLOSW;
+
+        DECLARE WFCB (33) BYTE INITIAL (0, 'RECORD  ', 'ISM');
+        DECLARE SBUFF (128) BYTE; 
+        DECLARE (SCNT, DSTAT) ADDRESS;
+
+        ----
+        ----
+
+        CALL CLOSW (.WFCB, .SBUFF, .SCNT, .DSTAT);
+
+
+D.4 Other Procedures
+--------------------
+
+D.4.1 Procedure NUMIN
+---------------------
+
+This  procedure converts a number in ASCII string form into a 16-bit  unsigned 
+binary number.
+
+Argument:  The  address of the pointer to the buffer area which  contains  the 
+ASCII string.
+
+See reference 1, page 147 for details of this procedure.
+
+The following is an example of the declaration and use of procedure NUMIN:
+
+        NUMIN:
+        PROCEDURE (BUFFER) ADDRESS EXTERNAL;
+          DECLARE  BUFFER  ADDRESS; 
+        END NUMIN;
+
+        DECLARE BUFFER (128) BYTE;
+        DECLARE BUFFPTR ADDRESS;
+        DECLARE N ADDRESS;
+
+        ----
+        ----
+
+        BUFFPTR = .BUFFER;
+        N = NUMIN (.BUFFPTR);
+
+
+D.4.2 Procedure NMOUT
+---------------------
+
+This procedure converts a 16-bit unsigned binary number into an ASCII string.
+
+Arguments are:
+
+     1. Number whose printable representation is desired.
+
+     2. Integer  between 2 and 16 inclusive, specifying the base in which  the 
+        first argument is to be interpreted.
+
+     3. ASCII  character to be used as leading character(s) in  the  printable 
+        representation, e.g., '0', ' ', 0 or 00H (ASCII NUL).
+
+     4. Address  of a buffer into which the printable representation is to  be 
+        placed.
+
+     5. Number  of  characters desired in the  printable  representation.  The 
+        buffer  of  argument  4  must be large enough  to  contain  this  many 
+        characters.
+
+See reference 1, page 143 for details of this procedure.
+
+The following is an example of the declaration and use of procedure NMOUT:
+
+        NMOUT:
+        PROCEDURE (VALUE, BASE, LC, BUFFADR, WIDTH) EXTERNAL;
+          DECLARE (VALUE, BUFFADR) ADDRESS;
+          DECLARE (BASE, LC, WIDTH) BYTE;
+        END NMOUT;
+
+        DECLARE BUFFER (128) BYTE;
+        DECLARE ROOT ADDRESS;
+
+        ----
+        ----
+
+        CALL NMOUT (ROOT, 10, ' ', .BUFFER, 5);
+
+
+Appendix E: Sample Output
+-------------------------
+
+This  section contains the input and output file listings for a  PLMX  program 
+which computes the average of an array of 10 numbers.
+
+
+E.a The source file listing
+----------------------------
+
+/***********************************************************/
+/* A PROGRAM TO FIND THE MEAN OF THE 10 VALUES OF AN ARRAY */
+/***********************************************************/
+
+
+MEAN$VAL:
+DO;
+
+        DECLARE X (10) BYTE DATA (23,2,18,0,20,14,45,27,8,33);
+        DECLARE SUM ADDRESS;
+        DECLARE (MEAN, I) BYTE;
+
+        SUM = 0;
+        I = 0;
+        DO WHILE I <= 9;
+           SUM = SUM + X (I);
+           I = I + 1;
+        END;
+        MEAN = SUM / 10;
+
+END MEAN$VAL;
+
+
+
+
+E.b The output file listing
+---------------------------
+
+        TITLE   MEANV
+        NAME    ('MEANV')
+
+MEANV::
+         EXTRN  INIT@
+         PUBLIC AAAAB@,AAAAA@
+
+AAAAA@:
+        LXI     H,$+6 
+        JMP     INIT@
+AAAAB@:
+;
+;/***********************************************************/
+;/* A PROGRAM TO FIND THE MEAN OF THE 10 VALUES OF AN ARRAY */
+;/***********************************************************/
+;
+;MEAN$VAL:
+;
+;DO;
+;
+;
+;        DECLARE X (10) BYTE DATA (23,2,18,0,20,14,45,27,8,33);
+;
+;        DECLARE SUM ADDRESS;
+;
+;        DECLARE (MEAN, I) BYTE;
+;
+;
+;        SUM = 0;
+        LXI     H,0H
+;
+;        I = 0;
+        SHLD    A0003
+        MVI     A,0H
+;
+;        DO WHILE I <= 9;
+        STA     A0005
+G0007:
+        MVI     L,09H
+        LDA     A0005
+        EXTRN   BP36@
+        CALL    BP36@
+;
+;           SUM = SUM + X (I);
+        RRC
+        JNC     G0008
+        LHLD    A0005
+        MVI     H,0
+        XCHG
+        LXI     H,A0001
+        DAD     D
+        MOV     A,M
+        LHLD    A0003
+        EXTRN   BP57@
+        CALL    BP57@
+;
+;           I = I + 1;
+        SHLD    A0003
+        MVI     L,01H
+        LDA     A0005
+        EXTRN   BP25@
+        CALL    BP25@
+;
+;        END;
+        STA     A0005
+        JMP     G0007
+;
+;        MEAN = SUM / 10;
+G0008:
+        MVI     A,0AH
+        LHLD    A0003
+        EXTRN   BP71@
+        CALL    BP71@
+        SHLD    T0009
+        LDA     T0009
+;
+;
+;END MEAN$VAL;
+        STA     A0004
+        EXTRN   EXIT@
+SCAT@:
+        CALL    EXIT@
+A0001:
+        DB      017H
+        DB      02H
+        DB      012H
+        DB      0H
+        DB      014H
+        DB      0EH
+        DB      02DH
+        DB      01BH
+        DB      08H
+        DB      021H
+        DSEG
+A0003:
+        DS      02H
+A0004:
+        DS      01H
+A0005:
+        DS      01H
+T0006:
+        DS      01H
+T0009:
+        DS      02H
+        END     AAAAA@
+
+
+Appendix F: IOCLD.SRC Listing
+-----------------------------
+
+/*
+   Following is a total list of I/O procedures available to the
+   PLMX user. Refer to Digital Research "CP/M Interface Guide"
+   for a description of CP/M 1.4 system level procedures. Refer to
+   the "PLMX User's Guide" for a description of all other procedures.
+   It is suggested that the user extract those procedures which are
+   applicable to his application, possibly putting them in an INCLUDE
+   file.
+*/
+
+/*   CP/M system level procedures   */
+
+RD$CON:
+PROCEDURE BYTE EXTERNAL;
+END RD$CON;
+
+WR$CON:
+PROCEDURE (CHAR) EXTERNAL;
+  DECLARE  CHAR  BYTE;
+END WR$CON;
+
+RD$RDR:
+PROCEDURE BYTE EXTERNAL;
+END RD$RDR;
+
+PUNCH:
+PROCEDURE (CHAR) EXTERNAL;
+  DECLARE  CHAR  BYTE;
+END PUNCH;
+
+PRINT:
+PROCEDURE (CHAR) EXTERNAL;
+  DECLARE  CHAR  BYTE;
+END PRINT;
+
+G$STAT:
+PROCEDURE BYTE EXTERNAL;
+END G$STAT;
+
+S$STAT:
+PROCEDURE (STAT) EXTERNAL;
+  DECLARE  STAT  BYTE;
+END S$STAT;
+
+PR$BUF:
+PROCEDURE (ADRS) EXTERNAL;
+  DECLARE  ADRS  ADDRESS;
+END PR$BUF;
+
+RD$BUF:
+PROCEDURE (BUF) ADDRESS EXTERNAL;
+  DECLARE  BUF  BYTE;
+END RD$BUF;
+
+CN$RDY:
+PROCEDURE BYTE EXTERNAL;
+END CN$RDY;
+
+LFT$HD:
+PROCEDURE EXTERNAL;
+END LFT$HD;
+
+INIT:
+PROCEDURE EXTERNAL;
+END INIT;
+
+LOGIN:
+PROCEDURE (DSK) EXTERNAL;
+  DECLARE  DSK  BYTE;
+END LOGIN;
+
+OPEN:
+PROCEDURE (FCB) BYTE EXTERNAL;
+  DECLARE  FCB  BYTE;
+END OPEN;
+
+CLOSE:
+PROCEDURE (FCB) BYTE EXTERNAL;
+  DECLARE  FCB  BYTE;
+END CLOSE;
+
+SERCH:
+PROCEDURE (FCB) BYTE EXTERNAL;
+  DECLARE  FCB  BYTE;
+END SERCH;
+
+SR$NXT:
+PROCEDURE (FCB) BYTE EXTERNAL;
+  DECLARE  FCB  BYTE;
+END SR$NXT;
+
+DLETE:
+PROCEDURE EXTERNAL;
+END DLETE;
+
+RD$DSK:
+PROCEDURE (FCB) BYTE EXTERNAL;
+  DECLARE  FCB  ADDRESS;
+END RD$DSK;
+
+WR$DSK:
+PROCEDURE (FCB) BYTE EXTERNAL;
+  DECLARE  FCB  ADDRESS;
+END WR$DSK;
+
+MAKE:
+PROCEDURE (FCB) BYTE EXTERNAL;
+  DECLARE  FCB  ADDRESS;
+END MAKE;
+
+RNAME:
+PROCEDURE (FCB) ADDRESS EXTERNAL;
+  DECLARE  FCB  ADDRESS;
+END RNAME;
+
+RL$VEC:
+PROCEDURE BYTE EXTERNAL;
+END RL$VEC;
+
+DRIVE:
+PROCEDURE BYTE EXTERNAL;
+END DRIVE;
+
+STDMA:
+PROCEDURE (BUF) EXTERNAL;
+  DECLARE  BUF  ADDRESS;
+END STDMA;
+
+
+/*   PLMX read and write line procedures   */
+
+READ:
+PROCEDURE (FUNCTION, BUFFER, COUNT, ACTUAL, STATUS) EXTERNAL;
+  DECLARE (FUNCTION, BUFFER, COUNT, ACTUAL, STATUS) ADDRESS;
+END READ;
+
+WRITE:
+PROCEDURE (FUNCTION, BUFFER, COUNT, STATUS) EXTERNAL;
+  DECLARE (FUNCTION, BUFFER, COUNT, STATUS) ADDRESS;
+END WRITE;
+
+
+/*   Disk I/O procedures */
+
+DRCHR:
+PROCEDURE (FCB, SEC$BUFFER, SEC$COUNT, CHAR, STATUS) EXTERNAL;
+  DECLARE (FCB, SEC$BUFFER, SEC$COUNT, CHAR, STATUS) ADDRESS;
+END DRCHR;
+
+DWCHR:
+PROCEDURE (FCB, SEC$BUFFER, SEC$COUNT, CHAR, STATUS) EXTERNAL;
+  DECLARE (FCB, SEC$BUFFER, SEC$COUNT, CHAR, STATUS) ADDRESS;
+END DWCHR;
+
+DRLIN:
+PROCEDURE (FCB, SEC$BUF, SEC$CNT, BUFFER, COUNT, STATUS) EXTERNAL;
+  DECLARE (FCB, SEC$BUF, SEC$CNT, BUFFER, COUNT, STATUS) ADDRESS;
+END DRLIN;
+
+DWLIN:
+PROCEDURE (FCB, SEC$BUF, SEC$COUNT, BUFFER, COUNT, STATUS) EXTERNAL;
+  DECLARE (FCB, SEC$BUF, SEC$COUNT, BUFFER, COUNT, STATUS) ADDRESS;
+END DWLIN;
+
+OPENR:
+PROCEDURE (FCB, SEC$COUNT, STATUS) EXTERNAL;
+  DECLARE (FCB, SEC$COUNT, STATUS) ADDRESS;
+END OPENR;
+
+CLOSR:
+PROCEDURE (FCB, STATUS) EXTERNAL;
+  DECLARE (FCB, STATUS) ADDRESS;
+END CLOSR;
+
+OPENW:
+PROCEDURE (FCB, SEC$COUNT, STATUS) EXTERNAL;
+  DECLARE (FCB, SEC$COUNT, STATUS) ADDRESS;
+END OPENW;
+
+CLOSW:
+PROCEDURE (FCB, SEC$BUF, SEC$COUNT, STATUS) EXTERNAL;
+  DECLARE (FCB, SEC$BUF, SEC$COUNT, STATUS) ADDRESS;
+END CLOSW;
+
+/*   Other procedures   */
+
+NUMIN:  /* Convert ASCII number to 16-bit unsigned binary */
+PROCEDURE (BUFFER) ADDRESS EXTERNAL;
+  DECLARE  BUFFER  ADDRESS;
+END NUMIN;
+
+NMOUT:  /* Convert 16-bit unsigned binary number to ASCII string */
+PROCEDURE (VALUE, BASE, LC, BUFFADR, WIDTH) EXTERNAL;
+  DECLARE (VALUE, BUFFADR) ADDRESS;
+  DECLARE (BASE, LC, WIDTH) BYTE;
+END NMOUT;
+
+
+Appendix G: PLMX Advertisements
+-------------------------------
+
+- "PLMX communicates with all 8/16-bit micros"
+  "IEEE Micro", February 1981, p.106
+
+PLMX, a universal high-level language for microprocessors, generates code  for 
+any 8- or 16-bit device. Designed for use in microcomputer product development 
+and real-time process control, it is priced at half the cost of PL/M and other 
+non-universal  microprocessor software packages, according to  its  developer, 
+System Consultants, Inc.
+
+PLMX takes PL/M to its logical conclusion, says the company. PL/M,  originally 
+derived  from  PL/1,  is  used only on  8080-  or  8086-based  systems.  Other 
+versions, such as PL/Z for the Z-80 and PL/65 for the 6500, are used only with 
+those  processors.  PLMX  combines the features  of  PL/M  with  universality, 
+allowing  users to employ new microprocessor architectures without  having  to 
+develop new software for them.
+
+PLMX's  syntax is identical to PL/M's, which means that the entire library  of 
+existing PL/M programs can be compiled under PLMX. Hence, PL/M programs may be 
+used on microprocessors other than the 8080, via the PLMX compiler.
+
+Currently,  the  PLMX compiler runs under the CP/M 1.4  and  Tektronix  TEKDOS 
+Operating  Systems.  Interfaces to other operating systems will  be  available 
+during  1981.  In  addition,  PLMX is a true  compiler,  not  an  interpretive 
+compiler  such  as BASIC or Pascal in some of their  current  implementations. 
+Since  an interpreter must be resident in ROM for execution of  programs,  and 
+thus  must  have  a considerable amount of memory  space,  its  usefulness  in 
+developing  ROM-based  products  is limited. The programs  compiled  by  PLMX, 
+however, run an average of 15 times faster than those on an interpreter, since 
+at run time the programs are already in memory in executable form. This,  says 
+Systems Consultants, makes PLMX appropriate for real-time applications.
+
+With  no  arbitrary formatting rules or line numbers, PLMX  source  statements 
+resemble  simple  English  declarations,  and  follow  a  well-defined   logic 
+structure.  The  source  text can contain  comments  anywhere,  except  within 
+reserved words, identifier names, and numbers.
+
+PLMX  is  priced  at $1000; an eight-inch compiler  diskette  and  instruction 
+manuals  are included. Additional copies for the same microprocessor type  are 
+substantially  discounted.  PLMX  is available for  immediate  delivery,  with 
+program development support and other engineering services also available.
+
+
+- "Microprocessor-Independent Program Library"
+   The *unique* cross-compiler for microprocessor independence
+  "IEEE Micro", Vol.2, No.4, Oct/Dec 1982, p.8
+
+With  PLMX, you are no longer restricted to any one microprocessor. PLMX is  a 
+flexible  cross-compiler  that generates code for the 8080/8085,  Z-80,  1802, 
+6800/6802/6809,  and  9900  microprocessors, and executes  under  TEKDOS  (*), 
+DOS/50 (*), CP/M (**), and CP/M-derivative Operating Systems. This flexibility 
+enables  you  to convert your existing PL/M libraries into  a  Microprocessor-
+Independent Program Library.
+
+PLMX implements the structured syntax of PL/M, and produces assembly  language 
+source files which can be assembled for ROM-based applications.
+
+And  PLMX  offers the features you are looking for in a  software  development 
+tool:  portability, better program organization, more efficient management  of 
+large  programming  jobs, and savings in programming time and  money.  Protect 
+your software investment, contact Roger Carlson - TODAY. He will tell you  all 
+about PLMX.
+
+SYSCON Corporation
+4015 hancock Street
+San Diego
+CA 92110
+
+* = TEKDOS and DOS/50 are trademarks of Tektronix, Inc.
+** = CP/M is a trademark of Digital Research, Inc.
+
+
+Appendix H: ROCHE Addenda
+-------------------------
+
+The  "PL/M-80  Programming Manual" (1980) is available on  the  BitSavers  Web 
+server.  However,  due  to its success, this server is  often  overwhelmed  by 
+demand.  So, if you cannot access it, try one of its multiple  mirrors.  Then, 
+search for the "Intel" directory. The manual is in the "PLM" directory.
+
+A  few short PL/M programs are available at the same address, in the  "insite" 
+directory. Open one of the two 600-pages catalogues, then search for any small 
+PL/M program that were incorporated in the catalogues. (There is even a  "Game 
+of Life"!)
+
+The PLMX "distribution disk" (except IOCLD.SRC?) is available at:
+
+http://z80cpu.eu/archive/rlee/S/SYSTEM%20CONSULTANTS/PLMX/
+
+The  "PLMX  User's Guide" is pretty small... For example,  my  "Mallard  BASIC 
+Introduction  and  Reference" manual, explaining a 30KB interpreter,  is  300-
+pages  long! (Ten pages per kilobyte.) The PLMX Compiler is 85KB (the  minimum 
+to  run  it),  yet its manual is... 24-pages long!  Obviously,  Roger  Carlson 
+expects its user to be pretty "familiar" about PL/M and CP/M...
+
+For  the  sake of Internet "Newbies", I decided to at least show them  how  to 
+generate a CP/M COMmand file (even if PLMX is designed to produce "modules" to 
+be put in a "library" and retrieved by a linker).
+
+So, I went to my Old Faithful Epson QX-10... which did not boot?!? Since there 
+was  no time to tinker with hardware, I decided to use an IBM Clown.  Since  I 
+wanted to show what was happening, I needed to redirect the screen output into 
+a  file.  Under MS-DOS, this is tricky: you need to type the  command  blindly 
+(!). So, CP/M(-86) Plus to the rescue! With CP/M Plus, I can have an unplanned 
+session at the console, redirecting the screen output to a file.
+
+A>put console output to file plmx.asc [system]
+
+Since  PLMX is an 8080 CP/M 1.4 program, we need an emulator to run  it  under 
+8086 CP/M 3.1. Me, I use Jim Lopushinsky's Z80.CMD Version 1.3.
+
+A>z80 plmx.com mean ; C+L+
+Z80 CP/M-80 emulator for CP/M-86 vers 1.3 - 11/30/97
+Copyright (c) 1985-1997 Jim Lopushinsky
+PLMX COMPILER VERSION 2.3   
+COPYRIGHT (C) 1980, SYSTEMS CONSULTANTS, INC.
+
+(See  Appendix E for the PLMX compiler output. The only reason why "C+L+"  are 
+in  uppercase  is  that, on my French keyboard, the  "+"  sign  is  uppercase. 
+Anyway, since this is a command line, the CCP translates it to uppercase.)
+
+END OF COMPILATION
+000 ERROR(S) DETECTED
+
+PLMX  produced  a MAC file. So, we now use M80 to produce the  REL  file.  (We 
+could  use  Digital Research's RMAC for 8080-only code (the one  outputted  by 
+this  version  of PLMX). The advantage of M80 is that only  one  assembler  is 
+needed  to generate code for the 8080 and the Z-80. The (big) drawback of  M80 
+is  that one additional step (compared to ASM and MAC) is needed:  linking  of 
+the  REL  modules  (you  can  load HEX files directly  into  the  DDT  or  SID 
+debuggers). For the Newbies, the M80 syntax is: M80 REL,PRN=MAC. The  shortest 
+form is: M80 =MAC.
+
+A>z80 m80.com mean,mean=mean
+Z80 CP/M-80 emulator for CP/M-86 vers 1.3 - 11/30/97
+Copyright (c) 1985-1997 Jim Lopushinsky
+
+No Fatal error(s)
+
+Finally, we need to link the modules. As explained in the "PLMX User's Guide", 
+RLIB.REL  contains  the  run-time  library  and  IOLIB.REL  contains  the  I/O 
+Procedures.  Also, "IOLIB should precede RLIB when they are linked."  Probably 
+the only advantage of using a Linker is that (with an option) it can  retrieve 
+from  the  library  only the modules needed (else,  it  includes  everything). 
+(Roger  Carlson  do  not  mention it but, normally,  you  put  your  assembled 
+relocatable modules inside a "library".)
+
+For  the Newbies, it could be possible to bypass the Linker, by using  INCLUDE 
+files  containing the full code of RLIB and IOLIB. Of course, there  would  be 
+some  overhead,  since all the routines would be included, even  if  you  just 
+printed "Hello, World!". (A problem with the code of RLIB is that it  contains 
+twice the BP67@ subroutine... So, no assembler can assemble correctly the run-
+time library! This is another problem with Linkers: they do not remember which 
+modules  they  put inside a file! In this case, Roger Carlson  linked  *TWICE* 
+module BP67@... If he had used a single file to contain the source code of all 
+the run-time routines, the assembler would have complained about this  doubly-
+defined  subroutine.  As he was using a Linker, the  Linker,  not  remembering 
+which modules were already inside the library, simply added twice the  module, 
+with  the same name and the same code... Do you understand, now, why I  prefer 
+absolute  macro-assemblers?)  (XREF is also an indispensable tool,  to  verify 
+that  no  labels have been forgotten, once you have got the code  right.  Note 
+that XREF works only for single file... How do you cross-ref a library made of 
+73 modules?)
+
+A>z80 link.com mean,iolib[s],rlib[s]
+Z80 CP/M-80 emulator for CP/M-86 vers 1.3 - 11/30/97
+Copyright (c) 1985-1997 Jim Lopushinsky
+LINK 1.31
+
+BP25@    0171   BP36@    0176   BP57@    0157   BP71@    019A   
+EXIT@    016D   MEANV    0100   BP41@    017F   BP42@    0187   
+BP43@    018A   BP44@    018F   BP45@    0192   BP58@    015A   
+BP59@    015D   BP60@    0160   BP61@    0163   INIT@    0166   
+BP87@    01A3   BP88@    01AC   
+
+ABSOLUTE     0000
+CODE SIZE    00E2 (0100-01E1)
+DATA SIZE    0007 (01E2-01E8)
+COMMON SIZE  0000
+USE FACTOR     03
+
+Now,  for  the  Newbies,  I will be obliged to  include  comments  inside  the 
+redirected output of SID.
+
+A>z80 sid.com
+Z80 CP/M-80 emulator for CP/M-86 vers 1.3 - 11/30/97
+Copyright (c) 1985-1997 Jim Lopushinsky
+CP/M 3 SID - Version 3.0
+
+Since  SID is a *symbolic* debugger, it allows us to debug using the  name  of 
+the  labels  of the program, instead of mere hexadecimal  values.  (Hence  the 
+"SYMBOLS" message. The first "mean" is the COM file, the second "mean" is  the 
+SYM file.)
+
+#emean,mean
+SYMBOLS
+NEXT MSZE  PC  END
+0200 0200 0100 D46F
+
+First, let us have a look to the code produced.
+
+#d100,1FF
+0100: 21 00 00 22 E2 01 3E 00 32 E5 01 2E 09 3A E5 01 !.."..>.2....:..
+0110: CD 76 01 0F D2 39 01 2A E5 01 26 00 EB 21 4D 01 .v...9.*..&..!M.
+0120: 19 7E 2A E2 01 CD 57 01 22 E2 01 2E 01 3A E5 01 .~*...W."....:..
+0130: CD 71 01 32 E5 01 C3 0B 01 3E 0A 2A E2 01 CD 9A .q.2.....>.*....
+0140: 01 22 E7 01 3A E7 01 32 E4 01 CD 6D 01 17 02 12 ."..:..2...m....
+0150: 00 14 0E 2D 1B 08 21 C3 7F 01 C3 87 01 C3 8A 01 ...-..!.........
+0160: C3 8F 01 C3 92 01 EB 2A 06 00 F9 EB E9 F3 C3 00 .......*........
+0170: 00 85 6F 26 00 C9 67 7D 94 9F 2F 6F 26 00 C9 85 ..o&..g}../o&...
+0180: 6F 7C CE 00 67 7D C9 B5 6F C9 A5 6F 26 00 C9 AD o|..g}..o..o&...
+0190: 6F C9 8D 6F 7C CE 00 67 7D C9 5F 16 00 EB CD A3 o..o|..g}._.....
+01A0: 01 7D C9 EB 42 4B CD B4 01 EB 7D C9 EB 42 4B CD .}..BK....}..BK.
+01B0: B4 01 7D C9 11 00 00 CD DA 01 EB 3E F0 F5 29 1F ..}........>..).
+01C0: EB 29 EB D2 C7 01 23 17 DA D2 01 7D 81 7C 88 D2 .)....#....}.|..
+01D0: D4 01 09 13 F1 3C FA BD 01 C9 0B 79 2F 4F 78 2F .....<.....y/Ox/
+01E0: 47 C9 00 00 00 00 00 00 00 1A 1A 1A 1A 1A 1A 1A G...............
+01F0: 1A 1A 1A 1A 1A 1A 1A 1A 1A 1A 1A 1A 1A 1A 1A 1A ................
+
+Ok.  200h bytes = 1/2 kilobytes. Less than 512 bytes. (The "1A"s are the  CP/M 
+End-Of-File characters.) Let us now see the names of the modules (compare them 
+with those mentioned by LINK-80 at the preceding step).
+
+#h
+0171 BP25@
+0176 BP36@
+0157 BP57@
+019A BP71@
+016D EXIT@
+0100 MEANV
+017F BP41@
+0187 BP42@
+018A BP43@
+018F BP44@
+0192 BP45@
+015A BP58@
+015D BP59@
+0160 BP60@
+0163 BP61@
+0166 INIT@
+01A3 BP87@
+01AC BP88@
+
+Notice  that one module is named MEANV... This is the name of the  module.  As 
+explained  in  the  "PLMX User's Guide", there is an option to  make  a  "Main 
+Program" module straight from a module, but we are not using it, here. I  must 
+leave  you some exercises to do... Ok. So, our COMmand file contains  a  MEANV 
+module:  let  us  see  what code was produced (compare  with  the  listing  of 
+Appendix  E).  (SID  lists only 11 lines, to fill only half  a  screen  of  24 
+lines.)
+
+#l.meanv
+MEANV:
+  0100  LXI  H,0000
+  0103  SHLD 01E2
+  0106  MVI  A,00
+  0108  STA  01E5
+  010B  MVI  L,09
+  010D  LDA  01E5
+  0110  CALL 0176 .BP36@
+  0113  RRC  
+  0114  JNC  0139
+  0117  LHLD 01E5
+  011A  MVI  H,00
+#l
+  011C  XCHG 
+  011D  LXI  H,014D
+  0120  DAD  D
+  0121  MOV  A,M
+  0122  LHLD 01E2
+  0125  CALL 0157 .BP57@
+  0128  SHLD 01E2
+  012B  MVI  L,01
+  012D  LDA  01E5
+  0130  CALL 0171 .BP25@
+  0133  STA  01E5
+#l
+  0136  JMP  010B
+  0139  MVI  A,0A
+  013B  LHLD 01E2
+  013E  CALL 019A .BP71@
+  0141  SHLD 01E7
+  0144  LDA  01E7
+  0147  STA  01E4
+  014A  CALL 016D .EXIT@
+  014D  RAL  
+  014E  STAX B
+  014F  STAX D
+
+Stop! This code contains a "CALL EXIT@"... And, just before EXITing, it stores 
+a  value inside a byte. So, 2 questions: what is the value of this  byte,  and 
+what  is the code of EXIT? (I leave it to you the question of the purposes  of 
+the various BP??@ run-time routines...)
+
+#d1E4,1E5
+01E4: 00 00
+#l.exit@
+EXIT@:
+  016D  DI   
+  016E  JMP  0000
+BP25@:
+  0171  ADD  L
+  0172  MOV  L,A
+  0173  MVI  H,00
+  0175  RET  
+BP36@:
+  0176  MOV  H,A
+  0177  MOV  A,L
+  0178  SUB  H
+  0179  SBB  A
+  017A  CMA  
+
+(Again,  SID  listed  11  lines, but only the  code  at  EXIT@  interests  us. 
+Fortunately,  it is only 2 lines long. So, the EXIT@ routine of  the  run-time 
+library  disables interrupts (in case the program re-enabled them)  then  goes 
+back to CP/M, by jumping to the BIOS entry point (normally, you put 0 into the 
+C-register,  then  call the BDOS. By the way, notice that Appendix  D.1  "CP/M 
+System-Level Procedures" does not mention EXIT@...).
+
+Ok.  So, we have seen the binary contents of the COMmand file. Now,  we  would 
+like to know if the program produces the right value (re-read Appendix E. What 
+are the values at A0001? By the way, the 10 values can be seen in the dump, at 
+addresses 014D-0156. Do you see them, between the code shown in Appendix E and 
+the code of the run-time routines added by LINK?) To know this, we need to run 
+this program... But we have just seen that it goes back to CP/M after "poking" 
+the result in memory. So, we need to interrupt it. We could put a "breakpoint" 
+at EXIT@ (read the "SID User's Guide"). In this case, let us do it simpler  (a 
+way  compatible with DDT for CP/M 2.2). SID uses an "entry point"  located  in 
+the CP/M 2.2 "Page Zero" (you have the BIOS entry point at 0000H, and the BDOS 
+entry  point  at  0005H).  The only problem is that SID can  use  any  of  the 
+"restart points" of the 8080 (and Z-80) CPU. In practice, most SIDs use RST  6 
+or 7, which correspond to 0030H and 0038H (hence the famous "RST 38" of the Z-
+80...). So, let us see which one is used, in this case.
+
+#l0030
+  0030  JMP  DB86
+  0033  NOP  
+  0034  NOP  
+  0035  NOP  
+  0036  NOP  
+  0037  NOP  
+  0038  NOP  
+  0039  NOP  
+  003A  NOP  
+  003B  NOP  
+  003C  NOP  
+
+Well...  It is obvious that RST 6 (at 0030H) is used by SID. So, let us  patch 
+our COMmand file so that, instead of jumping to the BIOS ("warm-booting"),  it 
+will jump back to SID. (In numbers: replace 0000H by 0030H.)
+
+#s.exit@
+016D F3 
+016E C3 
+016F 00 30
+0170 00 .
+
+Now that the COMmand file is patched, let us run the program at full speed.
+
+#g.meanv
+
+*014D
+
+SID  prompted  us ("*"), telling us that it stopped executing the  program  at 
+014D  (the byte *after* the "CALL EXIT@", because the CPU increased the PC  by 
+1). Ok, let us now see the value computed.
+
+#d1E4,1E5
+01E4: 13 0A
+
+SID has a command to display hexadecimal values in decimal for mere humans...
+
+#h13
+0013 #19
+
+Well...  This  is the value that I computed with a pencil on the  back  of  an 
+envelope from the data in Appendix E. And you?
+
+#^C
+A>put console to console
+
+Ok. Now that we have seen that PLMX is running, let us start to improve it.  I 
+have  not  had enough time to find where are made the links between  the  PLMX 
+keywords  and the run-time and I/O routines. However, during my tests,  I  was 
+annoyed with typing a ; to separate the options from the SRC filename. (By the 
+way,  the PLM files of PLMX are not PL/M source code files, and the FOR  files 
+are  not,  too, FORTRAN files... I have no idea why Roger Carlson  chose  such 
+common  filetypes  for his overlays?) Under CP/M Plus, the  "standard"  option 
+separator  is [ (it was $ for CP/M 2.2), so let us patch PLMX, so it  is  more 
+"standard". The addresses to patch are:
+
+0A61
+0A7D
+0A8E
+0AB2
+1993
+
+So far, I have had not problem with those patches, but I am a beginner in PLMX 
+programming.  What  is  sure  is that PLMX is the  most  incredible  piece  of 
+CP/M software to have appeared since... the death of CP/M!
+
+The look of PLMX programs is incredibly different from the look of my assembly 
+language  programs,  yet they produce the same code! With PLMX, since  you  no 
+longer  hard code the control structures but see only the data, you  have  the 
+impression of manipulating only the data, and the code appears without effort! 
+This  PLMX  compiler is really something worth... $1000! My hat off  to  Roger 
+Carlson.
+
+That's all, folks!
+
+
+EOF
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,47 @@
+$nolist
+/*
+    Queue Literals
+*/
+
+  declare queueheader literally
+               'ql address,
+                name(8) byte,
+                msglen address,
+                nmbmsgs address,
+                dqph address,
+                nqph address';
+
+  declare queuehead literally
+    'structure (queueheader)';
+
+  declare cqueue literally
+               'queueheader,
+                msgin address,
+                msgout address,
+                msgcnt address ';
+
+  declare circularqueue literally
+    'structure (cqueue,
+                buf (1) byte )';
+
+  declare lqueue literally
+               'queueheader,
+                mh address,
+                mt address,
+                bh address';
+
+  declare linkedqueue literally
+    'structure (lqueue,
+                buf (1) byte )';
+
+  declare userqcbhead literally
+    'structure (pointer address,
+                msgadr address )';
+
+  declare userqcb literally
+    'structure (pointer address,
+                msgadr address,
+                name(8) byte)';
+
+$list
+

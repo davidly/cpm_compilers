@@ -1,0 +1,6 @@
+; read and compile an assembler program
+A:R $1.MAC
+A:M80 =$1/M
+A:L80 $1,$1/N/E
+ERA $1.REL
+

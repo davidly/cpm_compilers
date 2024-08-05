@@ -1,0 +1,67 @@
+	.Z80
+	aseg
+
+simhport	equ	0feh
+setz80cpu	equ	19
+set8080cpu	equ	20
+printstringcmd	equ	09h
+bdos		equ	0005h
+cr		equ	13
+lf		equ	10
+eof		equ	1ah
+cmdline		equ	80h
+
+	org	100h
+
+	jp	start
+
+usage:	db	'Usage: CPU (Z[80] | 8[080]) [v]',cr,lf
+	db	'  sets CPU to desired type and optionally prints a confirmation.'
+	db	cr,lf,'$',eof		; stop accidental TYPE command here
+mdz80:	db	'Z80 detected.',	cr,lf,'$'
+md8080:	db	'8080 detected.',	cr,lf,'$'
+mz80:	db	'CPU set to Z80.',	cr,lf,'$'
+m8080:	db	'CPU set to 8080.',	cr,lf,'$'
+
+start:	ld	a,(cmdline)		; get number of characters on command line
+	ld	b,a			; store also in <B>
+	or	a			; no parameters?
+	jp	z,showus		; yes, show usage
+	dec	a			; or just one character?
+	jp	z,showus		; yes, show usage
+	ld	a,(cmdline+2)		; get first character (cmdline+1) is ' '
+	cp	'Z'			; check for Z80
+	jp	z,sz80			; Z80 is desired
+	cp	'8'			; check for 8080
+	jp	nz,showus		; neither, show usage
+	ld	a,set8080cpu		; 8080 is desired, prepare command
+	ld	de,m8080		; and optional confirmation message for 8080
+	jp	doset			; perform CPU set operation
+
+sz80:	ld	a,setz80cpu		; Z80 is desired, prepare command
+	ld	de,mz80			; and optional confirmation message for Z80
+doset:	out	(simhport),a		; set CPU
+	ld	hl,cmdline+1		; start of command line
+find:	ld	a,(hl)			; get character
+	cp	'V'			; is it 'V' (for verbose)?
+	jp	z,print			; yes, print message
+	inc	hl			; point to next character
+	dec	b			; decrement counter of characters in command line
+	ret	z			; done
+	jp	find
+
+showus:	xor	a			; determine which CPU currently in use
+	dec	a
+	ld	de,md8080		; prepare for 8080
+	jp	pe,detmsg		; all eight bits set means parity even for 8080
+	ld	de,mdz80		; not so on Z80
+detmsg:	call	print			; print CPU type
+	ld	de,usage		; show usage
+print:	ld	c,printstringcmd	; print command for CP/M
+	jp	bdos			; execute it and return to CP/M
+
+last	equ	$
+	ds	200h - last		; make sure to fill with zeros via M80 /M option
+
+	end
+

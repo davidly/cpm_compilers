@@ -1,0 +1,48 @@
+; Create a bootable image on disk A: of CP/M with CCP
+; Based on original Digital Research sources for CCP and BDOS
+; Required sources are CFGCCP.LIB, MOVER.MAC, CCP.MAC, BDOS.MAC, CBIOSX.MAC
+; Required programs: M80.COM, L80.COM, DDT.COM, BOOT.COM, BOOTGEN.COM
+XSUB
+; get correct configuration
+PIP MEMCFG.LIB=CFGCCP.LIB
+; create MOVER.COM
+M80 =MOVER/M
+L80 MOVER,MOVER/N/E
+ERA MOVER.REL
+; create CCP.COM
+M80 =CCP/M
+L80 CCP,CCP/N/E
+ERA CCP.REL
+; create BDOS.COM
+M80 =BDOS/M
+L80 BDOS,BDOS/N/E
+ERA BDOS.REL
+; create CBIOSX.COM
+M80 =CBIOSX/M
+L80 CBIOSX,CBIOSX/N/E
+ERA CBIOSX.REL
+; put pieces together
+DDT
+F100 5C00 0
+IMOVER.COM
+R0000
+ICCP.COM
+R0900
+IBDOS.COM
+R1100
+ICBIOSX.COM
+R1F00
+G0
+; create boot file
+SAVE 44 CPMBOOT.COM
+ERA MOVER.COM
+ERA CCP.COM
+ERA BDOS.COM
+ERA CBIOSX.COM
+ERA MEMCFG.LIB
+; now perform a cold boot to get rid of XSUB
+; this restores the original BIOS jump vector which is required by BOOTGEN
+BOOT
+; write boot file to reserved tracks, must be last command
+BOOTGEN CPMBOOT.COM A:
+
