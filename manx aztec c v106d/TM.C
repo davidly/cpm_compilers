@@ -15,9 +15,12 @@ int logging = 1;
 
 char * memset_x( p, v, c ) char * p; int v; int c;
 {
-    unsigned char * pc = (unsigned char *) p;
-    unsigned char val = (unsigned char) ( v & 0xff );
+    unsigned char * pc;
+    unsigned char val;
     int i;
+
+    pc = (unsigned char *) p;
+    val = (unsigned char) ( v & 0xff );
 
     if ( 0 == p )
     {
@@ -44,9 +47,12 @@ char * memset_x( p, v, c ) char * p; int v; int c;
 
 void chkmem( p, v, c ) char * p; int v; int c;
 {
-    unsigned char * pc = (unsigned char *) p;
-    unsigned char val = (unsigned char) ( v & 0xff );
+    unsigned char * pc;
+    unsigned char val;
     int i;
+
+    pc = (unsigned char *) p;
+    val = (unsigned char) ( v & 0xff );
 
     if ( 0 == p )
     {
