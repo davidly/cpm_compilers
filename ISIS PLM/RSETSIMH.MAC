@@ -1,0 +1,34 @@
+	.Z80				; mnemonics only
+
+SIMHPORT		EQU	0FEH
+resetSIMHInterfaceCmd	EQU	14
+maxOut			EQU	128
+printStringCmd		EQU	09h
+BDOS			EQU	5
+CR			EQU	13
+LF			EQU	10
+CMDLINE			EQU	80H
+
+	ASEG
+	ORG	100H
+
+	LD	B,maxOut
+	LD	A,resetSIMHInterfaceCmd
+OUTAGN:	OUT	(SIMHPORT),A
+	DEC	B
+	JP	NZ,OUTAGN
+	LD	A,(CMDLINE)	; number of character in command line
+	OR	A
+	RET	Z		; return if no command line
+	LD	A,(CMDLINE+2)	; get first character (skip ' ')
+	CP	'V'		; if no 'V' (for verbose)
+	RET	NZ		; done
+	LD	DE,MSG
+	LD	C,printStringCmd
+	CALL	BDOS
+	RET
+
+MSG:	DB	CR,LF,'Reset SIMH interface done.',CR,LF,'$'
+
+	END
+

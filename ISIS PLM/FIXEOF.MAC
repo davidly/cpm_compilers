@@ -1,0 +1,120 @@
+;
+; This program fixes the EOF problem of the ISIS PL/M-80 compiler
+; version 3.1 under CP/M. The compiler ignors EOF in text files
+; and then throws error messages about illegal characters after the
+; final END statement.
+; The problem is avoided by filling the last record of a text file
+; with CR characters, including the EOF. Don't use on origial sources,
+; only on temporary copies for the building process.
+;
+; September 2006, Udo Munk
+;
+;	BDOS function
+;
+WARM	EQU	0		;warm start
+BDOS	EQU	5		;BDOS call
+PRINT	EQU	9		;print string to console
+FOPEN	EQU	15		;file open
+FCLOSE	EQU	16		;file close
+SETDMA	EQU	26		;set DMA buffer
+READR	EQU	33		;read record
+WRITER	EQU	34		;write record
+SEEK	EQU	35		;find last record of file
+;
+;	default FCB and I/O buffer
+;
+FCB	EQU	5CH
+BUF	EQU	80H
+;
+;	character constants
+;
+CR	EQU	0DH		;carriage return
+LF	EQU	0AH		;linefeed
+EOF	EQU	1AH		;EOF (ctl-z)
+;
+	.Z80
+	ASEG
+	ORG	0100H
+;
+;	set stack
+;
+	LD	SP,STACK
+;
+;	try to open file
+;
+	LD	C,FOPEN
+	LD	DE,FCB
+	CALL	BDOS
+	CP	0FFH
+	JP	NZ,OPENED
+	LD	C,PRINT
+	LD	DE,OERR
+	CALL	BDOS
+	JP	WARM
+;
+;	file open, seek to end of file
+;
+OPENED:
+	LD	C,SEEK
+	LD	DE,FCB
+	CALL	BDOS
+;
+;	decrement record by one and read last record
+;
+	LD	A,(FCB+33)
+	DEC	A
+	LD	(FCB+33),A
+	CP	0FFH
+	JP	NZ,READ
+	LD	A,(FCB+34)
+	DEC	A
+	LD	(FCB+34),A
+READ:
+	LD	C,SETDMA
+	LD	DE,BUF
+	CALL	BDOS
+	LD	C,READR
+	LD	DE,FCB
+	CALL	BDOS
+;
+;	find EOF in the last record
+;
+	LD	A,EOF
+	LD	HL,BUF
+	LD	BC,128
+	CPIR
+;
+;	fill rest of the record including EOF with CR's
+;
+	DEC	HL
+	INC	BC
+FILL:
+	LD	A,CR
+	LD	(HL),A
+	INC	HL
+	DEC	BC
+	LD	A,B
+	OR	C
+	JP	NZ,FILL
+;
+;	write record and close file
+;
+	LD	C,WRITER
+	LD	DE,FCB
+	CALL	BDOS
+	LD	C,FCLOSE
+	LD	DE,FCB
+	CALL	BDOS
+;
+;	done
+;
+	JP	WARM
+;
+;	data
+;
+OERR:
+	DEFM	CR,LF,'can''t open file',CR,LF,'$'
+	DEFS	20		;stack
+STACK:
+;
+	END			;of program

@@ -1,0 +1,45 @@
+$nolist
+/*
+    Xdos Literals
+*/
+
+  declare abs$request      literally '128',
+          rel$request      literally '129',
+          memory$free      literally '130',
+          poll             literally '131',
+          flag$wait        literally '132',
+          flag$set         literally '133',
+          make$queue       literally '134',
+          open$queue       literally '135',
+          delete$queue     literally '136',
+          read$queue       literally '137',
+          cond$read$queue  literally '138',
+          write$queue      literally '139',
+          cond$write$queue literally '140',
+          delay            literally '141',
+          dispatch         literally '142',
+          terminate        literally '143',
+          create           literally '144',
+          set$priority     literally '145',
+          attach           literally '146',
+          detach           literally '147',
+          set$console      literally '148',
+          assign$console   literally '149',
+          send$cli$command literally '150',
+          call$res$sys$p   literally '151',
+          parse$fname      literally '152',
+          get$console$nmb  literally '153',
+          system$data$adr  literally '154',
+          get$tod          literally '155',
+          rtn$pd$adr       literally '156',
+          abort$spcfd$proc literally '157',
+          attach$list      literally '158',
+          detach$list      literally '159',
+          set$list         literally '160',
+          cond$attach$list literally '161',
+          cond$attach      literally '162',
+          mpm$ver          literally '163',
+          get$list$nmb     literally '164';
+
+$list
+

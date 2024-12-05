@@ -1,0 +1,15 @@
+$nolist
+/*
+    Memmgr Literals
+*/
+
+  declare allocated literally '80H';
+
+  declare memory$descriptor literally
+    'structure (base byte,
+                size byte,
+                attrib byte,
+                bank byte)';
+
+$list
+

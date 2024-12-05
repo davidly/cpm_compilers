@@ -1,0 +1,22 @@
+/***********************************************************/
+/* A PROGRAM TO FIND THE MEAN OF THE 10 VALUES OF AN ARRAY */
+/***********************************************************/
+
+
+MEAN$VAL:
+DO;
+
+        DECLARE X (10) BYTE DATA (23,2,18,0,20,14,45,27,8,33);
+        DECLARE SUM ADDRESS;
+        DECLARE (MEAN, I) BYTE;
+
+        SUM = 0;
+        I = 0;
+        DO WHILE I <= 9;
+           SUM = SUM + X (I);
+           I = I + 1;
+        END;
+        MEAN = SUM / 10;
+
+END MEAN$VAL;
+

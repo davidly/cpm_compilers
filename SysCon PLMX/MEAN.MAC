@@ -1,0 +1,99 @@
+	TITLE MEANV
+	NAME ('MEANV')
+MEANV::
+;
+;/***********************************************************/
+;/* A PROGRAM TO FIND THE MEAN OF THE 10 VALUES OF AN ARRAY */
+;/***********************************************************/
+;
+;
+;MEAN$VAL:
+;
+;DO;
+;
+;
+;        DECLARE X (10) BYTE DATA (23,2,18,0,20,14,45,27,8,33);
+;
+;        DECLARE SUM ADDRESS;
+;
+;        DECLARE (MEAN, I) BYTE;
+;
+;
+;        SUM = 0;
+	LXI H,0H
+;
+;        I = 0;
+	SHLD A0003
+	MVI A,0H
+;
+;        DO WHILE I <= 9;
+	STA A0005
+G0007:
+	MVI L,09H
+	LDA A0005
+	EXTRN BP36@
+	CALL BP36@
+;
+;           SUM = SUM + X (I);
+	RRC
+	JNC G0008
+	LHLD A0005
+	MVI H,0
+	XCHG
+	LXI H,A0001
+	DAD D
+	MOV A,M
+	LHLD A0003
+	EXTRN BP57@
+	CALL BP57@
+;
+;           I = I + 1;
+	SHLD A0003
+	MVI L,01H
+	LDA A0005
+	EXTRN BP25@
+	CALL BP25@
+;
+;        END;
+	STA A0005
+	JMP G0007
+;
+;        MEAN = SUM / 10;
+G0008:
+	MVI A,0AH
+	LHLD A0003
+	EXTRN BP71@
+	CALL BP71@
+	SHLD T0009
+	LDA T0009
+;
+;
+;END MEAN$VAL;
+	STA A0004
+	EXTRN EXIT@
+SCAT@:
+	CALL EXIT@
+A0001:
+	DB 017H
+	DB 02H
+	DB 012H
+	DB 0H
+	DB 014H
+	DB 0EH
+	DB 02DH
+	DB 01BH
+	DB 08H
+	DB 021H
+	DSEG 
+A0003:
+	DS 02H
+A0004:
+	DS 01H
+A0005:
+	DS 01H
+T0006:
+	DS 01H
+T0009:
+	DS 02H
+	END
+
