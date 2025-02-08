@@ -1,0 +1,99 @@
+XVIII. The Draco assembler
+
+    The syntax expected by the Draco assembler is very similar to that
+    expected by the standard CP/M assembler, ASM.COM. Blank lines are
+    ignored, labels must start in column 1 and can be followed by a colon.
+    They can be on a line all by themselves. There must be at least one
+    blank or tab before the mnemonic field of each line. Comments start
+    with a semicolon and extend to the end of the line. Symbols are the
+    same as in the Draco compiler - they can be any length and are built
+    from upper and lower case letters, digits, periods and underscores. Case
+    is significant. Constants are numeric constants as in Draco (binary,
+    octal, decimal and hexadecimal). Expressions are allowed in all places
+    which require numbers. They can use all of Draco's operators: unary
+    ~, -, and |; binary &, |, ><, >>, <<, +, -, *, / and %.
+    
+    Source files for the Draco assembler consist of file declarations
+    (include files are not supported, hence 'global' variables are not
+    available), followed by procedure definitions. Declarations can be
+    declarations of external procedures, which consist of the name of the
+    procedure as a label, and the mnemonic 'extern'; a named constant
+    declaration, consisting of the constant name as label, ':=' as mnemonic,
+    and the constant value as operand; or a variable declaration, consisting
+    of the variable name as label, 'ds' as mnemonic, and the size of the
+    variable in bytes as the operand. Symbols declared outside of any
+    procedure are available throughout the source file (similar to 'file'
+    variables in Draco).
+    
+    Each procedure definition consists of several lines. The first line has
+    the procedure's name as label and 'proc' as mnemonic. After that comes
+    optional local declarations, syntactically identical to the file
+    declarations. After the declarations must come a line containing 'code'
+    as the mnemonic. This signals the beginning of the code portion of the
+    procedure. The code portion consists of normal instruction lines -
+    mnemonic and any required operands (operands are separated by commas);
+    string constants consisting of characters enclosed in double quotes (");
+    or constant byte or word definitions, consisting of the mnemonic 'db' or
+    'dw', followed by one or more expressions, separated by commas. String
+    constants do not automatically include a terminating 0. The full escape
+    conventions, as in Draco, are supported; e.g. (\r, \n, \b, \t, \e). The
+    procedure is closed by a line containing 'corp' as the mnemonic. The
+    symbols 'a', 'b', 'c', 'd', 'e', 'h', 'l', 'psw', and 'sp' are predefined
+    with the appropriate values.
+    
+    The Draco assembler is a one pass assembler. This means that symbols
+    (other than program labels) cannot be used before they have been defined.
+    Also, the assembler is not able to handle expressions involving the
+    addresses of variables; thus one cannot do something like 'lda  x+2',
+    where x is a variable. This can be handled by the format of the .REL
+    files (the compiler does it for things like 'a[3]'), but the capability
+    of distinguishing between relocatable and absolute expressions has not
+    been built into the assembler. The assembler is a very simple one, not
+    intended for heavy use. Nearly all programs can be written completely
+    in Draco. The assembler is needed only for strange machine-specific
+    things (like the 'daa' instruction), and in cases where efficiency is
+    vital.
+    
+    The various forms are illustrated in the following example, which is not
+    a meaningful program:
+    
+	Var1	ds	2
+	Var2	ds	1
+	CONS	:=	13
+	Var3	ds	CONS * 2	; allocate CONS words
+	
+	; here comes the procedures
+	
+	test	proc
+	doit	extern
+	XXX	:=	1024 / CONS
+	local	ds	XXX
+		code
+		lhld	Var1
+		xchg			; stash it in DE
+		lhld	local		; load first 2 bytes of 'local'
+		dad	d
+		shld	Var1
+		call	doit
+	l1
+		lda	13
+		sta	XXX		; absolute addressing
+		lxi	h,strcon
+		call	doit
+		jnc	l1
+		jnz	l2
+		xra	a
+		sta	Var2
+	l2:
+		ret
+	strcon	"this is a string constant\r\n"
+		db	0
+		dw	XXX,XXX/2,XXX/4, XXX / 8	; data table
+		corp
+	
+	test	proc
+		code
+		rst	7
+		ret
+		corp
+

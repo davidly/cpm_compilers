@@ -1,0 +1,292 @@
+XV. Operator Types
+
+    The basic syntax of operator types was given previously. They will be
+    discussed here by means of an example, the construction of a complex
+    type based on integers. First, we give an include file which would be
+    referenced by programs wanting to use the complex number package:
+
+	type Complex_t = ("_cmplx", struct {int c_real, c_imag},
+			  OPADD | OPSUB | OPMUL | OPDIV | OPNEG |
+			  OPABS | OPCPR | OPPUT | OPGET);
+	Complex_t I = (0, 1);
+
+    This declares operator type 'Complex_t' which can be used with the
+    binary '+', '-', '*' and '/' operators, with the unary '-', and '|'
+    operators, which can be compared, and which can be read/written. The
+    type is implemented as a structure containing two integers, and the
+    routines the compiler will call will all start with "_cmplx". Also
+    declared is a complex constant, 'I', whose value is given using a
+    structure constant based on the base type of Complex_t. Using these
+    declarations, we could write the following code fragment:
+
+	proc main()void:
+	    Complex_t a, b, c;
+
+	    a := Complex_t(0, 0);
+	    b := I;
+	    write("Enter c: ");
+	    readln(c);
+	    if c = Complex_t(0, 0) then
+		c := a * I;
+		b := b - (a / b);
+	    elif c < Complex_t(0, 0) then
+		c := -c;
+	    fi;
+	    writeln("New a, b, c are: ", a, b, c);
+	corp;
+
+    The various 'OPxxx' names used in the above include file are bitwise
+    'or'ed together to produce a 16 bit value giving the operations allowed.
+    Definitions of these bits can be found in file "opdef.g", as follows:
+
+	OPADD - the binary '+' operator
+	OPSUB - the binary '-' operator
+	OPMUL - the binary '*' operator
+	OPDIV - the binary '/' operator
+	OPMOD - the binary '%' operator
+	OPNEG - the unary '-' operator
+	OPABS - the unary '|' operator
+	OPIOR - the binary '|' operator
+	OPAND - the binary '&' operator
+	OPXOR - the binary '><' operator
+	OPSHL - the binary '<<' operator
+	OPSHR - the binary '>>' operator
+	OPNOT - the unary '~' operator
+	OPCPR - the binary comparison operators
+	OPPUT - text output using 'write' and 'writeln'
+	OPGET - text input using 'read' and 'readln'
+
+    The operators all have their normal precedence. The various operators 
+    take arguments of the operator type and return a result of that type.
+    Exceptions to this are the shift operators, whose right operand must 
+    be a numeric value, and the comparison operators, which yield a boolean
+    result. It is suggested that any uses of operator types maintain some
+    semblance of relation to the operators' normal meanings.
+
+    Only a skeleton of the definition file for the above complex type will
+    be shown. The important things are the calling sequences used.
+
+	\util.g
+
+	type Complex_t = struct {int c_real, c_imag};
+	word STACK_SIZE = 10;
+	[10] Complex_t Stack;
+	word StackPointer;
+
+	/* the psh and pop routines must be provided with ALL operator type
+	   implementations, regardless of what else is provided */
+
+	/* _cmplxpsh - called to push a value onto our stack */
+
+	proc _cmplxpsh(*Complex_t x)void:
+
+	    if StackPointer = STACK_SIZE then
+		writeln();
+		writeln("*** Complex_t stack overflow - aborting. ***");
+		exit(1);
+	    fi;
+	    Stack[StackPointer] := x*;
+	    StackPointer := StackPointer + 1;
+	corp;
+
+	/* _cmplxpop - pop a value from our stack. */
+
+	proc _cmplxpop(*Complex_t x)void:
+
+	    StackPointer := StackPointer - 1;
+	    x* := Stack[StackPointer];
+	corp;
+
+	/* _cmplxadd - add the two values on top of the stack. */
+
+	proc _cmplxadd()void:
+
+	    StackPointer := StackPointer - 1;
+	    Stack[StackPointer - 1].c_real :=
+		Stack[StackPointer - 1].c_real + Stack[StackPointer].c_real;
+	    Stack[StackPointer - 1].c_imag :=
+		Stack[StackPointer - 1].c_imag + Stack[StackPointer].c_imag;
+	corp;
+
+	/* similar for _cmplxsub, _cmplxmul, _cmplxdiv */
+
+	/* _cmplxneg - negate the top of stack value */
+
+	proc _cmplxneg()void:
+
+	    Stack[StackPointer - 1].c_real :=
+		- Stack[StackPointer - 1].c_real;
+	    Stack[StackPointer - 1].c_imag :=
+		- Stack[StackPointer - 1].c_imag;
+	corp;
+
+	/* similar for _cmplxabs (if you want to define an absolute value
+	   operator that returns a complex result - if you want a routine
+	   that returns the integral norm, then you must pick a name for
+	   it, implement it here, and include a declaration for it in the
+	   include file) */
+
+	/* _cmplxcpr - the comparison routine - return -1, +1 or 0 */
+
+	proc _cmplxcpr()short:
+	    int leftSquared, rightSquared;
+
+	    StackPointer := StackPointer - 1;
+	    rightSquared := Stack[StackPointer].c_real *
+			    Stack[StackPointer].c_real +
+			    Stack[StackPointer].c_imag *
+			    Stack[StackPointer].c_imag;
+	    StackPointer := StackPointer - 1;
+	    leftSquared := Stack[StackPointer].c_real *
+			    Stack[StackPointer].c_real +
+			    Stack[StackPointer].c_imag *
+			    Stack[StackPointer].c_imag;
+	    if leftSquared < rightSquared then
+		make(-1, short)		/* force the result type of the if */
+	    elif leftSquared > rightSquared then
+		+1
+	    else
+		0
+	    fi
+	corp;
+
+	/* doing read/write on operator types requires careful interaction
+	   with the innards of Draco's run-time system. The special channel
+	   expression '*' means "this is a call to read/write from within
+	   a call to read/write - use the channel that is already set up".
+	   In this situation, the read/write constructs DO NOT return a
+	   boolean success/fail value, and an internal routine must be
+	   called to make the check. The special routines that can be called
+	   are as follows:
+
+	    _channelPutChar(char ch)void -
+		write the character on the current output text channel
+	    _channelGetChar()char -
+		get the next character from the current input text channel
+	    _channelUnGetChar(char ch) -
+		stuff the character back into the current input text channel.
+		Only ONE character may be put back this way.
+	    _channelError(ushort errorCode)void -
+		assert an error with the given code (from util.g) on the
+		current input text channel.
+	    _channelHadError()bool -
+		return 'true' if the current input text channel has had an
+		error during the current top-level read/readln operation.
+	    _channelSkip()void -
+		skip past whitespace (blanks and tabs) in the current input
+		text channel.
+	    _readln()void -
+		swallow the remainder of the current input line and move on
+		to the next input line.
+	    _writeln()void -
+		terminate the current output line and move on to the next
+
+	*/
+
+	/* _cmplxput - write a complex number out on the current channel */
+
+	proc _cmplxput()void:
+
+	    StackPointer := StackPointer - 1;
+	    write(*; '(', Stack[StackPointer].c_real, ", ",
+		    Stack[StackPointer].c_imag, ')');
+	    /* we could have also used _channelPutChar to output the single
+	       characters - this would have been more efficient */
+	corp;
+
+	/* _cmplxget - read a complex number in from the current channel */
+
+	proc _cmplxget(*Complex_t x)void:
+	    extern
+		_channelSkip()void,
+		_channelGetChar()char,
+		_channelHadError()bool,
+		_channelUnGetChar(char ch)void,
+		_channelError(ushort errorCode)void;
+	    char ch;
+
+	    _channelSkip();
+	    ch := _channelGetChar();
+	    if ch = '(' then
+		read(*; x*.c_real);
+		if not _channelHadError() then
+		    _channelSkip();
+		    ch := _channelGetChar();
+		    if ch = ',' then
+			read(*; x*.c_imag);
+			if not _channelHadError() then
+			    _channelSkip();
+			    ch := _channelGetChar();
+			    if ch ~= ')' then
+				_channelUnGetChar(ch);
+				_channelError(CH_BADCHAR);
+			    fi;
+			fi;
+		    else
+			_channelUnGetChar(ch);
+			_channelError(CH_BADCHAR);
+		    fi;
+		fi;
+	    else
+		_channelUnGetChar(ch);
+		_channelError(CH_BADCHAR);
+	    fi;
+	corp;
+
+    To solidify all of this somewhat, if we have the following fragment:
+
+	proc nonrec test()void:
+	    Complex_t c1, c2;
+
+	    if read(c1) then
+		if c1 < c2 then
+		    writeln(c1 + c2);
+		fi;
+	    else
+		c1 := - c2;
+	    fi;
+	corp;
+
+    It would turn into something like the following (8080 version):
+
+	test	proc
+	; a bunch of extern's that I'll omit
+	c1	ds	4
+	c2	ds	4
+		code
+		lxi	h,c1
+		push	h
+		call	_setstdin
+		call	_cmplxget
+		call	_unchannel
+		ana	a
+		jnz	L2
+		lxi	h,c1
+		call	_cmplxpsh
+		lxi	h,c2
+		call	_cmplxpsh
+		call	_cmplxcpr
+		ana	a
+		jp	L1
+		lxi	h,c1
+		push	h
+		call	_cmplxpsh
+		lxi	h,c2
+		push	h
+		call	_cmplxpsh
+		call	_cmplxadd
+		call	_setstdout
+		call	_cmplxput
+		call	_writeln
+		call	_unchannel
+	L1	jmp	L3
+	L2	lxi	h,c1
+		push	h
+		lxi	h,c2
+		push	h
+		call	_cmplxpsh
+		call	_cmplxneg
+		call	_cmplxpop
+	L3	ret
+		corp
+

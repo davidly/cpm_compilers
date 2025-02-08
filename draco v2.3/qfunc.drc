@@ -1,0 +1,24 @@
+bool PRINT = false;
+
+int SIZE = 1000,
+    TIMES = 100;
+
+[SIZE + 1] int A;
+
+proc main()void:
+    int i, count;
+
+    writeln("Starting..");
+    for count from 1 upto TIMES do
+	A[1] := 1;
+	A[2] := 2;
+	for i from 3 upto 1000 do
+	    A[i] := A[i - A[i - 1]] + A[i - A[i - 2]];
+	    if PRINT then
+		writeln(i, ' ', A[i]);
+	    fi;
+	od;
+    od;
+    writeln("Done.");
+corp;
+

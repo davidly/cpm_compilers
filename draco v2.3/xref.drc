@@ -1,0 +1,277 @@
+#util.g
+
+/*
+ * XREF.DRC - program to produce a procedure cross-reference listing from
+ *	      a group of .REL files.
+ */
+
+word
+    NAMEMAX = 100,		/* maximum length of procedure name */
+    MAXCOL = 80;		/* maximum output columns for listing */
+
+type
+    ENTRY = struct {
+	*ENTRY e_next;
+	*char e_name;
+	*char e_file;
+	*USAGE e_uses;			/* the ones this one uses */
+	*USAGE e_references;		/* the ones that use this one */
+    },
+
+    USAGE = struct {
+	*USAGE u_next;
+	*ENTRY u_this;
+    };
+
+*ENTRY Head;
+
+file(1024) InputFile, OutputFile;
+channel input binary Chin;
+channel output text Chout;
+bool IgnoreSystem, IgnoreUpper;
+[NAMEMAX] char Name;
+
+/*
+ * getSymbol - read a symbol from the current input file.
+ */
+
+proc nonrec getSymbol()void:
+    *char p;
+
+    p := &Name[0];
+    while
+	read(Chin; p*);
+	p* ~= '\e'
+    do
+	if p ~= &Name[NAMEMAX - 1] then
+	    p := p + 1;
+	fi;
+    od;
+    p* := '\e';
+corp;
+
+/*
+ * lookup - look up (and possibly enter) a symbol in the symbol chain.
+ *	    Alphabetical ordering is maintained using insertion.
+ */
+
+proc nonrec lookUp()*ENTRY:
+    **ENTRY e1;
+    *ENTRY e;
+
+    e1 := &Head;
+    while e1* ~= nil and CharsCmp(e1**.e_name, &Name[0]) = LESS do
+	e1 := &e1**.e_next;
+    od;
+    if e1* = nil or CharsCmp(e1**.e_name, &Name[0]) ~= EQUAL then
+	e := new(ENTRY);
+	e*.e_next := e1*;
+	e*.e_name := pretend(Malloc(CharsLen(&Name[0]) + 1), *char);
+	CharsCopy(e*.e_name, &Name[0]);
+	e*.e_file := nil;
+	e*.e_uses := nil;
+	e*.e_references := nil;
+	e1* := e;
+	e
+    else
+	e1*
+    fi
+corp;
+
+/*
+ * insert - insert a useage into a useage chain. Again, alphabetical order
+ *	    is maintained using list insertion.
+ */
+
+proc nonrec insert(**USAGE chain; *ENTRY reference)void:
+    *USAGE u;
+
+    while chain* ~= nil and
+	    CharsCmp(chain**.u_this*.e_name, reference*.e_name) = LESS do
+	chain := &chain**.u_next;
+    od;
+    u := new(USAGE);
+    u*.u_next := chain*;
+    u*.u_this := reference;
+    chain* := u;
+corp;
+
+/*
+ * processFile - process the currently open .REL file.
+ */
+
+proc nonrec processFile(*char fileName)void:
+    *ENTRY p, q;
+    word w, cnt;
+    byte b;
+
+    read(Chin; w, w, w);	/* magic number, global size, file size */
+    while
+	getSymbol();
+	Name[0] ~= '\e'
+    do
+	p := lookUp();
+	p*.e_file := fileName;
+	read(Chin; w, cnt);	/* size of local vars, size of code */
+	while cnt ~= 0 do
+	    cnt := cnt - 1;
+	    read(Chin; b);
+	od;
+	/* read 4 sets of relocation information: */
+	for b from 1 upto 4 do
+	    read(Chin; cnt);
+	    while cnt ~= 0 do
+		cnt := cnt - 1;
+		read(Chin; w, w);
+	    od;
+	od;
+	while
+	    getSymbol();
+	    Name[0] ~= '\e'
+	do
+	    if
+		if Name[0] = '_' then
+		    not IgnoreSystem
+		elif Name[0] >= 'A' and Name[0] <= 'Z' then
+		    not IgnoreUpper
+		else
+		    true
+		fi
+	    then
+		q := lookUp();
+		insert(&p*.e_uses, q);
+		insert(&q*.e_references, p);
+	    fi;
+	    read(Chin; w);
+	od;
+    od;
+corp;
+
+/*
+ * printChain - print a chain of procedure names (prettily).
+ */
+
+proc nonrec printChain(*char message; *USAGE u)void:
+    ushort column;
+
+    if u ~= nil then
+	write(Chout; "    ", message, ':');
+	column := MAXCOL;
+	while u ~= nil do
+	    if column + CharsLen(u*.u_this*.e_name) + 2 >= MAXCOL then
+		writeln(Chout;);
+		write(Chout; "        ");
+		column := 8;
+	    fi;
+	    column := column + CharsLen(u*.u_this*.e_name);
+	    write(Chout; u*.u_this*.e_name);
+	    if u*.u_next ~= nil then
+		write(Chout; ", ");
+		column := column + 2;
+	    fi;
+	    u := u*.u_next;
+	od;
+	writeln(Chout;);
+    fi;
+corp;
+
+/*
+ * printTable - print the accumulated table of interreferences.
+ */
+
+proc nonrec printTable()void:
+
+    while Head ~= nil do
+	write(Chout; Head*.e_name);
+	if Head*.e_file ~= nil then
+	    write(Chout; " (", Head*.e_file, ')');
+	fi;
+	writeln(Chout; ':');
+	printChain("uses", Head*.e_uses);
+	printChain("is used by", Head*.e_references);
+	Head := Head*.e_next;
+    od;
+corp;
+
+/*
+ * main - main program.
+ */
+
+proc nonrec main()void:
+    extern
+	ListOutput(char ch)void;
+    FILENAME fn;
+    [15] char nameBuffer;
+    *char p;
+
+    p := GetPar();
+    if p = nil then
+	writeln("Use is:  xref [-sup] [-ofile] file1[.rel] ... filen[.rel]");
+	exit(1);
+    fi;
+    open(Chout);
+    IgnoreSystem := true;
+    IgnoreUpper := true;
+    Head := nil;
+    while p ~= nil do
+	if p* = '-' then
+	    while
+		p := p + 1;
+		p* ~= '\e'
+	    do
+		case p*
+		incase 'S':
+		    IgnoreSystem := false;
+		incase 'U':
+		    IgnoreUpper := false;
+		incase 'P':
+		    close(Chout);
+		    open(Chout, ListOutput);
+		incase 'O':
+		    SetFileName(fn, (p + 1));
+		    if fn.fn_type[0] = ' ' then
+			fn.fn_type[0] := 'X';
+			fn.fn_type[1] := 'R';
+			fn.fn_type[2] := 'F';
+		    fi;
+		    GetFileName(fn, &nameBuffer[0]);
+		    pretend(FileDestroy(fn), void);
+		    if not FileCreate(fn) then
+			writeln("Can't create file '", &nameBuffer[0],
+				"' - aborting.");
+			exit(1);
+		    fi;
+		    close(Chout);
+		    if not open(Chout, OutputFile, &nameBuffer[0]) then
+			writeln("Can't open file '", &nameBuffer[0],
+				"' - aborting.");
+			exit(1);
+		    fi;
+		    p* := '\e';
+		    p := p - 1;
+		default:
+		    writeln("Invalid flag '", p*, "' - ignored.");
+		esac;
+	    od;
+	else
+	    SetFileName(fn, p);
+	    if fn.fn_type[0] = ' ' then
+		fn.fn_type[0] := 'R';
+		fn.fn_type[1] := 'E';
+		fn.fn_type[2] := 'L';
+	    fi;
+	    GetFileName(fn, &nameBuffer[0]);
+	    if open(Chin, InputFile, &nameBuffer[0]) then
+		p := pretend(Malloc(CharsLen(&nameBuffer[0]) + 1), *char);
+		CharsCopy(p, &nameBuffer[0]);
+		processFile(p);
+	    else
+		writeln("Can't open file '", &nameBuffer[0], "'.");
+	    fi;
+	fi;
+	p := GetPar();
+    od;
+    printTable();
+    close(Chout);
+corp;
+

@@ -1,0 +1,54 @@
+			The Game of ROBOTS
+
+    ROBOTS is a fairly old game which has been implemented in BASIC for
+several microcomputers. This version is a newer, faster version which works
+on any CP/M system. A 24 line by 80 column screen is best, but other sizes,
+including larger screens, are fully supported. The terminal must support
+cursor addressing, however.
+
+    The game is fairly simple, pitting the human player against an ever-
+increasing army of dumb, but deadly, robots. The playing area is depicted
+on the terminal's screen, surrounded by a box of '#'s, with a single
+statistics line at the bottom. The player is represented by '$', robots by
+'%'s and land mines by '*'s. The landmines blow up if touched, killing the
+player or robot which touched them. Robots are violent machines and destroy
+one-another if they collide. Naturally, they kill the player if they reach
+him. The landmines are stationary, but the player and the robots can move
+around - up, down, left, right and diagonally. Each time the player moves,
+the robots all move one position towards the player.
+
+    The player moves by using the keys on a numerical keypad, or keys on the
+main keyboard. If the player is viewed as being on the 5 key (or the j or J
+key), then the other keys move him in the corresponding direction. The
+resulting key layout is:
+
+	7, y, Y		8, u, U		9, i, I
+	up-left		   up		up-right
+
+	4, h, H		5, j, J		6, k, K
+	  left	      stand still	 right
+
+	1, b, B		2, n, N		3, m, M
+       down-left	  down	       down-right
+
+    The mines, robots and the player are positioned randomly at the start of
+the battle. If the arrangement is particularily bad, the player can use the
+space bar to relocate his character. This can only be done before moving.
+After having moved, the space bar is equivalent to the '5' key. If the player
+succeeds in destroying all of the robots, the next round will have more
+robots and proportionately more land mines. A key strategy element to ROBOTS
+is that pairs of robots can be lead so as to collide with each other.
+
+    If the terminal resets or the communications line has a transmission
+error, the screen can be redrawn by pressing 'r', 'R' or CONTROL-R. Pressing
+'?' will re-display the instructions, and pressing CONTROL-C will immediately
+return to CP/M.
+
+    ROBOTS must be configured to operate on the user's terminal before it can
+be used. This is done using the CONFIG utility which is included on the
+distribution diskette. Refer to the accompanying writeup on CONFIG for
+details on how to do this.
+
+    ROBOTS, CONFIG, and the terminal independent CRT I/O library were all
+written entirely in the Draco systems programming language.
+

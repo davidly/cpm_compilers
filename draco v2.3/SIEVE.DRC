@@ -1,0 +1,35 @@
+/* Eratosthenes Sieve Prime Number Program in Draco */
+
+bool
+    DEBUG = false;
+
+int
+    SIZE = 8190,
+    ITERATIONS = 10;
+
+proc nonrec main()void:
+    [SIZE + 1] bool flags;
+    unsigned ITERATIONS iter;
+    word i, prime, k, count;
+
+    writeln(ITERATIONS, " iterations.");
+    for iter from 1 upto ITERATIONS do
+        count := 0;
+        for i from 0 upto SIZE do
+            flags[i] := true;
+        od;
+        for i from 0 upto SIZE do
+            if flags[i] then
+                prime := 2 * i + 3;
+                if DEBUG then
+                    writeln(prime);
+                fi;
+                for k from i + prime by prime upto SIZE do
+                    flags[k] := false;
+                od;
+                count := count + 1;
+            fi;
+        od;
+    od;
+    writeln(count, " primes.");
+corp;

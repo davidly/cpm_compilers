@@ -1,0 +1,363 @@
+			   The Draco CRT Library
+
+			Copyright 1983 by Chris Gray
+
+
+The Routines Provided in CRT.LIB
+
+    The routines in CRT.LIB are declared in a Draco include file, CRT.G,
+which should be included via '\crt.g' at the beginning of each file of your
+program. If you use any of the CRT routines, you must include CRT.LIB, the
+library which actually contains the routines, as one of the parameters to the
+link-editor when you link-edit your program. Additional include file FORM.G
+is needed only if you use the form routines in the CRT library. Any program
+which correctly uses the CRT routines can (and must) be configured using the
+CONFIG.COM program before it can be used. This configuration inserts into
+the linked .COM program (renamed as .SET) the control sequences needed for
+the terminal the program is to run on. This is inconvenient for the
+programmer, but allows the program to be configurable without any additional
+effort.
+
+    Note that this version of the CRT library only supports systems in which
+all actions are done by sending special control sequences out through CP/M's
+normal console driver (the DirectConsoleIO system call is used). An earlier
+attempt was made to provide a different version which supports memory-
+mapped character displays. This version was abandoned due to difficulties
+with generalizing things like cursor handling.
+
+    The CRT routines require initialization before they will operate
+correctly. This is done by one of the magic '_initialize' routines which
+will be loaded and called before your 'main' routine is called. Thus, when
+using the CRT routines, no special actions need be taken by the programmer,
+except that using 'exit' may leave the terminal in a funny state if the
+terminal has a termination sequence (which will not be output).
+
+    The routines provided in CRT.LIB are:
+
+    CRT_NLines()ushort
+
+	This call returns the number of lines on the screen of the terminal.
+	If your program is to be completely general, it should use the size
+	of the terminal to determine the format of the screen.
+
+    CRT_NCols()ushort
+
+	This call returns the number of columns in each line of the
+	terminal's screen. Note that you should avoid putting a character 
+	in the last column of the last line on the screen, since this can
+	cause some terminals to scroll the screen.
+
+    CRT_Line()ushort
+
+	Returns the line the cursor is currently on.
+
+    CRT_Column()ushort
+
+	Returns the column the cursor is currently on.
+
+    CRT_AbortEnable()void
+    CRT_AbortDisable()void
+
+	These routines control how the various CRT input routines react when
+	a CONTROL-C is typed. The default case is to send the termination
+	sequence and return to the operating system. This can be disabled
+	by calling 'CRT_AbortDisable', in which case CONTROL-C will be
+	either ignored or returned to the caller, depending on which of the
+	input routines is in effect. 'CRT_AbortEnable' will re-enable the
+	normal abort procedure. It is suggested that aborting not be
+	disabled on a program that is under development, since it is often
+	handy to be able to abort such programs.
+
+    CRT_GetChar()char
+
+	This call returns a character typed by the user. The character will
+	not appear on the screen, and no processing whatsoever will have
+	been done on the character.
+
+    CRT_PutChar(char ch)void
+
+	The passed character is displayed on the screen at the current
+	position. If you have not selected a position yet, then the character
+	will appear to the right of the previous character on the screen.
+	If the terminal cannot display lower case letters, they will be
+	translated into upper case.
+
+    CRT_PutChars(*char charsPtr)void
+
+	The passed 'chars' value is displayed on the screen.
+
+    CRT_ClearScreen()void
+
+	The entire screen will be cleared and the cursor will be left in the
+	top left-hand corner of the screen.
+
+    CRT_ClearLine(ushort line)void
+
+	The selected line will be cleared and the cursor will be left at the
+	beginning of that line. Note that both lines and columns are numbered
+	starting with 0. Thus, the last line on a terminal with 24 lines is
+	line number 23.
+
+    CRT_ClearTail()void
+
+	The current line, from the cursor column to the end of the line, will
+	be cleared to spaces. The position of the cursor will be unchanged.
+
+    CRT_ClearToEnd(ushort line)void
+
+	All lines on the screen from the selected line onward will be
+	cleared. The cursor will be left at the beginning of the selected
+	line.
+
+    CRT_Move(ushort line, col)void
+
+	The cursor will be moved to the selected line and column (both are
+	0 - origin). Any character output to the screen will appear at that
+	position.
+
+    CRT_EnterHighLight()void
+
+	If the terminal has a reverse video or other accentuation mode, then
+	that mode is entered, in that all characters output subsequently
+	will appear in that mode.
+
+    CRT_ExitHighLight()void
+
+	The accentuation of characters (if any) is stopped. All characters
+	output subsequently will appear in the normal style.
+
+    CRT_Chars(*char charsPtr)void
+
+	This routine provides a primitive text-formatting capability within
+	the screen of the terminal. The chars value passed can contain
+	carriage returns and linefeeds to direct the formatting. The lines
+	of text passed will be split up on the spaces between words so that
+	each line fits on a screen line. The text will not be right
+	justified, however. A sequence of more than one blank will be
+	preserved in the output (this is used for paragraph indentation,
+	etc.) When all but two lines of the screen have been filled, the
+	message 'Press SPACE to continue' will be centered in the bottom
+	line, and the routine will wait for the user to enter a space. This
+	routine is designed to ease the presentation of on-screen help
+	information and user instructions.
+
+    CRT_Continue()void
+
+	The last line on the screen is cleared, and the message 'Press
+	SPACE to continue' will be centered in it. CRT_Continue will not
+	return until the user enters a space. This routine can be used to
+	give the user time to read or examine some information, before going
+	on to another screen of data. The last line is cleared after the
+	user enters a space.
+
+    CRT_Ask(*chars question)bool
+
+	The last line on the screen is cleared, and the passed chars value
+	is displayed on that line. The user must then enter a 'y', 'Y', 'n',
+	or 'N'. The result from CRT_Ask is 'true' if the user entered a 'y'
+	or 'Y', and 'false' if the user entered a 'n' or 'N'. The last line
+	is cleared following the user's reply. 
+
+    CRT_Scroll()void
+
+	The screen is scrolled up one line, i.e. the top line is lost, all
+	others are moved up one line, and the last is left empty. The cursor
+	is left at the beginning of the new empty line.
+
+    CRT_Center(ushort line; *char message)void
+
+	The given message is displayed centered on the given line.
+
+    CRT_Abort()void
+
+	The termination sequence is sent to the terminal, and the program is
+	terminated.
+
+    CRT_Reset()void
+
+	The initialization sequence (if any) is sent to the terminal. This,
+	in conjunction with a full redraw of the screen, can be done to
+	recover from terminal failures, transmission errors, etc.
+
+    CRT_Reply1(*char buffer; ushort length; *char prompt)void
+
+	The screen is cleared, the prompt is displayed on line 6, and a
+	reply from the user (up to the given maximum length) is read into
+	the buffer. When entering the reply, the normal editing characters
+	(backspace to delete characters, CONTROL-X to delete the entire
+	line) are available. The input is terminated with a carriage return.
+	The data in the input buffer will always be terminated with a '\e'.
+
+    CRT_Reply2(*char buffer; ushort length; *char prompt)void
+
+	This is the same as CRT_Reply1, except that the screen is not cleared
+	and the question is asked on the last line of the screen.
+
+    CRT_GetLine(*char buffer; ushort length)void
+
+	An input reply is read, without any additional output being done.
+
+    CRT_Read(*char buffer; ushort length; bool skipNext, skipPrev;
+	     *char terminators, terminator)bool
+
+	This is the bottom level input routine used by the above and also
+	by the form routines. 'skipNext' enables the termination of input
+	when the buffer is full. 'skipPrev' enables a return with an empty
+	buffer if the user backspaces past the beginning of the input.
+	'terminators' is a string containing the characters other than
+	carriage return and linefeed which are allowed to terminate the
+	input. 'terminator' returns the termination character that the user
+	used. 'true' is returned if the user typed any characters other than
+	a terminator. Note that while allowing user input, CONTROL-C aborts
+	are only active when the cursor is in the first column of the input.
+	This minimizes accidental aborts, but still allows the most common
+	use of them.
+
+    CRT_Random(word randomRange)word
+
+	The CRT routines maintain an internal random number seed, based on
+	a counter which spins while waiting for the user to type keys. This
+	routine uses that counter as a seed and returns a pseudo-random
+	number between 0 and the passed range.
+
+    CRT_NonRandom(word seed)void
+
+	This routine disables the above-mentioned counter and sets the seed
+	to the specified value.
+
+    CRT_Error(*char message)void
+
+	The given message is displayed on the last line of the screen, and
+	an internal flag is set, indicating the presence of an error message.
+
+    CRT_ClearError()void
+
+	If an error message is present, this routine clears it. A typical
+	sequence is to call 'CRT_Error' when something goes wrong, and just
+	continue with other processing. Eventually, an input routine will be
+	called to get input (often CRT_GetChar in cases where this is most
+	useful). After that routine returns with some input, CRT_ClearError
+	is called to clear any error. This ensures that the user has had a
+	chance to see the error message.
+
+    CRT_Menu(*char menu)ushort
+
+	This routine displays a menu on the screen, lets the user select an
+	entry from it, and returns the 1-origin index of the selected entry.
+	User errors are handled using CRT_Error and CRT_ClearError. The
+	screen will NOT be cleared on exit, thus giving the user something
+	to look at while the computer is off doing whatever it is doing.
+	The menu structure passed consists of: zero or more lines of header
+	information, separated by carriage returns and/or linefeeds, a '\e',
+	one or more menu entries, each terminated by '\e', and a final '\e'.
+	CRT_Menu will insert one or two digit indices in front of the menu
+	entries, so they should not be given explicitly. An example call:
+
+	    which := CRT_Menu(
+		"This is the first header line\n"
+		"\n"
+		"This is a second (spaced down) header line\e"
+		"menu item number 1\e"
+		"menu item number 2\e"
+		"menu item number 3\e"
+	    );
+
+	The final '\e' need not be given explicitly, since the compiler 
+	puts one at the end of all string constants. If the user makes no 
+	selection, i.e. just hits return, then 0 is returned, else the 
+	index of the selected entry is returned. The header lines are 
+	automatically centered within their lines, and the spacing of the
+	menu items is governed by their number and the screen size.
+
+    The following routines are part of a simple but effective forms entry
+system. Using them and the above CRT_Menu routine, fairly fancy "user-
+friendly" applications can be written without a lot of the grunge work that
+is normally needed. The form routines are included in the CRT library, but
+additional include file 'FORM.G' should be included to get declarations of
+them and of values they use.
+
+    CRT_FormStart()
+
+	This routine is called to start the definition of a form. Any 
+	existing form is thrown away.
+
+    CRT_FormInt(ushort line, column, length; *char heading;
+		*bool pChanged; *int resultPointer;
+		proc (int n)bool checker)void
+
+	This adds an integer field to the current input form. The line and 
+	column are of the header message that will appear to the left of 
+	the actual input area. 'length' is the number of spaces to be 
+	allowed for input of the number. The bool pointed to by 'pChanged' 
+	will be set if the user changes this field. 'resultPointer' points 
+	at the variable containing both the initial value to be displayed
+	in the field, and the final value as modified by the user. The 
+	'checker' routine is called when the user terminates input for 
+	this field. It is passed the current value of the input integer. If 
+	it returns 'true', that value is accepted, else it should have 
+	displayed a message using 'CRT_Error', and the user will have to 
+	change the value. This routine had better work right, or the user 
+	might not have any way to enter a value which IS accepted. 
+
+    CRT_FormIntOK(int n)bool
+
+	This is a dummy int checker routine that just returns 'true'.
+
+    CRT_FormChars(ushort line, column, length; *char heading;
+		  *bool pChanged; *char buffer;
+		  proc (*char value)bool checker)void
+
+	This adds a string field to the current input form in a way totally
+	analagous to 'CRT_FormInt'. 'buffer' points at a buffer which
+	contains the initial value, and into which the final value is placed.
+
+    CRT_FormRead(*char header; byte flags; *char terminators)char
+
+	This routine presents and handles the input form specified by calls
+	to the previous routines. 'header' is a (possibly multiline) header
+	that is to be displayed at the top of the screen. As with CRT_Menu,
+	the header lines will be centered on the screen. 'flags' consists of
+	any combination of the following (defined in FORM.G):
+
+	    FORMHEADERS = 0x01 - specifies that the form and field headers
+		are to be displayed on this call. If the same form is used
+		several times in succession, much annoying screen I/O is
+		avoided if only the first use has FORMHEADERS set.
+	    FORMSKIP = 0x02 - enables automatic skipping from one field to
+		the next at the end of a field and skipping from one field
+		to the previous when a backspace is typed at the beginning
+		of a field.
+	    FORMINPUT = 0x04 - enables the input of data to the fields.
+		A call without this flag is useful for nicely displaying
+		the information.
+	    FORMOUTPUT = 0x08 - enables all displaying associated with the
+		input form. Output is not needed if the program knows that
+		the current screen contents is correct. This could be from,
+		say, the user asking to edit the current record during a
+		browse of a set of records. (The browse would use CRT_GetChar
+		to input the browsing commands, one of which would request
+		the edit.)
+
+	Parameter 'terminators' is a string containg the characters that
+	are to be recognized as field terminators. CRT_FormRead recognizes
+	the following as special:
+
+	    CONTROL-R - undo changes to the current field
+	    CONTROL-Q - quick exit with fields as they appear
+	    CONTROL-Z - cancel all changes and redraw the fields
+	    ESCAPE - cancel all changes, redraw the fields, and exit
+
+	These special functions are enabled by including the corresponding
+	characters in the 'terminators' string. 'FORM.G' declares a string
+	constant, 'TERMINATORS', containing just these terminators.
+	CRT_FormRead returns the terminator character which the user typed
+	to terminate form input. Note that CRT_FormRead uses CRT_ClearError
+	and the storage allocator (for structures and backup buffers).
+
+	The screen is NOT cleared either before or after the the form is
+	displayed and read. The programmer is responsible for this. This is
+	done so that a form can appear in a small section of the screen. For
+	example, the screen might be divided into two parts, each of which
+	is used as an input form for different, but related data. Careful
+	use of the flags can result in a very clean use of screen updates.
+

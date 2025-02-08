@@ -1,0 +1,325 @@
+     I will describe the various routines in sections, but first a few 
+points about the whole set. None of the files have carriage control, so 
+if you want to copy them to the printer, you should specify @-CC on 
+*PRINT*. All of the files (except this one) are Draco source files. None 
+of you will be too familiar with the language, but it's sufficiently 
+like C and Pascal that you shouldn't have trouble with it. Data types 
+'ushort', 'word', 'short' and 'int' can all be thought of as Pascal 
+integers (the distinction between 8 bit and 16 bit and between signed 
+and unsigned is useful on micros which don't support that stuff very 
+efficiently, but is not relevant on the Amdahl). The 'nonrec' in the 
+procedure headers can be ignored - it's like a compiler directive. The 
+enumeration types 'enum' are like the same things in C and Pascal. The 
+'union' types are C-style unions, which are like Pascal's variant 
+records except that the choice of which is present is made externally. 
+The most difficult conversion problem will be that of handling global 
+variables - each of the 3 library source files has it's own internal 
+global variables which are not meant to be visible by anyone else (much 
+like modules and packages). Pascal has no such feature, so the globals 
+will have to be combined into one big batch. Perhaps the cleanest way is 
+to have one file of all global declarations which can be $CONTINUEd with 
+to sort of fudge 'include'ing them. I've kept all externally visible 
+library routine names to 8 characters or less, but some internal 
+routines have longer names which will have to be shrunk for MTS. Also, I 
+don't think I've relied on upper/lower case distinction anywhere. Draco 
+strings are like C strings - they consist of a bunch of characters with 
+a special marker ('\e' in Draco) at the end. Things in double quotes
+(e.g. "hello") are that kind of string. Their data type is '*char' which 
+is pointer to character. The '&' operator in Draco takes the address of 
+whatever it is applied to. Thus if 'buffer' is an array of 10 characters
+(type '[10]char'), then '&buffer[0]' is the address of the first 
+character in the array and is of type '*char'.
+
+QCRT.DRC - CRT routines.
+
+     These routines handle a 24 line by 80 column screen in the manner 
+which we discussed earlier. Even though the sizes are parameterized as 
+constants (NLINES and NCOLUMNS), it is not likely that the code would 
+work properly with a different size screen. All routines whose names 
+begin with 'CRT_' are in my terminal independent CRT library, which 
+allows programs which use it to be user configured for most terminal 
+types. The routines used are:
+
+    CRT_ClearScreen() - clear the screen & leave cursor at (0, 0)
+    CRT_Move(ushort line, column) - move the cursor to the indicated
+	(0-origin) line and column on the screen
+    CRT_EnterHighLight() - output after this will be highlighted, e.g. 
+	in reverse video
+    CRT_ExitHighLight() - output after this will be normal
+    CRT_ClearTail() - the current line from the cursor to the last 
+	column is cleared - the cursor is not moved
+    CRT_ClearToEnd(ushort line) - the cursor is moved to the beginning 
+	of the given line and the screen is cleared from there on down
+    CRT_PutChars(*char string) - the given string is output to the 
+	screen at the current cursor position
+    CRT_PutChar(char ch) - the character is output to the screen
+    CRT_GetChar()char - a character is read from the terminal. This 
+	routine returns '\e' until a key is pressed
+    CRT_GetLine(*char buffer; ushort length) - this routine reads an 
+	input line of the given maximum length into the buffer. Input 
+	line editing (backspace, line delete) is enabled.
+
+     The upper left-hand corner of the screen, 11 lines by 38 columns, is
+used to display an 11 line by 19 column region of a "scenery map" which 
+is a sort of bird's eye view of the region around the player character
+(PC) or group. Each 'cell' in the map is represented by two characters, 
+side by side. The CRT routines maintain this view by calling a user-
+supplied scenery generator, which, given the line and column 
+co-ordinate, returns the pair of characters to display for that position.
+Also maintained is a list of 'movable objects' which are not considered 
+part of the scenery. Each has a pair of characters to display. They are 
+displayed 'over top of' the scenery, and the last such specified at a 
+given position is the one displayed. Each has an identifier by which the 
+user programmer can refer to it. The one with identifier = 0 is assumed 
+to be the PC or group, and if it is moved to or off of the edge of the 
+viewing area, then the entire map view is windowed (which will entail a 
+number of calls to the user-supplied scenery generator).
+
+     The upper right-hand corner of the screen, 11 lines by 40 columns, 
+is used to display various status indicators needed by the scenario. 
+There are three kinds of status indicators: numeric, string and string- 
+list. These are set up by calling the appropriate routine with the 
+header for the item, it's position in the status area (line, column of 
+the first character of the header), and the item's size. These routines 
+are also passed the address of the actual variable which records the 
+current value, so that a simple call to 'scUpdate' can update the status 
+display directly. All routines return an identifier by which the status 
+indicator can be referred. String-list items are used for things such as 
+the list of things the PC is carrying - the update routine handles 
+correct formatting for multi-line display with separating commas. 
+Instead of being given the address of the list header, the 'scMult' 
+routine is passed a procedure which it is to call to get successive 
+strings to display. 
+
+     The bottom 12 lines of the screen are used for text input/output as
+occurs in most Adventure style games. When the bottom of the screen is 
+reached, the area is cleared and I/O continues on the first line of the 
+region. If the bottom is reached during output, then the output pauses 
+until the end-user types a key to continue (my version displays 'MORE' 
+in reverse video down the right-hand edge of the region). The output 
+routine handles one character at a time. This allows me to use it as a 
+Draco text output channel through which I can 'write' or 'writeln' 
+whatever I need to output. This can't be done in Pascal, but so far the 
+only things I've needed to output are character strings. Output in this 
+way will automatically do word breaks at the correct place. (This means 
+that, unless special output formats are needed, text can be output in 
+one big continuous stream, and will be automagically broken on word 
+boundaries.)
+
+     All CRT routines have names beginning with 'sc'. They are:
+
+scInit() - this must be called once before any other calls.
+
+Map area routines:
+
+scNewMap(proc(int line, column)[2]char scenery; word oldObj)word - this 
+    fancy header indicates that 'scNewMap' has 2 parameters and returns 
+    a result. The first parameter is a procedure which takes two integer 
+    parameters and returns an array of 2 characters - this is the 
+    scenery generator mentioned above. The second parameter is the list 
+    of "movable objects" associated with the map. This is usually just 
+    0, but is used when a scenario involves more than one map (it 
+    preserves the "movable objects" between uses of the map). The value 
+    returned is the "movable objects" list that used to be active. This 
+    routine must be called before the map area is used for anything.
+scWindow(int line, column) - forces the map area to be redrawn, centered 
+    on the given co-ordinates.
+scNew(int id, line, column; [2]char chars) - this routine is used to 
+    create a new "movable object". The id is used to refer to the entry 
+    when moving or deleting it. The line and column are where the object 
+    is now, and the two characters are what to display for it.
+scMove(int id, line, column) - the specified "movable object" is moved 
+    to the given location and redisplayed (if within the window).
+scDelete(int id) - the specified "movable object" is removed and can no 
+    longer be referenced.
+
+Status area routines:
+
+scNumber(*char name; ushort line, column, length; *int ptr)int - this 
+    routine is used to create a numeric status display. 'name' is the 
+    string to use for a header, 'line' and 'column' specify where in the 
+    status area to display the item, 'length' is the number of spaces to 
+    use for the numeric display (format is 'HEADER: xxxx'), and ptr is 
+    the address of the variable which is being displayed. (This address 
+    is saved away so that calls to 'scUpdate' can cause a re-display 
+    without having to pass in the new value.) The returned value is an 
+    identifier by which the status item can be referred.
+scString(*char name; ushort line, column, length; **char ptr)int - this 
+    routine is used to create a string status display. 'length' is the 
+    length of the string to be used (it will be padded on the right or 
+    truncated as needed). 'ptr' points to the string variable.
+scMult(*char name; ushort line, column, lines;
+       proc(bool first)*char gen)int - this routine is used to create a 
+    string-list status display. 'lines' is the number of lines reserved 
+    for this item (successive lines start in the 3rd column of the 
+    status display area). 'gen' is a procedure to call to get the items 
+    to be displayed in the list. It has a parameter telling it to start 
+    over since, if the items won't fit in the available space, the 
+    display process will prematurely stop calling it. If the items won't 
+    fit in the available lines, the last one is followed by '..' to 
+    indicate that there were more items.
+scUpdate(int id) - the specified status item is re-displayed. Once the 
+    display items are set up, this is the only display item routine that 
+    will be needed.
+
+***NOTE*** In going over this stuff, I've notice that I'm quite 
+inconsistent about who generates id's and when they are used. The status 
+area routines (and the grammar rules) should be GIVEN id's by the user 
+program. Then an 'scRemove(int id)' can be easily added.
+
+Later note: this HAS been done, but I'm too lazy to change this writeup.
+
+Text I/O routines:
+
+scPut(char ch) - this routine is called to output a character in the 
+    text area. Word break and pagination is handled as discussed above. 
+    The characters '\r' and '\n' (Carriage return and linefeed) are used 
+    to signal the need for a forced newline.
+scPrompt(*char prompt) - this routine is called to specify the prompt to 
+    use on input.
+scRead(*char buffer) - an input line is read into the passed buffer. If 
+    any text was left to be output (it is buffered up to allow for the 
+    word-break processing) it is output first and a new line started. 
+    Any prompt is output before the read is done.
+
+QPARSE.DRC - the parser.
+
+     The parser is fairly simple but will handle a variety of input 
+styles, ranging from the simple 'get book' to the more complex 'Put the 
+magic sword into the glass trophy case.' No provisions are currently 
+present for having multiple commands on one line unless the grammar 
+specifies it directly (quite cumbersome). Prefixes, consisting of words 
+before an initial ':' can be picked off, but this facility will probably 
+not be used (see later). These routines handle the dictionary, which 
+contains words, along with their id (should be unique) and type (the 
+parser places no interpretation on types, but they are needed). The 
+words are stored directly as given (any characters can be used), but 
+when the parsing occurs, case will be ignored. Also, when parsing, 
+spaces are used as word separators, so having 'words' with spaces in 
+them will not work.
+
+     The grammar parsed consists of a number of sentence forms, each of 
+which is simply a list of elements. An element can be a specific word 
+which is required, a specific word-type which is required, an optional 
+specific word, an optional word-type or a sequence of words of a given 
+type. For example, the grammar sentence
+
+    give [ARTICLE] ADJECTIVE* NOUN to [ARTICLE] ADJECTIVE* NOUN
+	[PUNCTUATION]
+
+could be used to handle the verb 'give'. Input sentences like
+
+    Give the big red rose to the ugly dwarf.
+    give sword to troll
+
+would be accepted (provided the words were in the dictionary and had 
+been flagged with the appropriate types). The various sentence forms are 
+tried one at a time to match the input commands, thus the ones given 
+first will take precedence over later ones in case of ambiguity.
+
+    All parser routine names start with 'ps'. They are:
+
+psInit(bool prefixEnabled) - must be called once before any other parser 
+    routines are used. If 'prefixEnabled' is true, then prefixes ending 
+    with ':' will be picked off of input sentences, otherwise they are 
+    handled as part of the input sentence. Even when such prefixes are 
+    used (e.g. to talk to NPC's), it is probably better to have separate 
+    grammar rules for the things that can be said to NPC's, instead of 
+    having these things mixed in with the rules for direct commands. The 
+    whole area needs more thought, e.g. how do we send messages to other 
+    players?
+psWord(*char txt; int id, typ) - the given word is added to the 
+    dictionary with the given id and word-type. More than one entry with 
+    the same id can be added - they are synonyms. Punctuation 'words' 
+    are added in the same way.
+psgBegin() - called to start the specification of a grammar rule.
+psgWord(FORMTYPE form; int data) - called to add an element to a grammar 
+    rule. FORMTYPE is an enumeration type with values REQID, REQTYPE, 
+    OPTID, OPTTYPE and MULTIPLE which is included in Q.G. The five 
+    element types were discussed above (required word of given id, 
+    required word of given type, optional word of given id, optional 
+    word of given type, multiple words of given type). The 'data' 
+    parameter is either the id or word-type, as needed.
+psgEnd() - called to signal the end of a grammar rule. Grammar rules can 
+    be added at any time, as can dictionary entries; thus the language 
+    can grow as the game progresses.
+psFind(*char txt)int - looks a word up in the dictionary. Returns the id 
+    of the word, or 0 if the word isn't found (thus id = 0 should not be 
+    used for any word).
+psGet(int id)*char - returns the text of the identified word
+psType(int id)int - returns the word-type of the identified word
+psParse(*char sentence)int - this routine parses the given input string 
+    according to the currently existing dictionary and grammar rules. It 
+    returns: -1 if some word in the input is unknown (call pspBad to get 
+    the text of the word); 0 if all words were known but the input 
+    didn't match any of the grammar rules; else the grammar rule number 
+    of the matched rule (assigned starting at 1 and going up as the 
+    rules are created using the 'psg' routines). For a successful match, 
+    'pspWord' and 'pspPref' can be used to find more details.
+pspBad()*char - called after pspParse has returned -1 to get the text of 
+    the word which wasn't in the dictionary. (The parser stops as soon 
+    as it finds one, so there will only be the one.)
+pspWord(int pos)int - returns the id of the word(s) that matched the 
+    'pos'th position in the successful grammar rule. For OPTional 
+    elements, 0 is returned if no word was there. For MULTIPLE elements, 
+    successive calls to 'pspWord' with the same 'pos' will return the 
+    various words that matched. No more (or none at all) is signalled by 
+    'pspWord' returning 0.
+pspPref()int - After psParse when prefixes are enabled, successive calls 
+    to this routine will return the id's of the words that were part of 
+    the prefix (the stuff before the first ':'). To handle prefixes like
+    'Dan, Joe:', comma should be made a word and will be dutifully 
+    returned by pspPref. (The ':' is thrown away.) pspPref returns 0 
+    when there are no more prefix words (if there were any at all).
+
+QLIST.DRC - list handling routines.
+
+     These routines are used for handling semantic information. They 
+care nothing about meanings - they are just general tools. If we come up 
+with better ways to handle general semantic information, I'm quite 
+willing to abandon the whole set. One set of routines (names start with 
+'l') simply handles lists of integers (adding, appending, deleting, etc.)
+Another set handles properties (essentially arbitrary boolean
+(true/false) flags) associated with identifiers. A third set handles
+attribute-value pairs associated with identifiers (things like (size 2),
+(weight 20), (color red), etc.). More complicated things are used in AI,
+(e.g. (BROTHER-OF Sam Joe)), but we probably won't need them.
+
+lInit() - this routine must be called before any others in this set.
+getId()int - called to get a unique integer id. The values returned on 
+    consecutive calls are just 1, 2, 3, etc. Note that this routine was 
+    never used in the sample scenario program, since all id's were 
+    needed to be known in several places.
+
+Simple list handling routines.
+
+Type INTLIST given in Q.G defines the elements of the lists. A list 
+variable is of type *INTLIST.
+
+lAdd(**INTLIST pil; int n) - the value 'n' is added to the front of the 
+    list. No check is made to see if it is already in the list.
+lAppend(**INTLIST pil; int n) - the value 'n' is appended to the end of 
+    the list. No check is made to see if it is already in the list.
+lDelete(**INTLIST pil; int n) - the first occurrence (if any) of the 
+    value 'n' is deleted from the list.
+lGet(*INTLIST il; int n)int - the value of the nth element of the list 
+    is returned (if any, else 0).
+lIn(*INTLIST il; int n)bool - returns 'true' if the value 'n' is in the 
+    list, else returns 'false'.
+
+Property handling routines.
+
+putProp(int id, prop) - associates property 'prop' with item 'id'.
+getProp(int id, prop)bool - returns 'true' if property 'prop' is 
+    associated with item 'id', else returns 'false'.
+delProp(int id, prop) - ensures that property 'prop' is not associated 
+    with item 'id'.
+
+Attribute-value handling routines.
+
+putAttr(int id, attr, val) - associates attribute 'attr' with value 
+    'val' with item 'id'. Any previous association is replaced.
+getAttr(int id, attr)int - returns the value for attribute 'attr' 
+    associated with item 'id', else 0 if none.
+delAttr(int id, attr) - dissassociates attribute 'attr' from item 'id'.
+

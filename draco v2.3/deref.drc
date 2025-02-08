@@ -1,0 +1,27 @@
+/*
+ * deref.drc - benchmark program to examine the efficiency
+ *	of pointer dereferencing
+ */
+
+word LOOPS = 50000;	/* how many loops */
+byte BELL = 0x07;	/* ASCII bell character */
+
+type
+    CPTR1 = struct {
+	********************char ptr1;
+    };
+
+proc main()void:
+    word i;
+    char yekdorb;
+    ********************CPTR1 pointer;
+
+    writeln(LOOPS, " loops.");
+
+    for i from 0 upto LOOPS do
+	yekdorb := pointer********************.ptr1********************;
+    od;
+
+    writeln("\(BELL)finished");
+corp;
+

@@ -1,0 +1,51 @@
+			The Game of NUCLEAR
+
+    The game of NUCLEAR is an old game that has probably been programmed
+in BASIC for nearly all home computers. This version is simply a newer,
+faster, and perhaps cleaner, implementation of the standard game. NUCLEAR
+is a two player game, in which each player tries to eliminate all of the
+other player's pieces ("neutrons"). It is played on a 6 x 6 playing board.
+The 36 spaces are identified as 0 - 9 and a - z. The players take turns
+placing neutrons on their own or unowned spaces.
+
+    Each space has a "critical mass" which is the number of orthogonal
+(left-right or up-down) neighbours that it has. The four corner spaces have
+a critical mass of 2; the 16 side spaces have a critical mass of 3; and the
+16 interior spaces have a critical mass of 4. If placing a neutron on a
+space causes the number of neutrons there to exceed that space's critical
+mass, then the space "explodes", sending one neutron to each of its
+neighbours. These neighbours may in turn have exceeded their critical mass
+and will also explode, in a kind of "chain reaction". Such chain reactions
+can involve many spaces, some more than once, and can drastically affect
+the playing board. The key element here is that neutrons exploding into
+neighbouring spaces take over that space, along with all of its neutrons,
+for the player who started the first explosion. Thus, players "attack" the
+other player's spaces by exploding into them. The game is won by the player
+who takes over all of the other player's neutrons. Note that neutrons are
+never destroyed, so the game cannot continue indefinitely.
+
+    In NUCLEAR, the game board is displayed on the screen, along with an
+identification board, which displays just the "name" of the corresponding
+spaces on the game board. Positions on the game board indicate the number
+of neutrons in each space, along with a '+' or '-' if the number is not 0.
+'+' spaces belong to the first player, and '-' spaces belong to the second
+player. The screen also indicates which player is which, how many neutrons
+each player currently owns, and how many games each player has won in this
+series. Players are prompted for their moves, and enter them by pressing
+the key corresponding to the space they wish to place a neutron in. The last
+move made by each player is displayed on the screen.
+
+    When either player is prompted for a move, CONTROL-R can be entered 
+instead. This will clear the screen and redraw the current board. This is 
+useful if the terminal resets or a noisy communication line changes the
+data. Also, pressing '?' will cause NUCLEAR to re-display the built-in 
+instructions. CONTROL-C will abort the game and return to CP/M. 
+
+    Before it can be played, NUCLEAR must be configured to operate on the
+user's terminal. This is done using the CONFIG program, which is included on
+the distribution diskette. Refer to the accompanying writeup on CONFIG for
+details on how to do this.
+
+    NUCLEAR, CONFIG, and the terminal independent CRT I/O library, were
+written entirely in the Draco systems programming language.
+

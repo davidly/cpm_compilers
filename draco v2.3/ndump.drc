@@ -1,0 +1,147 @@
+#util.g
+
+word
+    ASMMAGIC = 0x4689,
+    DRACOMAGIC = 0x4688,
+ 
+    SYMSIZE = 100;		/* size of symbol buffer */
+
+channel input binary CodeFile;	/* input code file */
+channel output text DumpFile;	/* output dump file */
+file() CodeFyle, DumpFyle;
+
+[SYMSIZE] char SymbolBuffer;	/* buffer for one symbol */
+
+proc nonrec getByte()byte:
+    byte b;
+
+    if not read(CodeFile; b) then
+	writeln(CodeFile, ": unexpected end-of-file");
+	exit(1);
+    fi;
+    b
+corp;
+
+proc nonrec getWord()word:
+    word high, low;
+ 
+    low := getByte();
+    high := getByte();
+    (high << 8) | low
+corp;
+ 
+proc nonrec getSymbol()void:
+    *char symPtr;
+    char c;
+ 
+    symPtr := &SymbolBuffer[0];
+    while
+        c := getByte() + '\e';
+        symPtr* := c;
+        c ~= '\e'
+    do
+        symPtr := symPtr + 1;
+    od;
+corp;
+ 
+proc nonrec getReloc()void:
+    word count;
+ 
+    count := getWord();
+    while count ~= 0 do
+        count := count - 1;
+	writeln(DumpFile; getWord() : x : -4, ' ', getWord() : x : -4);
+    od;
+corp;
+ 
+proc nonrec process()void:
+    word wordVal, pos;
+
+    wordVal := getWord();
+    if wordVal ~= ASMMAGIC and wordVal ~= DRACOMAGIC then
+	writeln("File ", CodeFile, " invalid magic number: ",
+		wordVal : x : - 4);
+        exit(1);
+    fi;
+    writeln(DumpFile; "Size of globals is ", getWord());
+    writeln(DumpFile; "Size of file statics is ", getWord());
+    while
+        getSymbol();
+        SymbolBuffer[0] ~= '\e'
+    do
+	writeln(DumpFile; "proc ", &SymbolBuffer[0], ':');
+	writeln(DumpFile; "Size of locals is ", getWord());
+        wordVal := getWord();
+	write(DumpFile; "Size of code is ", wordVal, ", the code is:");
+        pos := 0;
+        while pos ~= wordVal do
+            if pos & (16 - 1) = 0 then
+		writeln(DumpFile;);
+		write(DumpFile; pos : x : -4, ": ");
+            fi;
+	    write(DumpFile; getByte() : x : -2, ' ');
+            pos := pos + 1;
+        od;
+	writeln(DumpFile;);
+	writeln(DumpFile; "Globals relocation data:");
+        getReloc();
+        writeln(DumpFile; "File statics relocation data:");
+        getReloc();
+        writeln(DumpFile; "Local statics relocation data:");
+        getReloc();
+        writeln(DumpFile; "Program relocation data:");
+        getReloc();
+        while
+            getSymbol();
+            SymbolBuffer[0] ~= '\e'
+        do
+	    writeln(DumpFile; &SymbolBuffer[0],
+			      " reference chain head is at ",
+			      getWord() : x : -4);
+        od;
+    od;
+corp;
+ 
+proc nonrec main()void:
+    *char parPtr;
+    FILENAME fn;
+    [15] char nameBuffer;
+ 
+    parPtr := GetPar();
+    if parPtr = nil then
+        writeln("Use is: dump f1[.rel] ... fn[.rel]");
+        exit(1);
+    fi;
+    while parPtr ~= nil do
+	SetFileName(fn, parPtr);
+	fn.fn_type[0] := 'R';
+	fn.fn_type[1] := 'E';
+	fn.fn_type[2] := 'L';
+	GetFileName(fn, &nameBuffer[0]);
+        if not open(CodeFile, CodeFyle, &nameBuffer[0]) then
+            writeln(&nameBuffer[0], ": cannot open");
+            exit(1);
+        fi;
+	fn.fn_type[0] := 'D';
+	fn.fn_type[1] := 'M';
+	fn.fn_type[2] := 'P';
+	GetFileName(fn, &nameBuffer[0]);
+	pretend(FileDestroy(fn), void);
+	if not FileCreate(fn) then
+	    writeln(&nameBuffer[0], ": cannot create");
+	    exit(1);
+	fi;
+	if not open(DumpFile, DumpFyle, &nameBuffer[0]) then
+	    writeln(&nameBuffer[0], ": cannot open");
+	    exit(1);
+	fi;
+	writeln(CodeFile, ':');
+        process();
+	if not close(DumpFile) then
+	    writeln(DumpFile, ": error on close");
+	    exit(1);
+	fi;
+	parPtr := GetPar();
+    od;
+corp;
+

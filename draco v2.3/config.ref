@@ -1,0 +1,293 @@
+Using CONFIG to Configure a Program
+
+    The CONFIG utility is designed to take object files which have been
+built using the CRT facilities, and configure them for a specific terminal.
+To do this, it also includes facilities for the maintenance of a database of
+terminal definitions. When CONFIG is called from CP/M, it can be given
+several parameters. These parameters must be the base names of the files
+which are to be configured. The actual configuring is not done until the
+user issues the 'Process' command to CONFIG, which is an interactive program.
+
+    CONFIG has been designed so that it will operate on most terminals. It
+It does not need a lower-case capability, but will use it if it is available.
+When CONFIG is run, it will ask
+
+    LOWER CASE ON THIS TERMINAL?
+
+The question refers to the terminal on which CONFIG is being run, and must be
+answered with a 'y' or an 'n' (upper or lower case). If the reply is yes, the
+messages and prompts from CONFIG will be in mixed case; if the reply is no,
+all messages, etc. will be translated to upper case. When CONFIG issues its
+command prompt, you can reply with '?' for a summary of the options. The
+options available are:
+
+    C(reate) new terminal type
+
+	If the terminal you are using is not in CONFIG's database, you can
+	create a new entry and add it to the database. When doing so, you
+	will be able to test the definition, and modify it until it appears
+	to be correct. CONFIG must be running on the terminal in question
+	in order that the testing work. Many of the questions have a default
+	value in parentheses, which will be used if nothing is entered. When
+	creating a new terminal type, you will be asked for the following
+	information:
+
+	    How many lines does the terminal display? (24)
+	    
+		This is the number of lines which the terminal can display on
+		its screen. The value must be between 16 and 253. If you just
+		press RETURN, a default value of 24 lines will be assumed.
+
+	    How many columns does the terminal display? (80)
+
+		This is the number of columns which the terminal can display
+		in each line. The value must be between 32 and 253. If you
+		just press RETURN, a default value of 80 will be used.
+
+	    Can the terminal display lower case letters? (y)
+
+		Answer 'y' or 'Y' if the terminal can display lower-case
+		letters, else answer 'n' or 'N'.
+
+	Next, you will be asked to enter information describing how your
+	terminal does cursor addressing, i.e. what codes are required to put
+	the cursor at a specific place (line, column) on the screen. This
+	section is headed by the message:
+
+	    The following questions refer to the cursor positioning
+		    operation:
+
+	after which the following questions will be asked:
+
+	    When positioning, is the line number sent before the column
+		    number? (y)
+
+		Some terminals require that the line number be transmitted 
+		before the column number, others require that the column 
+		number be transmitted before the line number. Answer 'y' or 
+		'Y' if your terminal requires the line number first; answer 
+		'n' or 'N' if your terminal requires the column number first.
+
+	    Are the values decimal ASCII values instead of single byte
+		    binary values? (n)
+
+		Some more expensive terminals follow an emerging standard in
+		which the addressing information is actually a decimal text
+		string, e.g. '10,30' to go to line 10 and column 30. Most
+		current terminals, however, send the values encoded as single
+		characters each. The most common form of this uses the space
+		character for the first line/column, the '!' for the second,
+		the '"' for the third, etc. Others follow a similar scheme,
+		but the values are offset in the ASCII character set. If
+		your terminal is of the first type (requires a full text
+		form), answer 'y' or 'Y', else answer 'n' or 'N'. If you
+		answered 'y', you will also be asked:
+
+	    Are the values 3 digits instead of 2 digits? (n)
+
+		Some terminals can display up to 132 columns of text. To
+		allow full cursor addressing, they require 3 digit values
+		instead of 2 digit values. If you terminal is of this kind,
+		answer 'y' or 'Y', else answer 'n' or 'N'.
+
+	    Enter decimal value to add to line number: (xx)
+
+		Assuming that the first line on the screen is line 0, what
+		value must be added to the line number which is transmitted
+		to the terminal? In the case where the character space is
+		used to represent the first line, the value is the ASCII
+		value of space, which is 32. The default value will be 32
+		if you have selected non-ASCII addressing, otherwise the
+		default value will be 1, which is normal for that mode.
+
+	    Enter decimal value to add to column number: (xx)
+
+		This is entirely analagous to the line offset. Most terminals
+		will use the same offset for both lines and columns.
+
+	    Enter the cursor addressing lead-in sequence:
+
+		For this and other requested 'sequences', you must actually
+		type on your keyboard the sequence of characters (usually
+		including control characters and/or escapes) which your
+		terminal uses to signal the start of a cursor addressing
+		operation. For example, the sequence for an ADDS Viewpoint
+		terminal is listed as ESCAPE-Y, thus if you are using that
+		terminal, you would press the ESCAPE (or ESC) key, followed
+		by a capital 'Y'. The characters will not appear on the
+		screen. Press RETURN at the end of the sequence. For some
+		sequences, some terminals may require delays after the 
+		action, so that the terminal can complete the operation 
+		before the next is sent. The CRT library partially allows 
+		for this by allowing NUL's (hex 0x00) in the sequences. 
+		Since the CP/M TTY driver doesn't let NUL's through, some 
+		other character must be used. I've chosen to use the TAB
+		character (hex 0x09), on the grounds that it is unlikely to 
+		be included in any terminal's sequences.
+
+	    Enter the line/column separator sequence:  (optional)
+
+		Some terminals require specific characters between the line
+		number and the column number (or vice versa). If your
+		terminal does, then enter that sequence. If your terminal
+		doesn't require any separators, then just press RETURN.
+
+	    Enter the cursor addressing lead-out sequence: (optional)
+
+		Some terminals may require specific characters after the
+		line and column numbers. If your terminal does, then enter
+		that sequence. If your terminal doesn't require any
+		terminating characters, then just press RETURN.
+
+	All that remains now is to specify a few remaining sequences which
+	tell the terminal to clear lines, clear the screen, etc. This section
+	is headed by the message
+
+	    Now the remaining terminal characteristics:
+
+	The specific values requested are:
+
+	    Enter the sequence used to initialize the terminal: (optional)
+
+		This sequence will be sent to the terminal when a program
+		which uses the CRT library first starts up. It can be used
+		to set various terminal modes, such as highlight modes.
+
+	    Enter the sequence used to terminate CRT mode: (optional)
+
+		This sequence will be sent to the terminal when a program
+		which uses the CRT library terminates normally. It will
+		typically reset anything unusual set by the initialization
+		sequence.
+
+	    Enter the sequence used to clear to the end of the line:
+
+		This must be a sequence which tells the terminal to clear
+		the current line from the cursor column to the end of the
+		line to all blanks. It must leave the cursor in the same
+		position.
+
+	    Enter the sequence used to clear the entire screen:
+
+		Enter here the sequence of characters that your terminal
+		interprets by clearing the entire screen to spaces or nulls,
+		and leaves the cursor in the upper left corner of the screen.
+		For many terminals, this will be a single CONTROL-L (the
+		ASCII FF or formfeed character).
+
+	    Enter the sequence used to clear from here on down:
+
+		This is similar to the previous sequence, except that all
+		lines on the screen from the current one to the end of the
+		screen must be cleared. The cursor should be left at the
+		beginning of the first line cleared. You can rely on it
+		being there when this sequence is issued.
+
+	    Enter the sequence used to enter highlight mode: (optional)
+
+		If your terminal has any facilities for highlighting
+		characters, such as reverse video, half intensity, blinking,
+		etc., then enter here the sequence which will cause all
+		successive characters to be highlighted. If your terminal has
+		no such facility, then just press RETURN.
+
+	    Enter the sequence used to exit highlight mode:
+
+		This sequence must be provided if the previous one was. It
+		must instruct the terminal to stop highlighting characters.
+		The characters on the screen which are already highlighted
+		should stay highlighted, but new characters added should not
+		be highlighted. You will not be asked for this sequence if
+		you didn't enter a sequence for the previous prompt.
+
+	    Enter the sequence which moves the cursor forward: (optional)
+
+		Enter here the character or characters which your terminal 
+		interprets as a request to move the cursor forward one 
+		column, but without affecting the current character or the 
+		character at the new position. If your terminal doesn't have 
+		such a capability, then just press RETURN.
+
+	The program will now respond with
+
+	    Done.
+
+	and will ask if you want to test the terminal definition. If you are
+	running CONFIG on the terminal that you just defined, and you want
+	to test the definition, then respond with 'y' or 'Y' and CONFIG will
+	execute a sequence of operations that tries out all of the values
+	and sequences you just entered. When the test is done, you should
+	see a line of minus signs at the top of the screen, vertical bars
+	down the sides (the last line will be empty), a large 'X' of
+	asterisks across the middle of the screen, and some text centered
+	at the top of the screen, overwriting part of the large 'X'. A
+	couple of the lines of output are dependent on whether or not the
+	terminal has a highlighting feature (called reverse video), and
+	whether or not it has a non-destructive forward space. Press any
+	key to continue, and you will be asked if the test worked. If it
+	didn't, respond with 'n' or 'N', and you will go through the
+	definition operation again. If the test worked, or you didn't
+	perform the test, you will be asked if you want to add the terminal
+	to the database. If you respond 'y' or 'Y', you will also be asked
+	for a name for the terminal in the database. The newly defined
+	terminal becomes the 'current' terminal, and will be used to process
+	the .SET files if not later overridden.
+
+    D(elete) terminal type
+
+	This option is used to delete a terminal definition from the
+	database. This can be done if you wish to replace one of the
+	definitions. Any selected terminal will be un-selected, in case you
+	deleted the one which was selected.
+
+    (L)ist terminal types
+
+	This option will list on your screen the names of all of the terminal
+	definitions in the database. If you have not already done a list, you
+	will be asked how many lines your current terminal has. This value
+	is required so that proper pagination of the list (which can be
+	quite long if your version of the database has a lot of entries) can
+	be done. Again, if you just press RETURN, a default of 24 is assumed.
+
+    (S)elect terminal type
+
+	This option is used to select a terminal type which is to be used
+	for a test, or, more importantly, for configuring some programs.
+	You will be asked for the number of the terminal type, which can be
+	obtained by finding the terminal type in the listing produced by the
+	list option.
+
+    (V)iew selected terminal
+
+	This option displays the definition of the current selected terminal.
+	It is used to verify a new definition, or to examine an existing
+	definition. Unlike the 'Test' option, it can be used on a terminal
+	different from the selected one.
+
+    (T)est selected terminal
+
+	If your terminal already existed in the database (likely if you have
+	a large database and a fairly common terminal), you may want to test
+	it to see if it actually works. You must have selected a terminal
+	type via the select option before you can test it.
+
+    (P)rocess .SET files
+
+	This is the important option. This option is used to configure the
+	programs supplied in .SET file form, producing a corresponding .COM
+	file for each one, which has been configured to run on your terminal.
+	If you gave CONFIG parameters when you ran it, those parameters are
+	now taken to be .SET files (the .SET is optional) which are to be
+	processed. CONFIG will inform you of which one it is currently
+	processing. The processing can take quite a while, since it is a
+	two-pass operation. If you did not supply any parameters to CONFIG,
+	you will be prompted to enter the name of a .SET file (again, the
+	.SET can be ommitted) to configure. Just press RETURN to get out of
+	the process option. Note that you must have selected a terminal
+	type via the select option before you can use the process option.
+
+    Q(uit)
+
+	Use this option when you are finished with CONFIG. It will return you
+	to CP/M command mode.
+

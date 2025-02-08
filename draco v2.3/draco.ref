@@ -1,0 +1,1287 @@
+			Draco Quick Reference Guide
+
+		       Copyright 1983 by Chris Gray
+
+
+I. Using the compiler under CP/M
+    (CP/M is a trademark of Digital Research Incorporated)
+
+	draco f1[.drc] f2[.drc] ... fn[.drc]
+
+    Each file is a separate compilation; they need not be related. If no
+    extension is given, then .DRC is assumed. For each file, if the
+    compilation is successful, a corresponding .REL file is produced.
+    Standard CP/M ambiguous file specifications are accepted - all matching
+    files will be compiled.
+
+II. Using the assembler under CP/M
+
+	das f1[.das] f2[.das] ... fn[.das]
+
+    Each file is a separate assembly. If no extension is given, then .DAS
+    is assumed. For each file, if the assembly is successful, a corresponding
+    .REL file is produced.
+
+III. Using the link editor under CP/M
+
+	link f1[.rel] f2[.rel] ... fn[.rel] fa.lib fb.lib ... fz.lib
+
+    Each file is a .REL file produced by DAS or DRACO, a .LIB file produced 
+    by DLIB, or a .PLD file produced by LINK. If no extension is given on a 
+    file name, then .REL is assumed; thus libraries must have the .LIB given 
+    explicitly. Flags can be interspersed with the file names. Each flag 
+    starts with a minus sign (UNIX convention) and consists of several flag 
+    letters, and perhaps one flag value. The recognized flags and their 
+    meanings are: 
+
+	m - produce a map of the load address of the various procedures and
+	    the addresses of all local and global variable groups. This map
+	    is sent to a file whose base name is the same as that of the
+	    resulting .COM file (see later) and whose extension is ".MAP".
+	    The symbols will be sorted alphabetically.
+	a - produce a map file as above, but sort the symbols by their load
+	    addresses. This is useful when debugging.
+	i - suppress the normal Draco initialization code. This option should
+	    only be used by assembler programmers. Note: LINK allocates
+	    data areas before code areas if -d is not specified. Thus, if
+	    neither -s nor -d are specified, the first .REL file must not
+	    have any file variables, and the first procedure in it must not
+	    have any local variables. If either set of variables exist,
+	    they will be first in the .COM file, and will be at the entry
+	    point to the program. This option also prevents the standard
+	    libraries TRRUN.LIB and TRCPM.LIB from being automatically 
+	    searched. (The 'TR' is from a previous name of the language.)
+	q - produce a program which will return to CP/M quickly. This is done
+	    by using an alternate initialization section which leaves CP/M's
+	    CCP untouched in memory, and which will simply return to CP/M
+	    without doing a warm start. This flag should not be given when
+	    linking programs which use CP/M's location 6 (pointer to warm
+	    boot routine) to determine the top of available memory. The
+	    pointer so returned does not take the CCP into account, and so
+	    the resulting program will probably not run. A very smart program
+	    could determine if it had been compiled with '-q' and subtract
+	    the size of the CCP from the top-of-memory pointer. The standard
+	    storage allocator does this by referencing the special symbols
+	    '_DataEnd' and '_CodeEnd' which point to the ends of the data and
+	    code portions of the final object file.
+	o - specifies the name for the resulting .COM file. The name must
+	    immediately follow the 'o', with no intervening spaces or other
+	    flags. If no explicit name is given, then the name is derived
+	    from the name of the first .REL file in the parameter list.
+	c - specifies the first address to be used for program (code). The
+	    value must follow immediately and is in hexadecimal. This option
+	    is normally only useful for people who wish to produce .COM files
+	    suitable for PROM burning. The default program start address is
+	    0x100, which is the standard CP/M entry point.
+	d - specifies the first address to be used for data (variables). The
+	    value must follow immediately and is in hexadecimal. This option
+	    should be used for programs which have large data areas, or for
+	    programs which are to be burned into PROMS. If no value is given,
+	    then data areas are intermixed with code areas.
+	s - the linker is forced to take two passes for it's operation. The
+	    first pass determines the total code size of the resulting
+	    program, and the second pass does the actual linking, using a
+	    data start address (as with the '-d' flag) just past the address
+	    of the last byte of code. The 's' stands for small - the
+	    resulting .COM file will be as small as possible (it will contain
+	    only the code of the program) and the total space occupied will
+	    be a minimum, since no gaps will exist. In linking with no flags
+	    given, code and data will be intermixed, thus the data space will
+	    occupy disk space in the .COM file
+	v - verbose. The linker prints out the names of the .REL and .LIB
+	    files it is processing. This gives you something to watch when
+	    linking a large program on slow disks.
+	p - requests that a .PLD file be produced representing the entire
+	    program. This file is a machine readable map, in address order,
+	    of all symbols loaded. The format is a 4 character hexadecimal
+	    address, a space, the symbol name, and CR/LF for each symbol, and
+	    an extra CR/LF at the end of the file. When such a PLD file is
+	    given to LINK as input, the named symbols are assumed to pre-
+	    exist at the given addresses. This could be because they are in
+	    ROM or because they are in a program which has dynamically loaded
+	    the program that is referencing them.
+
+    The Draco linker provides partial support for a type of module, i.e. for
+    a fully independent package of routines with its own local variables,
+    it's own initialization and termination code, and a set of procedures
+    which are exported to its 'clients' or users. Most of this is provided
+    by the normal features of the Draco language. A module is written as a
+    single Draco source file, with its own local variables. Clients import
+    procedures from it in the normal way, using 'extern' declarations.
+
+    The additional support provided by the linker works as follows. If a
+    procedure in a library is called, and the file which that procedure came
+    from contains another procedure called "_initialize", then the linker
+    will load "_initialize" and will generate code at the beginning of the
+    program to call it. Similarly, a routine called "_terminate" will be
+    automatically loaded and called at the end of the program (directly
+    returning to the system via "exit" or "SystemReset" will bypass the
+    termination call). There can be multiple occurrences of these special
+    symbols, so long as there is only one per source file.
+
+    In the interests of portability, all versions of Draco will have
+    available a routine called "exit", which has a single integer parameter.
+    This routine will return directly to the host operating system. The
+    parameter passed is an error indicator, and should be 0 to indicate
+    successful execution. CP/M cannot make use of this returned error code,
+    but other systems can, so this facility is provided to simplify the
+    transportation of Draco programs among different systems.
+
+    LINK's operation can involve one or two passes, each pass consisting of 
+    a read of the .REL files and one or more reads of the .LIB files. The
+    second pass is necessary only if the '-s' flag is given or if the program
+    is too large to fit into the available memory. When operating in two-pass
+    mode, LINK can produce a final .COM file larger than the amount of memory
+    on the machine on which LINK is running. LINK will automatically switch
+    to two-pass mode whenever the available memory runs out.
+
+    Libraries produced by DLIB have a directory at the front which indicates
+    where in the library all of the individual procedures can be found. LINK
+    loads only those procedures which have been referenced, and it will scan
+    the libraries several times if needed to resolve all references. If a
+    procedure is loaded which references file-level global variables, then
+    space for those variables is allocated, and all procedures from that
+    original source file will reference them. When running under CP/M 1.0,
+    random access is not supported, so the entire library is actually read
+    in, but under later versions of CP/M, random access is used to reduce the
+    amount of actual disk I/O done.
+
+    If a given symbol is present in more than one of the libraries being
+    scanned, then it is loaded from the first library encountered after the
+    first reference to the symbol. All .REL files are scanned first, in the
+    order they appear on the LINK command, then all .LIB files are scanned,
+    in the order they appear on the LINK command. The entire set of .LIB
+    files is rescanned if further unresolved references occur. If the first
+    reference to a symbol comes from a library member, then the search for
+    that symbol starts with the remainder of that library and continues on
+    with later ones.
+
+    Because of this strictly forward searching, the order of placement of
+    symbols in libraries can be important. If a procedure in a given source
+    file which is to be part of a library references another procedure in
+    that source file, then the referenced procedure should be forward
+    declared and appear LATER in the source file than its referencer. This
+    approach minimizes the number of library scans needed to resolve all
+    references. All of the standard libraries are set up this way.
+
+    Unless the '-i' flag is given, LINK will automatically add the libraries
+    'TRRUN.LIB' and 'TRCPM.LIB' to the end of the set of libraries searched.
+    TRRUN.LIB contains the run-time system, including support needed by the
+    compiler, the I/O library and the utility library described later.
+    TRCPM.LIB is an interface library which provides interface routines to
+    all of the CP/M entry points. Entry point names are exactly as given in
+    the CP/M manuals - e.g. SetDMAAddress, ReadSequential, etc. Most simple
+    programs will not need any other libraries, and thus can be linked by
+    simply giving all of the .REL files. A program with only one source file
+    xxx.drc can thus be compiled and linked by:
+
+	draco xxx
+	link xxx
+
+    A program with source files p1.drc, p2.drc and p3.drc, which references
+    the CRT library can be fully compiled and linked by:
+
+	draco p?
+	link p1 p2 p3 crt.lib
+
+    For a final version, the '-s' flag should probably be given.
+
+IV. Using the disassembler under CP/M
+
+	ddis [-r] f1[.rel] f2[.rel] ... fn[.rel]
+
+    Each disassembly is separate. The files being disassembled can be
+    produced by either the compiler or the assembler. The disassembler knows
+    about all of the conventions and special code sequences produced by the
+    compiler. If no extension is given on a file name, then .REL is used.
+    Each disassembly produces a .DIS file corresponding to the .REL file.
+    The contents of the .DIS file is assembler source, suitable for
+    assembling with DAS. The disassembler does not generate correct
+    declarations for file variables (it uses only the information passed in
+    the relocation information, which may not completely identify them
+    without processing the entire program). Also, since the assembler does
+    not handle global variables, no declarations for them are produced.
+    The '-r' flag requests that code labels not appear and branches use a
+    position-relative form (*-n or *+n). This is useful when working with
+    a printed, out-of-date disassembly listing, since most of the branches
+    will still be correct.
+
+V. Using the librarian under CP/M
+
+	dlib f[.lib]
+	dlib f[.lib] f1[.rel] f2[.rel] ... fn[.rel]
+
+    In the first form, the already existing library file is read in, and a
+    listing of it's contents is produced on the console. In the second form,
+    the (1 or more) .REL files are read, and a .LIB library is constructed
+    from them. This is a two pass operation, and the name of the .REL file
+    currently being read is printed on each pass.
+
+VI. Using the cross-referencer under CP/M
+
+	xref [-supo<file>] x1[.rel] ... xn[.rel]
+
+    A cross reference listing of the procedures in the given .REL files
+    is produced. If no flags are given, the listing is produced on the
+    console. If '-p' is given, the listing is sent to the printer. If '-o'
+    followed by a filename is given, the listing is sent to that file. Flag
+    '-s' tells the cross-referencer to include procedures whose names start
+    with an underscore ('-') - the default is to omit such procedures, since
+    they are usually part of the run-time system or private to a library.
+    Flag '-u' tells the cross-referencer to include procedures whose names
+    start with an upper-case letter - the default is to omit such procedures,
+    since they are usually library routines, not part of the current program.
+    Note that the cross referencer works on the .REL files, NOT the .DRC
+    source files, thus it cross references only procedure calls, and only
+    those that are not conditionally compiled out.
+
+VII. Draco source files
+
+    Source files for the Draco compiler are either normal source files,
+    usually with an extension of .DRC, or are declaration include files,
+    usually with an extension of .G. Declaration include files can contain
+    only declarations (constant, type, external, variable), and the symbols
+    declared in them are called 'global', and are available to all procedures
+    in all source files which include that particular include file.
+
+    Normal source files contain, in the order given:
+
+	- 0 or more include file references. These must start in the first
+	    column of the first line, and consist of a backslash (\) or
+	    number sign (#) followed by the name of the include file being
+	    referenced. Several such references may occur, one per line,
+	    with no intervening spaces or comments. When a program consists
+	    of more than one source file, each of the source files will
+	    usually have the same set of include file references. The link
+	    editor requires that the 'global' variables be consistent among
+	    all .REL files being linked. .REL files being put into libraries
+	    may not have any 'global' variables.
+
+	- declarations. These declarations are called 'file' declarations,
+	    and are available to all procedures in that particular source
+	    file. Short Draco programs, consisting of only one source file,
+	    will not have any 'global' declarations - the 'file' declarations
+	    will play that role. In larger programs, 'file' declarations are
+	    still useful, in that procedures associated with a given portion
+	    of a program can be assembled in one file, and any declarations
+	    private to those procedures can be 'file' declarations in that
+	    file, and thus will not be accessible to any other procedures.
+	    Also, 'file' declarations are common in files which are to be
+	    used as part of a library, since any 'file' variables will be
+	    allocated (assigned real memory addresses) by the link-editor
+	    whenever a routine from that file is referenced.
+	
+	- procedures. Each procedure can have it's own set of local
+	    declarations (it's parameters are assumed to be part of that
+	    set). These declarations are accessible only within that
+	    procedure, and the values of any variables are not preserved
+	    between activations of the procedure. Procedures defined in a
+	    source file are considered to be declared for the remainder of
+	    that source file. If circular referencing of procedures is
+	    required, then a 'file' level extern declaration of the procedure
+	    can be given before the procedure is used, and, so long as that
+	    declaration is consistent with the final definition, the compiler
+	    will not complain. Because of the compiler's requirement that
+	    all symbols be declared before they are used, the simplest
+	    arrangement of source files is that which puts the lowest-level
+	    routines first, and the highest-level routines (those which call
+	    the lower-level ones) last. Thus, short programs consisting of
+	    only one source file will normally put procedure 'main' last.
+	    (All Draco programs must have a procedure 'main', since the
+	    initialization code starts program execution by calling 'main'.)
+
+	    In keeping with a highly readable convention used by some UNIX 
+	    programmers, it is suggested that all 'global' and 'file' 
+	    symbols begin with a capital letter, and all local symbols 
+	    begin with a small letter (other than constants). In keeping 
+	    with this convention the names of all routines in all libraries 
+	    supplied with Draco begin with a capital letter. Even though 
+	    procedure definitions are technically 'file' declarations, such 
+	    procedures, unless they are to be part of an externally 
+	    available library, should have names beginning with small
+	    letters.
+
+	    Draco takes a different approach to scope than many standard
+	    algorithmic languages. Languages such as Pascal, Algol68, etc.
+	    allow the declaration of an identifier, at an inner scope level,
+	    which is already declared at an outer scope level. For the
+	    duration of that scope, the new, inner, declaration masks the
+	    outer declaration so that the outer meaning of the identifier
+	    is not available. In Draco, it is illegal to attempt to declare
+	    an identifier which already exists, regardless of the scope
+	    levels of the declarations (Draco only has 3 levels anyway -
+	    global, file and local). Several procedures can declare the same
+	    identifier locally (names such as 'i', 'p', 'n', etc. are quite
+	    common), but they cannot declare a name which exists at either
+	    the global or file level. Similarly, at the file level, a name
+	    cannot be used which is already in use at the global level. This
+	    approach is used so as to eliminate the problems arising from
+	    accidentally masking an outer meaning in a situation which uses
+	    that outer meaning, but also declares a similar, inner meaning.
+	    This situation can result in bugs which are very difficult to
+	    detect. If the naming convention suggested above is used, little
+	    inconvenience will occur. Also, since Draco imposes no limit on
+	    the length of identifiers, there should be no problem in choosing
+	    meaningful ones.
+
+VIII. Declarations
+
+    Declarations in Draco can be of constants, types, variables or external 
+    procedures. 
+
+    Constant declarations consist of the type, followed by the identifiers, 
+    along with an '=' and their value. Constants can be numeric (signed or 
+    unsigned), single character, or 'chars' values. In keeping with a highly 
+    readable convention used on UNIX systems, it is suggested that the names 
+    of constants be fully capitalized. Example constant declarations:
+    
+	word MAX_LENGTH = 1000,
+	     ENTRY_COUNT = 10;
+	char BEL = '\(7)', BS = '\b', LETTER_F = 'f';
+	*char AUTHOR = "Sam Spade";
+	unsigned 255 LIMIT = 255 - 1;
+    
+    The values used for constants can be any expression whose value can be
+    determined at compile time by the compiler. This can include conditional
+    expressions, so long as the conditions are known at compile time.
+
+    Type declarations consist of the word 'type', followed by the names of
+    the new types, each followed by '=' and the type's definition. The
+    various kinds of types in Draco are as follows:
+    
+	- signed numeric types. These are specified by the word 'signed',
+	    followed by a constant expression giving the upper bound on the
+	    positive values allowed. The negative values have a similar
+	    limit (one less for 2's complement machines). The maximum value
+	    of the limit will vary from machine to machine and possibly from
+	    version to version of the compiler. All versions will allow at
+	    least 'signed 32767'. In programs where execution time must be
+	    minimized, the programmer should use numeric types with the
+	    smallest possible range. This allows the compiler to generate
+	    more efficient code for CPU's which do some types of arithmetic
+	    better than others.
+	
+	- unsigned numeric types. These are specified by the word 'unsigned',
+	    followed by a constant expression giving the upper bound on the
+	    values allowed (the lower bound is 0). Signed and unsigned values
+	    can be mixed in arithmetic operations. The two kinds of values
+	    can be compared for equality, but not for magnitude (they use the
+	    same bit pattern for different values).
+	
+	- enumerated types. These are specified by the word 'enum', followed
+	    by an open brace ({), followed by a list of the named values of
+	    this type, followed by a close brace (}). The values named in the
+	    list are the only allowed values of this type. They can be
+	    compared (all comparisons are meaningful), subtracted (the result
+	    is an unsigned numeric), and can have a numeric added to or
+	    subtracted from them (the result is another value of the same
+	    enumerated type). This kind of type is usually used for flag
+	    values, where the flag can take on a limited set of values. A
+	    sample enumerated type:
+	    
+		enum {c_red, c_yellow, c_blue, c_black, c_white}
+
+	- pointer types. These are specified by an '*' preceding the type 
+	    which is to be pointed to. Thus, '*int' is a type specification 
+	    meaning 'pointer to integer'. In the language's single exception 
+	    to the requirement that all identifiers be declared before they 
+	    can be used, the pointed to type can be an undeclared symbol, 
+	    which is assumed to be an as-yet undeclared type, which must be 
+	    declared before the end of the current set of declarations. This 
+	    rule relaxation is used to allow the construction of circularly 
+	    referencing structures. Pointer values can be compared, 
+	    subtracted (as long as the values are of the same pointer type), 
+	    and can have a numeric value added to or subtracted from them. 
+	    Unlike similar operations in the 'C' language, the value being 
+	    added or subtracted is not multiplied by the size of the 
+	    pointed-to type. Pointer values are usually generated via the '&'
+	    address-of operator, or by using a 'chars' constant, which is of 
+	    type *char. The predefined value 'nil' is compatible with all 
+	    pointer types. 
+
+	- array types. These are specified by a left square bracket ([),
+	    followed by a list of constant expressions giving the size of the
+	    array in that dimension, followed by a right square bracket (]),
+	    followed by the type of the array elements. There is no limit on
+	    the number of dimensions of an array, but the user must keep in
+	    mind the amount of memory occupied by the array as compared to
+	    the amount of memory available on the computer system. Arrays
+	    are stored in row-major order, i.e. when scanning along an array
+	    in memory, the last index varies most frequently. Array values
+	    can be assigned. Sample array types:
+	    
+		[MAX_NAME_LENGTH + 1] char
+		[M, N, P] int
+		[BLOCK_COUNT] [BLOCK_LEN] unsigned 32
+
+	- structure types. These are specified by the word 'struct', followed
+	    by a left brace bracket ({), followed by the types and names of
+	    the fields of the structure, followed by a right brace bracket
+	    (}). Unlike some other languages, Draco does not allow field
+	    names to be re-used; all must be unique. The easiest way to do
+	    this is to follow yet another highly readable UNIX convention
+	    which names all fields of a structure as a short abbreviation of
+	    the structure name (1 - 3 letters), followed by an underscore (_)
+	    and the mnemonic name of the field. Like array types, structure
+	    types can be assigned. Some structure declarations:
+
+		type
+		    ProcessState_t = struct {
+			word st_programCounter, st_stackPointer;
+			[8] word st_registers;
+			byte st_statusRegister;
+		    },
+
+		    Process_t = struct {
+			int pr_priority;
+			*Process_t pr_parent, pr_children, pr_nextSibling;
+			ProcessState_t pr_state;
+			*ProcessQueue_t pr_waitQueue;
+		    },
+
+		    ProcessQueue_t = struct {
+			*ProcessQueue_t pq_next;
+			*Process_t pq_this;
+		    };
+
+	- union types. Union types are declared exactly like structure types
+	    except that the word 'union' replaces the word 'struct'. Union
+	    types are similar to unions in 'C', in that they specify a type
+	    which is a set of types. The space allocated for a value of a
+	    union type is the maximum of the spaces needed for the various
+	    member types in the union. The programmer informs the compiler
+	    which of the member types is currently active by selecting the
+	    member type, exactly as a field of a structure is selected, when
+	    the union value is referenced or assigned to as other than the
+	    union type. Union types are useful when constructing networks of
+	    nodes, and the nodes are of differing natures, but all are
+	    pointed to by other nodes. The alternative of having separate
+	    pointers for each possible node type is very wasteful of memory.
+	    Sample union type: (this one from a railroad simulation)
+
+		type
+		    Track_t = union {
+			int tr_straight;	/* straight track option */
+			struct {		/* turnout option */
+			    int trn_length;
+			    bool trn_open;
+			    bool trn_isRight;
+			} tr_turnout;
+		    };
+
+	- procedure types. These types are declared similarly to actual
+	    procedure headers, except that no procedure name occurs, no
+	    machine specific options (e.g. 'nonrec') can occur, and the names
+	    of the parameters are required, but are irrelevant. Procedure
+	    values can be compared for equality, assigned, and called. Sample
+	    procedure types:
+	    
+		proc (int a, b)int
+		proc (proc (char c)void putChar; *char charsPtr)void
+		proc ([12]**int x, y)[12]**int
+
+	- operator types. This kind of type is Draco's (somewhat limited) way
+	    of being an extensible language. Syntactically an operator type
+	    consists of an open parenthesis, a string constant, a comma, a
+	    base type, a comma, a numeric constant and a close parenthesis.
+	    The string constant is a prefix which is used to build the names
+	    of the procedures that the compiler will generate calls to in
+	    order to do operations on values of this new type. The base type
+	    is the type that is the underlying representation of this new
+	    type, and the numeric constant is a set of 16 bits, indicating
+	    which operations are enabled for this type. Operator types will
+	    be explained in a later section.
+
+	Types in Draco can be combined in arbitrary ways. The only 
+	limitations imposed by the compiler are those inherent in the sizes 
+	of the type table and the type information table. The question of 
+	type equivalence is answered in Draco in the following way: two 
+	types are equivalent if they are equivalently constructed from
+	equivalent component types. The determination of type equivalence is
+	done while the compiler is parsing the type specification. Thus, in
+	the following:
+	
+	    [12] int a;
+	    [10 + 4 / 2] int b;
+
+	'a' and 'b' will have the same type. The type of 'b' is equivalent 
+	to the type of 'a', and so will BE the type of 'a'. If a type is
+	given a name via a type declaration, however, then that type is 
+	unique and is not equivalent to any other named type. Thus, if we
+	declare: 
+
+	    type T1 = [10] int,
+		 T2 = [10] int;
+	    T1 a;
+	    T2 b;
+	    [10] int c;
+
+	Types T1 and T2 are not equivalent, and 'a' and 'b' cannot be 
+	assigned to one-another. Both can be assigned to or from 'c', 
+	however, else there would be no way to generate values of named 
+	types. This scheme is an attempted compromise between the need for 
+	usability of named types, and the desire to have the compiler 
+	protect us from mistakes when two named types just happen to have 
+	equivalent definitions. Signed or unsigned numeric types which are 
+	named are always compatible with other named or unnamed numeric
+	types, whether equivalent or not.
+
+	The following types are supplied predefined:
+
+	    int - signed numeric using the standard fully supported word
+		size on the host processor 
+	    short - smaller sized signed value (often 8 bit)
+	    word - unsigned numeric, same size as int
+	    ushort - unsigned numeric, same size as short
+	    byte - unsigned numeric, one byte long (8 bits)
+	    char - enumeration type of all 256 character values
+	    bool - enumeration type consisting of 'false' and 'true'
+
+	Most programs can safely use types 'int' and 'word', since they will 
+	always be at least 16 bits long. The careful programmer will usually 
+	use his/her own signed and unsigned types, however, so that the 
+	reader is always aware of the range of possible values, and so that 
+	compilers can optimally decide the implemented size of variables
+	(which may vary from processor to processor). 
+
+    Variable declarations consist of the type (either named or explicit) 
+    followed by a comma separated list of identifiers. This format is 
+    similar to that used for constants, but combining the two is not 
+    advised, since doing so can be confusing. 
+
+    External procedure declarations consist of the word 'extern' followed
+    by a list of procedure headers, complete with procedure name, parameter
+    types and names, and result type.
+
+IX. Procedures
+
+    Each Draco procedure definition begins with the word 'proc', followed
+    by any special machine dependent modifiers, followed by the name of the
+    procedure, followed by a procedure header, followed by a colon, followed
+    by the body of the procedure and a final terminating word, 'corp'. A
+    procedure header consists of '(', optional parameter declarations, ')',
+    and the result type (or 'void' for procedures which don't return a
+    result). Note that the parentheses are required, even if no parameters
+    are declared. Parameter declarations are just like variable declarations.
+
+    Unlike Pascal and C, Draco provides a way for arrays of differing sizes
+    to be passed to a common procedure. An array parameter can use an
+    asterisk (*) for the size of one or more of its dimensions, instead of
+    the normal constant expression. When such a procedure is called, the
+    compiler will automatically pass the true size of the dimensions of the
+    passed array along with the array. These true sizes can be determined
+    inside the procedure via the 'dim' construct. Note that this method can
+    only be used for parameter arrays, and can only be used for top level
+    arrays (e.g. if the parameter is an array of arrays, then only the top-
+    level array can have '*' sizes).
+
+    If the procedure is to return a result, the type placed between the
+    closing ')' of it's header and the following ':' is the type expected
+    by the compiler. Conversions among various numeric types are allowed
+    here as elsewhere. The result is returned by placing it at the end of
+    the procedure's body, just before the closing 'corp'. There must not be
+    a semicolon after the result, since the compiler uses the semicolon as
+    a signal that the previous unit should have been a statement. As a sample
+    procedure, here is the old standard, "Towers of Hanoi":
+
+	proc hanoi(int n; *char from, to, using)void:
+
+	    if n > 0 then
+		hanoi(n - 1, from, using, to);
+		writeln("Move disk ", n, " from peg ", from, " to peg ", to);
+		hanoi(n - 1, using, to, from);
+	    fi;
+	corp;
+    
+    A standard procedure with a result:
+    
+	proc minimum([*] int a)int:
+	    int i, min;
+
+	    min := a[0];
+	    for i from 1 upto dim(a, 1) - 1 do
+		if a[i] < min then
+		    min := a[i];
+		fi;
+	    od;
+	    min
+	corp;
+
+X. Statements in Draco
+
+    Draco is a fairly standard programming language, along the lines of
+    Pascal, C, and Algol. Where several statements are allowed, they are
+    separated by semicolons (the semicolon is a separator, not a terminator).
+    The standard statement forms in Draco are:
+    
+    - assignment statement. This is the usual, consisting of the destination,
+	a ':=', and the source expression.
+    
+    - procedure call statement. This consists of the procedure's name (or an
+	expression yielding a procedure), followed by the procedure's
+	parameters, enclosed in parentheses. The parentheses must be present,
+	even if the procedure has no parameters (this makes it very clear
+	when something is being called - useful for procedures such as random
+	number generators which have no parameters but return a result).
+	The parameters passed must be compatible with those specified in
+	the defining procedure header, in terms of both type and number.
+    
+    - if statements. If statements in Draco are syntactically identical to
+	if statements in Algol68. The simplest form consists of the word
+	'if', followed by an expression of type 'bool', followed by the word
+	'then', followed by a sequence of statements to be executed when the
+	bool yields 'true', followed by the word 'fi'. An 'else' clause,
+	which is executed when the bool yields 'false', can be placed between
+	the 'true' statements and the 'fi'. An 'else' clause consists of the
+	word 'else' and a sequence of statements. As in Algol68, alternate
+	conditions, consisting of the word 'elif', a bool expression, the
+	word 'then', and a statement sequence, can be placed between the
+	first statement sequence and the 'else' (or 'fi' if there is no
+	'else'). In that case, the conditions are evaluated one at a time,
+	until one is found that yields 'true'. The corresponding statement
+	sequence is then executed. Only if no condition yields 'true' will
+	the 'else' statements be executed. When a condition has yielded
+	'true', no more conditions will be evaluated. As an example,
+	
+	    if a then
+		b
+	    elif c then
+		d
+	    elif e then
+		f
+	    else
+		g
+	    fi
+	
+	is equivalent to
+	
+	    if a then
+		b
+	    else
+		if c then
+		    d
+		else
+		    if e then
+			f
+		    else
+			g
+		    fi
+		fi
+	    fi
+	
+	The advantage of the 'elif' form is fairly obvious - it has far less
+	indentation for the same logic.
+    
+	The standard if statement is the basis for the conditional
+	compilation feature of the Draco compiler. If the condition for an
+	if statement can be evaluated at compile time, then no code is
+	generated for the if statement, and code for only one of the branches
+	is generated. This feature is not as flexible as that provided by
+	full macro preprocessors, but it has the advantage that the compiler
+	always checks all branches for correct syntax and semantics, thus the
+	programmer can be sure that changing the flag value controlling the
+	conditional compilation will not cause the program to stop compiling.
+	(With macro pre-processors, and conditional inclusion, as supported
+	by most C compilers, the compiler does not even see the code which
+	has been conditioned out.) By including conditional compilation
+	in the compiler, rather than requiring a separate pre-processor,
+	compilation times for Draco programs can be significantly less.
+	One common use for conditional compilation is that of including
+	debugging statements, dependent on a global debugging flag. E.g.
+	
+	    bool DEBUG = false;
+	    ...
+	    if DEBUG then
+		writeln(DebugOut; "We got to this point, key values are:");
+		...
+	    fi;
+	    
+	In situations like this, the Draco compiler will generate no code at
+	all for the entire if statement. If the DEBUG flag is set to 'true'
+	instead, then the debugging code will appear, but there will still be
+	no code to actually test DEBUG (DEBUG doesn't even exist). For more
+	complex debugging, the DEBUG flag can be a number, specifying the
+	level of debugging required. Another common use of conditional
+	compilation is to have one source file which can produce two or more
+	different versions of a program, depending on one or more flags.
+    
+    - while statements. The standard while statement consists of the word
+	'while', followed by a bool expression, followed by the word 'do',
+	followed by a sequence of statements (the loop body), followed by
+	the word 'od'. Draco allows an extension of this form, in which a
+	sequence of statements can be placed between the 'while' and the
+	bool expression. This extension allows the same 'while' construct to
+	serve as beginning, middle and end exit loops. E.g.
+	
+	    while
+		write("Enter command: ");
+		command := getCommand();
+		command ~= HALT
+	    do
+		processCommand(command);
+	    od;
+
+    - for statements. The for statement is the standard way in Draco of
+	iterating over a fixed sequence of values. It is similar to the
+	for statements in most programming languages. It consists of the
+	word 'for', followed by the name of the variable to use as an index
+	variable, followed by the word 'from' and an expression giving the
+	start of the range, optionally followed by the word 'by' and an
+	expression giving the step amount, followed by either the word
+	'upto' or the word 'downto' and an expression giving the end of the
+	range, followed by the word 'do', followed by a statement sequence,
+	and finally, the word 'od'.
+	
+	In Draco, the direction of the loop (increasing or decreasing) is
+	set at compile time, by the selection of 'upto' or 'downto'. If the
+	'by' part is omitted, then either +1 or -1, whichever is appropriate,
+	is used. The for loop terminates when the index variable attains the
+	last possible value between the two limits (inclusive). Thus we have
+	the loop
+	
+	    for i from 1 by 5 upto 13 do
+		...
+	    od;
+	    
+	stepping 'i' through the values 1, 6, and 11. The index variable can
+	be numeric (signed or unsigned), an enumeration value, or a pointer
+	value. The limits must be compatible with the index variable, and
+	the 'by' value, if present, must be numeric. Thus we can have a loop
+	which steps through every second letter of the alphabet:
+	
+	    for ch from 'a' by 2 upto 'z' do
+		...
+	    od;
+	
+	Most programs which do a lot of computation have a lot of for loops
+	in them (fancy compilers are an exception). Thus, it is beneficial
+	if the compiler can generate fairly fast code for for loops. The
+	Draco compiler does a number of fancy tricks with for loops. Because
+	of this, it is important that none of the assumptions made by the
+	compiler are broken. Thus, the program should never attempt to assign
+	a value to the for index variable within the for loop. (A later
+	version of the compiler may be able to flag such usages as errors.)
+
+    - case statements. Case statements in Draco are similar to those in 
+	many languages; they are of the variety where the individual 
+	alternatives being selected among are an explicit part of the case 
+	statement. A default alternative is also available. The syntax is as 
+	follows: the word 'case'; followed by the expression being used as a 
+	selector; followed by several alternatives, each consisting of 1 or 
+	more alternative index values given as the word 'incase', a constant 
+	expression, and a colon. Each alternative then has a body, which is 
+	a sequence of statements to be executed when that alternative is 
+	selected. The entire case statement is terminated by the word 'esac'.
+	The default case, if present, can occur anywhere among the
+	alternatives, and consists of the word 'default' and a colon, 
+	followed by the statements of the default case. The alternative index
+	values can be a pair of values separated by '..', in which case all
+	values between the two (inclusive) are used. The index expression
+	can be of any numeric or enumerated type. The alternative index
+	values must be compatible with the index expression. A sample case
+	statement:
+	
+	    case ch
+	    incase 'a':
+	    incase 'A':
+		writeln("It was an A.");
+	    incase 'b' .. 'd':
+	    incase 'B' .. 'D':
+		x := y;
+		y := z;
+	    default:
+		flag := true;
+	    esac;
+	
+	The various Draco compilers will use different code sequences to
+	handle case statements. At least two forms will probably be
+	supported - one form which uses the index expression as a direct
+	index in a (perhaps sparse) table of code addresses, and one form
+	which uses a binary search through a sorted table of the alternative
+	index values. The appropriate form will be selected by the compiler,
+	based on the range and number of alternative index values.
+
+    - I/O statements are discussed in a separate section later.
+
+    - the 'free' construct, which can be applied to any value of a pointer
+	type, returns the storage pointed to to the storage allocator. That
+	storage must have been previously allocated by using 'new'. 'free' is
+	a statement since it returns no result.
+
+    - the 'pretend' type-cheating construct can be used as a statement 
+	if the type being forced is 'void'. This form is used to throw
+	away a value, usually from a procedure, which is not needed. 
+
+    - the 'error' construct, which accepts a parenthesized string constant
+	as its argument, simply uses that string as the text of an error
+	message to print AT COMPILE TIME. This construct is useful for 
+	putting consistency checks into code. For example, if a program has 
+	been written with the assumption that "IDENTIFIER"s fit in one byte,
+	then the following check, done somewhere in the program, would be
+	appropriate:
+
+	    if range(IDENTIFIER) > 255 then
+		error("IDENTIFIER range must be <= 255");
+	    fi;
+
+	Then, when someone comes along later and changes the definition of
+	the IDENTIFIER numeric type, if the type is made bigger than
+	'unsigned 255', a compile time error message will be produced when
+	compiling the file containing the above check. Near the check would
+	be a good place to put comments saying why the limitation exists.
+
+    - some machine dependent constructs are formulated as statements. 
+
+XI. Expressions in Draco
+
+    Most small processors are more efficient at doing 8 bit operations then
+    they are at doing 16 or 32 bit operations. Because of this, the Draco
+    compiler will normally attempt to use the smallest possible size for
+    a given numeric type. One result of this is that the operands to an
+    operator may not be of the same size. In such cases, the compiler will
+    expand the smaller value (doing sign-extension on signed values) and do
+    the operation in the larger size. The one exception to this rule involves
+    the shift operators - the operation is always done in the size of the
+    value being shifted (the left operand). Also, the type of numeric
+    constants will be overridden by any non-constant operand, so long as
+    their value will fit in that size. If both operands are constants, the
+    larger type will be used as the result type.
+    
+    Similarly, the result of an operation can depend on whether that
+    operation is done using signed or unsigned arithmetic. In cases where
+    one operand to an arithmetic operator is signed and the other is
+    unsigned, the operation is done as a signed operation, and the result
+    is considered to be signed. This only affects the result for the
+    division and remainder operations. Note that this rule is opposite to
+    that of C, which would yield an unsigned result. This can be though of
+    as follows: in C, the normal numeric type is signed, while in Draco, the
+    normal numeric type is unsigned. In either language, any ocurrence of
+    a non-normal value forces non-normal operation and result. This choice
+    in Draco is likely to be contentious - the reasoning is that most numbers
+    used in most programs are unsigned. I personally find C's habit of
+    reserving '-1' as an error flag to be quite disgusting. As with size, the
+    signedness of a constant is ignored unless both operands are constants.
+
+    Draco has a fairly large set of operators. These include the familiar
+    arithmetic operators of addition, subtraction, etc., along with a full
+    set of bit operators (and, xor, etc.), and a few special operators. The
+    operators are at various levels of priority, meaning that a higher
+    priority operator will be evaluated before a lower priority one, unless
+    there are parentheses explicitly governing the order of evaluation. This
+    reflects the usual view that multiplication comes before addition, etc.
+    Draco also has the usual constructs for calling functions, indexing
+    arrays, selecting fields of structures, etc. These are included in the
+    following table, to indicate their position in the precedence scheme.
+    The operators and constructs, in order of decreasing precedence are:
+    
+    ----------
+	
+	* - postfix dereferencing operator. This operator is postfix in
+	    Draco, rather than prefix as in C, so that there is never any
+	    ambiguity about the order in which the various constructs are to
+	    be applied (consider *a[i] in C, which is either a[i]* or a*[i]
+	    in Draco (I can never remember how C evaluates these)).
+	
+	[] - postfix array indexing. Array indexing is 0-origin in Draco,
+	    i.e. the first element of an array has index 0. The compiler will
+	    attempt to be efficient with indexing, but most microprocessors
+	    have little direct support for array indexing, so if the
+	    application is critical in terms of CPU time or program size, it
+	    may be necessary to use pointer arithmetic instead of array
+	    indexing. Values used for indexing can be of any numeric or
+	    enumeration type.
+	
+	. - field selection. Field selection in Draco is fairly efficient,
+	    usually requiring little, if any, extra machine code. The same
+	    notation (structure '.' field-name) is used to select the current
+	    form from a union type value.
+	
+	() - function calling. Function calls are identical to procedure
+	    calls, except that they return a value. The function to be called
+	    can be the result of an expression. (E.g. many versions of UNIX
+	    contain an array of structures of procedures, which is used to
+	    direct I/O calls based on the device being accessed (the array
+	    index), and the particular function requested.)
+	
+    ----------
+    
+	& - prefix address-of operator. This operator takes the address of
+	    it's operand. The type of the value generated is 'pointer-to-X',
+	    where 'X' is the type of the operand. This operator cannot be
+	    applied to expressions which do not have an inherent address,
+	    e.g. '&(a + 1)' will not work, but '&a[i].name[j]' will. In
+	    general, these constructs are arranged in Draco in such a way
+	    that if you need brackets to express it, it's probably illegal.
+    
+    ----------
+    
+	~ - prefix bitwise complement operator. This and the other bit
+	    operators can only be applied to numeric values.
+    
+    ----------
+    
+	& - bitwise and operator.
+	
+	>< - bitwise exclusive-or operator.
+	
+	<< - logical left shift operator. In both shift operators, the left
+	    operand must be an unsigned numeric, while the right operand can
+	    be any numeric. The operation and result are done using the size
+	    of the left operand.
+	
+	>> - logical right shift operator.
+    
+    ----------
+    
+	| - bitwise inclusive-or operator.
+    
+    ----------
+    
+	| - prefix numeric absolute value operator. This, and other
+	    arithmetic operators, can only be applied to numeric values.
+	    (Exceptions for binary + and - are listed there.) Both the
+	    absolute value and negation unary operators always yield a
+	    signed type, regardless of the signedness of their operand.
+	
+	- - prefix numeric negation operator.
+	
+	+ - prefix numeric do-nothing operator. This operator is included so
+	    that forms like '+0' can be allowed.
+    
+    ----------
+    
+	* - multiplication operator.
+	
+	/ - division operator.
+	
+	% - remainder operator.
+    
+    ----------
+    
+	+ - addition operator. In addition to numeric operands, one
+	    operand can be of an enumeration or pointer type. The resulting
+	    value will be of the same type, incremented by the other,
+	    numeric, operand. Unlike C, which pre-multiplies the numeric
+	    value by the size of the pointed-to type, Draco doesn't modify
+	    the numeric value at all.
+	
+	- - subtraction operator. Similar to incrementing a pointer or
+	    enumeration value, these values can be decremented by using them
+	    as the left-hand operand in subtraction. Two enumeration or
+	    pointer values of the same type can also be subtracted, yielding
+	    an unsigned numeric value.
+
+    ----------
+    
+	>, <, >=, <=, =, ~= - comparison operators. Most values in Draco can
+	    be compared. For some comparisons, only the equality comparisons
+	    (= and ~=) are meaningful. For example, comparing a signed
+	    numeric with an unsigned numeric can yield two different results,
+	    depending on whether a signed or unsigned comparison is used.
+	    Because of this, the compiler will not allow a signed value to be
+	    compared with an unsigned value with other than = or ~=. The
+	    values being compared must be of compatible types. Structure and
+	    array types cannot be compared, since these types might contain
+	    internal gaps due to alignment requirements, and the contents of
+	    these gaps is undefined.
+
+    ----------
+
+    Along with the capability of conditional compilation provided by the
+    if statement, the Draco compiler attempts to evaluate expressions at
+    compile-time, so that they need not be evaluated at run-time. If both
+    operands to an operator can be evaluated at compile time, then the
+    operation is done at compile time, producing a constant. The evaluation
+    is done using the highest precision supported by the compiler. The
+    nature of the evaluation will be the same as if it was done at run-time,
+    i.e. mixing signed and unsigned values will yield a signed result, etc.
+    This facility is used in all places where constants appear, e.g. in
+    array declarations, signed/unsigned declarations, case statement
+    alternative index values, etc.
+
+    There are several forms of expressions in Draco which do not involve
+    actual operators. These include the boolean 'and', 'or' and 'not'
+    operations. These are not classed with the normal operators, since they
+    are actually language constructs instead. Both 'and' and 'or' will not
+    evaluate their right-hand operand if the value of the left-hand operand
+    is sufficient to determine the result. This is known as 'short-circuit-
+    evaluation', or the McCarthy form of the 'and' and 'or' operators. There
+    is no exclusive-or operation for bools, but the same result can be
+    achieved using the ~= operator, which can be applied to bool values.
+    
+    Draco also allows conditional expressions - the if expression and the
+    case expression. These forms are identical to their statement forms,
+    except that the various statement sequences used as their alternatives
+    must end with an expression, which is the result for that alternative.
+    Also, if expressions must have an else part, since they must yield a
+    result in all cases. The same feature which allows if statements to be
+    used for conditional compilation allows the use of if expressions in
+    constant expressions, so long as the conditions and all alternative
+    values are themselves constant expressions.
+
+    The unwise programmer can 'type cheat' (convince the compiler to allow 
+    him to do things which he would not normally be allowed to do) by 
+    misusing union types. In the hope of preventing this, Draco has an 
+    explicit construct for type cheating. It uses the word 'pretend'. The 
+    form 'pretend(expr, type)' instructs the compiler to consider 'expr' to 
+    be of type 'type', regardless of what it thinks the type must be. As a 
+    special case, 'type' can be 'void', in which case the value of 'expr' is 
+    simply discarded (this action, called voiding, is done automatically by 
+    most C compilers, often resulting in programming errors, since it is 
+    easy to do it unintentionally). The pretend construct should be used
+    with great care, since some values cannot possibly be of some types. For 
+    example, what is supposed to happen in something like 'pretend(x + y, 
+    [10] int)'? A more innocuous form of the pretend construct uses the word 
+    'make' instead of the word 'pretend'. This form requests that the 
+    compiler convert the given expression to the given type. This form will 
+    only allow those conversions which make sense. 'make' is normally used 
+    to expand a short value to a longer form, to force an operation to be 
+    in a longer form (e.g. to force 16 bit arithmetic on 8 bit values).
+
+    The form 'dim(arrayname, number)' will be replaced by the size of the
+    named array in the given dimension (the first dimension is dimension
+    number 1). If the array is a parameter array and the selected dimension
+    was declared as '*', then the value will be obtained at run-time from
+    a hidden parameter passed along with the normal parameters, otherwise,
+    the value is a compile-time constant and can be used in constant
+    expressions. Note that the value is the size of the array in that
+    dimension, which is one greater than the maximum legal index in that
+    dimension.
+    
+    The form 'sizeof(type)' yields a numeric constant which is the number of
+    bytes needed to store an object of the given type. The type can be the
+    name of a declared type, or can be a more complex type description.
+    Proper use of this construct is needed to allow some programs to be
+    portable among machines which have, say, different sized integers. Most
+    programmers will not have to use it, however.
+
+    The construct 'new(type)' creates a call to the standard storage
+    allocator to allocate a new object of type 'type'. It can be thought of
+    as equivalent to 'pretend(malloc(sizeof(type)), *type). Note that the
+    value returned is a pointer to the newly allocated storage, and thus its
+    type is *type.
+
+    The form 'range(type)' can be applied to signed or unsigned numeric types
+    to return the upper limit of that type (the value given when type was
+    declared); or to an enumeration type to return the number of values in
+    that type. Thus 'range(bool)' is equivalent to '2', and 'range(int)'
+    returns the maximum signed numeric value allowed with the normal integer
+    values supported by that version of the compiler. Note that 'range(byte)'
+    is not legal since 'byte' is not considered to be a normal numeric type,
+    since it is forced to be exactly 1 byte long, regardless of whether that
+    is efficient for the target machine.
+
+XII. Basic components of Draco programs
+
+    Identifiers in Draco can be any length. This applies to variables, 
+    constants, types and procedure names. The link editor maintains the lack 
+    of a limit - the full name of an external procedure is used when 
+    searching for it in other files and libraries. Draco treats upper and 
+    lower case letters as distinct, thus the identifiers 'A' and 'a' are not 
+    the same. The programmer can use any convention he wishes with regard to 
+    capitalization, but the conventions mentioned previously are highly 
+    recommended. Note also that keywords in Draco are recognized only in the
+    exact case in which they are specified. Identifiers in Draco must start
+    with a letter or an underscore (_), and must consist of letters, digits
+    and underscores.
+
+    Comments in Draco consist of the delimiters '/*' and '*/' around the 
+    portion of the source to be commented out. Comments can span several 
+    input lines. Comments can be nested, i.e. a comment entirely within an 
+    outer comment is recognized and handled properly by the compiler. Thus, a
+    section of code can be commented out by enclosing it in /* and */, 
+    regardless of whether it has any comments in it or not. Comments, along 
+    with 'whitespace' (blanks, tabs, carriage-returns and linefeeds) can 
+    occur between any two tokens, as well as in string breaks (see below). 
+
+    Numeric constants in Draco can be in decimal, octal, hexadecimal or 
+    binary. Simple numbers like '10' and '6348' are treated as decimal. Other
+    bases are selected by preceeding the number by a prefix consisting of a 
+    '0' and a base indicator. The base indicators, which can be in upper or 
+    lower case, are 'x' for hexadecimal, 'o' for octal, and 'b' for binary. 
+    Hexadecimal digits 'a' - 'f' can be in upper or lower case. The compiler 
+    checks for proper digits for a given base and for numeric overflow in 
+    constants. 
+
+    Character constants in Draco come in two forms. The apostrophe (') is 
+    used to delimit single character constants, as in 'a', '.', etc. Quotes
+    (") are used to delimit C - style strings, consisting of a sequence of 
+    characters terminated by a 0 character. In both forms, an escape 
+    convention is available. The escapes consist of a backslash followed 
+    either by a single character, or by a numeric expression enclosed in 
+    parentheses. The single character forms are: 
+
+	\b - the ASCII backspace character
+	\t - the ASCII tab character
+	\r - the ASCII carriage return character
+	\n - the ASCII linefeed (newline) character
+	\e - the C - style string termination character (0)
+
+    Any other character used this way will be passed through unchanged. This 
+    can be used to put backslashes and quotation marks of the same type as 
+    the delimiter into the string. The convention of doubling a quote mark to
+    produce a single one is also supported. The escape form consisting of a 
+    numeric value in parentheses must yield a constant between 0 and 255. 
+    This form can be used for special named characters, as in: 
+
+	write('\(BEEP)');		/* ring terminal's bell */
+
+    The multi-character form of character constants ('chars' values using ") 
+    supports the 'string break'. This is a convention which allows a long 
+    string to be split up over several input lines, and to be indented 
+    nicely. If the last thing (other than spaces, comments, etc.) on an input
+    line is a portion of a chars constant, and the first thing (other than 
+    spaces, comments, etc.) on the next input line is a similar constant, 
+    then the two are concatenated at compile time to yield a single, longer 
+    constant. This can be carried on for as many input lines as are needed to
+    nicely format the constant. 
+
+    Many CP/M systems in use today do not have full ASCII keyboards (e.g.
+    CP/M on the Apple-II or Apple-II+). In such systems, it could be
+    difficult to use Draco, since the language uses characters not found on
+    the keyboards. To help alleviate this problem, the compiler recognizes
+    the following alternate forms for some operators and characters:
+
+	 standard	 alternate
+
+	    \		    #
+	    [		    (:
+	    ]		    :)
+	    {		    ($
+	    }		    $)
+	    ~=		    /=
+	    ~		    $-
+	    |		    $/
+	    _		    ^
+
+    Draco allows the construction of array and structure constants for 
+    named array and structure types. The form is that of a parenthesized
+    list of values. Such constants can be arbitrarily complex. If one is
+    used in a constant declaration, it simply appears after the '='. If one
+    is desired inside executable code, it must be preceeded by the name of
+    the type in question, so that the compiler has some clue as to what is
+    going on. For example:
+
+	type type1 = struct {int field1, field2; char field3};
+	type type2 = [2] type1;
+	type2 CONST = ((1, 2, 'a'), (3, 4, 'a' - FRED / 2));
+	type2 var;
+	...
+	var := type2((-26, 13 + 2 / 7, 'a' + 2), (+1, -1, '\e'));
+
+XIII. Machine specific constructs
+
+    The 8080 (CP/M) version of the compiler has several additional features,
+    which can make certain types of programming easier.
+    
+    When a variable (global, file or local) is declared, it can be followed
+    by an '@' and a numeric constant. This informs the compiler that that
+    variable is to be located at that address. This is useful for things
+    like memory-mapped displays and memory-mapped I/O. This same modifier
+    can be appended to 'extern' procedures, enabling Draco programs to call
+    routines at absolute addresses in ROMS.
+
+    When declaring variables, the value given after the '@' can also be the
+    name of some other variable. In this case, the second named variable must
+    occupy at least as many bytes of storage as the first, and the two will
+    then occupy the same storage. This technique can be used to "type-cheat",
+    but the programmer is strongly advised to use 'pretend' instead, unless
+    unreadable code is desired. This feature of the compiler is intended to
+    be used to conserve storage space as used for variables.
+    
+    The 8080 processor has no really efficient way to access variables
+    stored on the stack. This tends to make recursive programs quite
+    inefficient. Draco sidesteps the problem by not storing any variables on
+    the stack - all can be directly addressed at a fixed location. Recursion
+    is allowed by using special code at the beginning and end of procedures,
+    which saves and restores that procedure's local variables on the stack.
+    This can be slightly time-consuming if the procedure is called often.
+    If the word 'nonrec' is placed between the word 'proc' and the name of
+    the procedure, then this special code is ommitted. Such a procedure must
+    not be used recursively. The scheme used has one slight flaw - taking the
+    address of a local variable of a routine used recursively may not work
+    as expected, since the value originally pointed to will be moved onto the
+    stack when the procedure is called recursively, and the pointer will be
+    left pointing to the new version of the variable. This flaw will not
+    affect many programs (it did affect the compiler, however).
+
+    Several provisions were added to the CP/M compiler to allow nearly all 
+    types of programming to be done directly in Draco, rather than having to 
+    write assembler language subroutines. The form 'input(port)' will return 
+    a 'byte' value obtained from input port 'port' ('port' must be a compile 
+    time expression whose value is between 0 and 255). Similarly, the form 
+    'output(port, value)' will output an 8 bit value 'value' to the specified
+    output port. If the 'value' expression is ommitted, then a indeterminate 
+    value is output. (This is useful with hardware configurations in which 
+    the output instruction itself causes the desired external action.) The 
+    statement form 'halt' will generate a HLT instruction. The statement form
+    'ion' will generate an EI instruction. The statement form 'ioff' will 
+    generate a DI instruction. If the word 'vector' is used instead of 
+    'nonrec' when defining a procedure, ('vector' also implies 'nonrec') then
+    that procedure is assumed to be an interrupt handler, and will start with
+    code to stack all of the processor's registers, and will end with code to
+    unstack the registers, enable the interrupts, and return. Remember that 
+    the 8080's EI instruction will not enable interrupts until after the NEXT
+    instruction. 'vector' procedures must not have any parameters (who would 
+    supply them?), and cannot yield any result (where would it go?). The 
+    cleanest way to set up interrupt vectors would be something like: 
+
+	type
+	    VECTOR = struct {
+		byte v_jmp;
+		proc()void v_handler;
+		[5] byte v_padding;	/* pad to 8 bytes each */
+	    };
+	
+	byte JMP = 0xc3;		/* 8080 JUMP instruction */
+    
+	[8] VECTOR Vector @ 0x0000;	/* array of vectors at absolute */
+					/* address 0x0000 */
+	proc vector handle0()void:
+	    ...
+	corp;
+	
+	...
+	
+	Vector[0].v_jmp := JMP;		/* set up the machine's vectors */
+	Vector[0].v_handler := handle0;
+	Vector[1].v_jmp := JMP;
+	Vector[1].v_handler := handle1;
+	...
+
+	ion;				/* enable interrupts */
+
+    Since the Draco compiler directly emits object code, rather than
+    assembler source code, it is not possible to allow in-line assembler
+    language statments. Instead, Draco has the 'code' construct, which
+    consists of the keyword 'code' followed by a parenthesized list of
+    constant expressions and symbol references. The values of constant
+    expressions are emitted directly into the code stream. The type of the
+    constants controls its size as emitted. Variable and procedure references
+    yield 16 bit words which will be relocated at link time to contain the
+    required address. For example (an 8080 example):
+
+	byte
+	    OP_CALL = 0o315,
+	    OP_MOV = 0o100,
+	    OP_ADD = 0o200,
+	    OP_SUB = 0o220,
+	    OP_DAA = 0o047,
+	    OP_LXI = 0o001,
+
+	    R_A = 0o7,
+	    R_B = 0o0,
+	    R_C = 0o1;
+	int x;
+
+	word CALL_ADDRESS = 0x1234;
+
+	...
+	code (
+	    OP_MOV | R_A << 3 | R_B,
+	    OP_ADD | R_C,
+	    OP_DAA,
+	    OP_CALL, CALL_ADDRESS,
+	    OP_LXI | R_H << 3, x	/* load address of x into HL */
+	);
+

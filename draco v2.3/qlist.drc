@@ -1,0 +1,246 @@
+/*
+ * QLIST.DRC - list handling utilities for Quest.
+ */
+
+type
+    INTLIST = struct {
+	*INTLIST il_next;
+	int il_this;
+    },
+
+    PROPLIST = struct {
+	*PROPLIST pl_next;
+	int pl_id;
+	int pl_property;
+    },
+
+    ATTRLIST = struct {
+	*ATTRLIST al_next;
+	int al_id;
+	int al_attribute;
+	int al_value;
+    };
+
+int NextId;			/* next available id */
+*PROPLIST PropList;		/* list of properties */
+*ATTRLIST AttrList;		/* list of attribute-value pairs */
+
+/*
+ * lInit - initialize list processing.
+ */
+
+proc nonrec lInit()void:
+
+    NextId := 0;
+    PropList := nil;
+    AttrList := nil;
+corp;
+
+/*
+ * getId - return the next unique id.
+ */
+
+proc nonrec getId()int:
+
+    NextId := NextId + 1;
+    NextId
+corp;
+
+/*
+ * lAdd - add an element to the front of a list.
+ */
+
+proc nonrec lAdd(**INTLIST p; int val)void:
+    *INTLIST il;
+
+    il := new(INTLIST);
+    il*.il_next := p*;
+    il*.il_this := val;
+    p* := il;
+corp;
+
+/*
+ * lAppend - append an element to the end of a list.
+ */
+
+proc nonrec lAppend(**INTLIST p; int val)void:
+    *INTLIST il;
+
+    while p* ~= nil do
+	p := &p**.il_next;
+    od;
+    il := new(INTLIST);
+    il*.il_next := nil;
+    il*.il_this := val;
+    p* := il;
+corp;
+
+/*
+ * lDelete - delete an element from a list.
+ */
+
+proc nonrec lDelete(**INTLIST p; int val)void:
+    *INTLIST il;
+
+    while p* ~= nil and p**.il_this ~= val do
+	p := &p**.il_next;
+    od;
+    if p* ~= nil then
+	il := p*;
+	p* := il*.il_next;
+	free(il);
+    fi;
+corp;
+
+/*
+ * lGet - get the nth entry on a list.
+ */
+
+proc nonrec lGet(*INTLIST p; int n)int:
+
+    while
+	n := n - 1;
+	n ~= 0 and p ~= nil
+    do
+	p := p*.il_next;
+    od;
+    if p = nil then
+	0
+    else
+	p*.il_this
+    fi
+corp;
+
+/*
+ * lIn - say if a value is in a list.
+ */
+
+proc nonrec lIn(*INTLIST il; int n)bool:
+
+    while il ~= nil and il*.il_this ~= n do
+	il := il*.il_next;
+    od;
+    il ~= nil
+corp;
+
+/*
+ * _pFind - find the list element for a given id-property pair.
+ */
+
+proc nonrec _pFind(int id, prop)**PROPLIST:
+    **PROPLIST ppl;
+
+    ppl := &PropList;
+    while ppl* ~= nil and (ppl**.pl_id ~= id or ppl**.pl_property ~= prop) do
+	ppl := &ppl**.pl_next;
+    od;
+    ppl
+corp;
+
+/*
+ * putProp - associate a property with an id.
+ */
+
+proc nonrec putProp(int id, prop)void:
+    *PROPLIST pl;
+
+    if _pFind(id, prop)* = nil then
+	pl := new(PROPLIST);
+	pl*.pl_next := PropList;
+	pl*.pl_id := id;
+	pl*.pl_property := prop;
+	PropList := pl;
+    fi;
+corp;
+
+/*
+ * getProp - return 'true' if a property is associated with an id.
+ */
+
+proc nonrec getProp(int id, prop)bool:
+
+    _pFind(id, prop)* ~= nil
+corp;
+
+/*
+ * delProp - delete the given property from the given id.
+ */
+
+proc nonrec delProp(int id, prop)void:
+    **PROPLIST ppl;
+    *PROPLIST pl;
+
+    ppl := _pFind(id, prop);
+    if ppl* ~= nil then
+	pl := ppl*;
+	ppl* := pl*.pl_next;
+	free(pl);
+    fi;
+corp;
+
+/*
+ * _aFind - find the list element for a given id-attribute pair.
+ */
+
+proc nonrec _aFind(int id, attr)**ATTRLIST:
+    **ATTRLIST pal;
+
+    pal := &AttrList;
+    while pal* ~= nil and (pal**.al_id ~= id or pal**.al_attribute~=attr) do
+	pal := &pal**.al_next;
+    od;
+    pal
+corp;
+
+/*
+ * putAttr - associate an attribute-value with an id.
+ */
+
+proc nonrec putAttr(int id, attr, val)void:
+    **ATTRLIST pal;
+    *ATTRLIST al;
+
+    pal := _aFind(id, attr);
+    if pal* = nil then
+	al := new(ATTRLIST);
+	al*.al_next := AttrList;
+	al*.al_id := id;
+	al*.al_attribute := attr;
+	AttrList := al;
+    else
+	al := pal*;
+    fi;
+    al*.al_value := val;
+corp;
+
+/*
+ * getAttr - return the value of an attribute associated with an id.
+ */
+
+proc nonrec getAttr(int id, attr)int:
+    **ATTRLIST pal;
+
+    pal := _aFind(id, attr);
+    if pal* = nil then
+	0
+    else
+	pal**.al_value
+    fi
+corp;
+
+/*
+ * delAttr - delete the given attribute from the given id.
+ */
+
+proc nonrec delAttr(int id, attr)void:
+    **ATTRLIST pal;
+    *ATTRLIST al;
+
+    pal := _aFind(id, attr);
+    if pal* ~= nil then
+	al := pal*;
+	pal* := al*.al_next;
+	free(al);
+    fi;
+corp;
+

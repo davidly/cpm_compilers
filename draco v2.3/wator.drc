@@ -1,0 +1,553 @@
+#util.g
+#crt.g
+
+/*
+ * WATOR - simulation of the torus world of Wa-Tor, with a population of
+ *	   sharks and fish. Size of display = 23 lines x 80 columns.
+ *
+ * Idea from: "Computer Recreations" by A. K. Dewdney in December 1984
+ *		Scientific American.
+ *
+ * Programmed: December 10, 1984, by Chris Gray.
+ * Language: Draco (systems language for microprocessors from
+ *		    Northware Systems Corporation)
+ */
+
+ushort
+    NLINES = 23,		/* number of lines displayed and run */
+    NCOLUMNS = 80;		/* number of columns displayed and run */
+
+/* footer line with statistics:
+
+NSharks: xxxx  NFish: xxxx  Time: xxxxx  SBreed: xx  FBreed: xx  Starve: xx
+
+*/
+
+ushort
+    NSHARKSCOLUMN = 9,
+    NFISHCOLUMN = 22,
+    TIMECOLUMN = 34,
+    SBREEDCOLUMN = 49,
+    FBREEDCOLUMN = 61,
+    STARVECOLUMN = 73;
+
+byte
+    SHARK = 0x01,		/* shark is present in this ocean cell */
+    FISH = 0x02,		/* fish is present in this ocean cell */
+    NEWSHARK = 0x04,		/* shark has moved here this cronon */
+    NEWFISH = 0x08;		/* fish has moved here this cronon */
+
+type
+    CELL = struct {
+	byte f_flags;
+	ushort f_age;
+	ushort s_age;
+	ushort s_eat;
+    };
+
+word
+    NSharks,			/* number of sharks currently alive */
+    NFish,			/* number of fish currently alive */
+    Time;			/* the current time */
+
+ushort
+    SBreed,			/* breeding time for sharks */
+    FBreed,			/* breeding time for fish */
+    Starve;			/* starvation time for sharks */
+
+[NLINES, NCOLUMNS] CELL Ocean;	/* the ocean of Wa-Tor */
+
+channel output text
+    CRTOut,			/* formatted output to screen */
+    LogOut;			/* statistics logging */
+
+bool Logging;			/* true if logging is enabled */
+
+file() File;			/* file for save, restore and logging */
+
+/*
+ * initialize - set up the screen and the various data structures.
+ */
+
+proc nonrec initialize()void:
+    *CELL p;
+    word i;
+    ushort l, c;
+
+    CRT_ClearScreen();
+    p := &Ocean[0, 0];
+    for i from 0 upto NLINES * NCOLUMNS - 1 do
+	p*.f_flags := 0x00;
+	p := p + sizeof(CELL);
+    od;
+    Time := 0;
+corp;
+
+/*
+ * beep - beep to indicate an error (send BEL to terminal).
+ */
+
+proc nonrec beep()void:
+
+    CRT_PutChar('\(0x07)');
+corp;
+
+/*
+ * findCell - find a random cell meeting the given mask requirements.
+ *	      Return 'false' if no neighbouring cell is satisfactory.
+ */
+
+proc nonrec findCell(byte mask, value; **CELL pp; ushort l, c)bool:
+    *CELL p, p1;
+    ushort count;
+    [4] *CELL neighbour;
+
+    p1 := pp*;
+    count := 0;
+    p :=
+	if l = NLINES - 1 then
+	    p1 - ((NLINES - 1) * NCOLUMNS * sizeof(CELL))
+	else
+	    p1 + (NCOLUMNS * sizeof(CELL))
+	fi;
+    if p*.f_flags & mask = value then
+	neighbour[count] := p;
+	count := count + 1;
+    fi;
+    p :=
+	if l = 0 then
+	    p1 + ((NLINES - 1) * NCOLUMNS * sizeof(CELL))
+	else
+	    p1 - (NCOLUMNS * sizeof(CELL))
+	fi;
+    if p*.f_flags & mask = value then
+	neighbour[count] := p;
+	count := count + 1;
+    fi;
+    p :=
+	if c = NCOLUMNS - 1 then
+	    p1 - ((NCOLUMNS - 1) * sizeof(CELL))
+	else
+	    p1 + sizeof(CELL)
+	fi;
+    if p*.f_flags & mask = value then
+	neighbour[count] := p;
+	count := count + 1;
+    fi;
+    p :=
+	if c = 0 then
+	    p1 + ((NCOLUMNS - 1) * sizeof(CELL))
+	else
+	    p1 - sizeof(CELL)
+	fi;
+    if p*.f_flags & mask = value then
+	neighbour[count] := p;
+	count := count + 1;
+    fi;
+    if count = 0 then
+	false
+    else
+	count := CRT_Random(count);
+	pp* := neighbour[count];
+	true
+    fi
+corp;
+
+/*
+ * updateFish - update and regenerate the fish.
+ */
+
+proc nonrec updateFish()void:
+    *CELL p, p1;
+    ushort l, c;
+
+    p := &Ocean[0, 0];
+    for l from 0 upto NLINES - 1 do
+	for c from 0 upto NCOLUMNS - 1 do
+	    if p*.f_flags & FISH ~= 0x00 then
+		p1 := p;
+		if findCell(NEWFISH | FISH, 0x00, &p1, l, c) then
+		    p1*.f_flags := p1*.f_flags | NEWFISH;
+		    p1*.f_age := p*.f_age + 1;
+		    if p1*.f_age = FBreed then
+			/*
+			 * it's giving birth to a new fish at old position.
+			 */
+			p1*.f_age := 0;
+			p*.f_flags := p*.f_flags | NEWFISH;
+			p*.f_age := CRT_Random((FBreed + 1) / 2);
+			NFish := NFish + 1;
+		    fi;
+		else
+		    p*.f_flags := p*.f_flags | NEWFISH;
+		fi;
+	    fi;
+	    p := p + sizeof(CELL);
+	od;
+    od;
+corp;
+
+/*
+ * updateSharks - update and regenerate the sharks and eat the fish.
+ */
+
+proc nonrec updateSharks()void:
+    *CELL p, p1;
+    ushort l, c;
+    bool moved;
+
+    p := &Ocean[0, 0];
+    for l from 0 upto NLINES - 1 do
+	for c from 0 upto NCOLUMNS - 1 do
+	    if p*.f_flags & SHARK ~= 0x00 then
+		moved := false;
+		p1 := p;
+		if findCell(NEWFISH|NEWSHARK|SHARK, NEWFISH, &p1, l, c) then
+		    /*
+		     * this shark is eating a fish.
+		     */
+		    p1*.f_flags := p1*.f_flags | NEWSHARK;
+		    p1*.s_eat := 0;
+		    NFish := NFish - 1;
+		    moved := true;
+		else
+		    p*.s_eat := p*.s_eat + 1;
+		    if p*.s_eat = Starve then
+			/*
+			 * this shark has starved to death
+			 */
+			NSharks := NSharks - 1;
+		    else
+			if findCell(FISH|NEWSHARK|SHARK,FISH, &p1, l, c) or
+				findCell(NEWSHARK|SHARK,0x00, &p1, l, c) then
+			    /*
+			     * shark will chase a fish if one WAS nearby,
+			     * otherwise it just wanders.
+			     */
+			    p1*.f_flags := p1*.f_flags | NEWSHARK;
+			    p1*.s_eat := p*.s_eat;
+			    moved := true;
+			else
+			    p*.f_flags := p*.f_flags | NEWSHARK;
+			    if p*.f_flags & NEWFISH ~= 0x00 then
+				/*
+				 * poor fish swam right to him!
+				 */
+				p*.s_eat := 0;
+				NFish := NFish - 1;
+			    fi;
+			fi;
+		    fi;
+		fi;
+		if moved then
+		    p1*.s_age := p*.s_age + 1;
+		    if p1*.s_age = SBreed then
+			/*
+			 * it's giving birth to a new shark at old position.
+			 */
+			p1*.s_age := 0;
+			if p*.f_flags & NEWFISH ~= 0x00 then
+			    /*
+			     * unlucky fish there is eaten by newborn!
+			     */
+			    NFish := NFish - 1;
+			fi;
+			p*.f_flags := p*.f_flags | NEWSHARK;
+			p*.s_age := CRT_Random((SBreed + 1) / 2);
+			p*.s_eat := 0;
+			NSharks := NSharks + 1;
+		    fi;
+		fi;
+	    fi;
+	    p := p + sizeof(CELL);
+	od;
+    od;
+corp;
+
+/*
+ * updateDisplay - redraw the changes to the screen and reset Ocean.
+ */
+
+proc nonrec updateDisplay()void:
+    *CELL p;
+    ushort l, c;
+    byte b;
+
+    p := &Ocean[0, 0];
+    for l from 0 upto NLINES - 1 do
+	for c from 0 upto NCOLUMNS - 1 do
+	    b := p*.f_flags;
+	    if b & NEWSHARK ~= 0x00 then
+		if b & SHARK = 0x00 then
+		    CRT_Move(l, c);
+		    CRT_PutChar('0');
+		fi;
+		p*.f_flags := SHARK;
+	    elif b & NEWFISH ~= 0x00 then
+		if b & FISH = 0x00 then
+		    CRT_Move(l, c);
+		    CRT_PutChar('.');
+		fi;
+		p*.f_flags := FISH;
+	    elif b ~= 0x00 then
+		CRT_Move(l, c);
+		CRT_PutChar(' ');
+		p*.f_flags := 0x00;
+	    fi;
+	    p := p + sizeof(CELL);
+	od;
+    od;
+    Time := Time + 1;
+    CRT_Move(NLINES, NSHARKSCOLUMN);
+    write(CRTOut; NSharks : 4);
+    CRT_Move(NLINES, NFISHCOLUMN);
+    write(CRTOut; NFish : 4);
+    CRT_Move(NLINES, TIMECOLUMN);
+    write(CRTOut; Time : 5);
+    if Logging then
+	writeln(LogOut; NSharks, ' ', NFish);
+    fi;
+corp;
+
+/*
+ * readNumber - read a number in CRT mode from the status line.
+ */
+
+proc nonrec readNumber(ushort c, digits)word:
+    *char p;
+    word n;
+    [6] char buffer;
+
+    while
+	CRT_Move(NLINES, c);
+	for n from 1 upto digits do
+	    CRT_PutChar(' ');
+	od;
+	CRT_Move(NLINES, c);
+	CRT_GetLine(&buffer[0], digits + 1);
+	p := &buffer[0];
+	while p* = ' ' do
+	    p := p + 1;
+	od;
+	if p* = '\e' then
+	    true
+	else
+	    n := 0;
+	    while p* >= '0' and p* <= '9' do
+		n := n * 10 + (p* - '0');
+		p := p + 1;
+	    od;
+	    p* ~= '\e' or n = 0
+	fi
+    do
+	beep();		/* beep to indicate error */
+    od;
+    CRT_Move(NLINES, c);
+    write(CRTOut; n : (digits));
+    n
+corp;
+
+/*
+ * getParameters - read in the five operating parameters.
+ */
+
+proc nonrec getParameters()void:
+
+    CRT_Move(NLINES, 0);
+    CRT_PutChars("NSharks:");
+    NSharks := readNumber(NSHARKSCOLUMN, 4);
+    CRT_Move(NLINES, NSHARKSCOLUMN + 6);
+    CRT_PutChars("NFish:");
+    NFish := readNumber(NFISHCOLUMN, 4);
+    CRT_Move(NLINES, NFISHCOLUMN + 6);
+    CRT_PutChars("Time:     0  SBreed:");
+    SBreed := readNumber(SBREEDCOLUMN, 2);
+    CRT_Move(NLINES, SBREEDCOLUMN + 4);
+    CRT_PutChars("FBreed:");
+    FBreed := readNumber(FBREEDCOLUMN, 2);
+    CRT_Move(NLINES, FBREEDCOLUMN + 4);
+    CRT_PutChars("Starve:");
+    Starve := readNumber(STARVECOLUMN, 2);
+corp;
+
+/*
+ * initializeOcean - initialize the populations and Ocean.
+ *		     Note: if NFish and/or NSharks are too large, this
+ *		     routine will go into an infinite loop.
+ */
+
+proc nonrec initializeOcean()void:
+    *CELL p;
+    word i;
+    ushort l, c;
+
+    for i from 1 upto NFish do
+	while
+	    l := CRT_Random(NLINES);
+	    c := CRT_Random(NCOLUMNS);
+	    p := &Ocean[l, c];
+	    p*.f_flags ~= 0x00
+	do
+	od;
+	p*.f_flags := FISH;
+	p*.f_age := CRT_Random(FBreed);
+	CRT_Move(l, c);
+	CRT_PutChar('.');
+    od;
+    for i from 1 upto NSharks do
+	while
+	    l := CRT_Random(NLINES);
+	    c := CRT_Random(NCOLUMNS);
+	    p := &Ocean[l, c];
+	    p*.f_flags ~= 0x00
+	do
+	od;
+	p*.f_flags := SHARK;
+	p*.s_age := CRT_Random(SBreed);
+	p*.s_eat := CRT_Random(Starve);
+	CRT_Move(l, c);
+	CRT_PutChar('0');
+    od;
+corp;
+
+/*
+ * restoreOcean - restore the state from a file and write screen.
+ */
+
+proc nonrec restoreOcean()void:
+    *CELL p;
+    word i;
+
+    CRT_ClearScreen();
+    p := &Ocean[0, 0];
+    for i from 0 upto NLINES * NCOLUMNS - 1 do
+	CRT_PutChar(
+	    if p*.f_flags & SHARK ~= 0x00 then
+		'0'
+	    elif p*.f_flags & FISH ~= 0x00 then
+		'.'
+	    else
+		' '
+	    fi
+	);
+	p := p + sizeof(CELL);
+    od;
+    write(CRTOut;
+	"NSharks: ", NSharks : 4,
+	"  NFish: ", NFish : 4,
+	"  Time: ", Time : 5,
+	"  SBreed: ", SBreed : 2,
+	"  FBreed: ", FBreed : 2,
+	"  Starve: ", Starve : 2
+    );
+corp;
+
+/*
+ * main - main program - handles setup, restore, save and running.
+ */
+
+proc nonrec main()void:
+    FILENAME fn;
+    [15] char buffer;
+    *char p;
+    channel input binary restore;
+    channel output binary save;
+
+    Logging := false;
+    open(CRTOut, CRT_PutChar);
+    p := GetPar();
+    if p ~= nil and p* = '-' then
+	case (p + 1)*
+	incase 'L':
+	    Logging := true;
+	default:
+	    writeln("*** Invalid flag '", (p + 1)*, "' - aborting. ***");
+	    exit(1);
+	esac;
+	p := GetPar();
+    fi;
+    if p = nil then
+	/*
+	 * start a new run.
+	 */
+	initialize();
+	getParameters();
+	initializeOcean();
+    else
+	/*
+	 * restore a run from a save file.
+	 */
+	SetFileName(fn, p);
+	if fn.fn_type[0] = ' ' then
+	    fn.fn_type[0] := 'W';
+	    fn.fn_type[1] := 'A';
+	    fn.fn_type[2] := 'T';
+	fi;
+	GetFileName(fn, &buffer[0]);
+	if not open(restore, File, &buffer[0]) then
+	    writeln("*** Can't open restore file ",
+		    &buffer[0], " - aborting. ***");
+	    exit(1);
+	fi;
+	read(restore; NFish, NSharks, SBreed, FBreed, Starve, Ocean, Time);
+	close(restore);
+	restoreOcean();
+    fi;
+    if Logging then
+	SetFileName(fn, "WATOR.LOG");
+	pretend(FileDestroy(fn), void);
+	if not FileCreate(fn) then
+	    writeln("*** Can't create log file WATOR.LOG - aborting. ***");
+	    exit(1);
+	fi;
+	open(LogOut, File, "WATOR.LOG");
+	writeln(LogOut; NSharks, ' ', NFish);
+    fi;
+    while (NFish ~= 0 or NSharks ~= 0) and CRT_GetChar() = '\e' do
+	updateFish();
+	updateSharks();
+	updateDisplay();
+    od;
+    if Logging then
+	close(LogOut);
+    fi;
+    while
+	CRT_ClearLine(NLINES);
+	CRT_PutChars("File to save to (<CR> to abandon run): ");
+	CRT_GetLine(&buffer[0], 15);
+	p := &buffer[0];
+	while p* = ' ' do
+	    p := p + 1;
+	od;
+	CRT_ClearLine(NLINES - 1);
+	if p* = '\e' then
+	    CRT_PutChars("Run abandoned.");
+	    false
+	else
+	    SetFileName(fn, p);
+	    if fn.fn_type[0] = ' ' then
+		fn.fn_type[0] := 'W';
+		fn.fn_type[1] := 'A';
+		fn.fn_type[2] := 'T';
+	    fi;
+	    GetFileName(fn, &buffer[0]);
+	    pretend(FileDestroy(fn), void);
+	    if FileCreate(fn) then
+		open(save, File, &buffer[0]);
+		write(save; NFish, NSharks, SBreed, FBreed, Starve,
+			    Ocean, Time);
+		close(save);
+		CRT_PutChars("Run saved.");
+		false
+	    else
+		write(CRTOut; "*** Can't create save file ",
+			      &buffer[0], ". ***");
+		true
+	    fi
+	fi
+    do
+    od;
+    CRT_ClearLine(NLINES);
+    CRT_Move(NLINES - 1, 0);
+corp;
+

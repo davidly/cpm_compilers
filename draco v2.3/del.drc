@@ -1,0 +1,98 @@
+#util.g
+
+/*
+ * DEL - a program to get rid of those damn files with lower-case names
+ */
+
+proc nonrec main()void:
+    type FCB = struct {
+	byte fcb_drive;
+	[8] char fcb_name;
+	[3] char fcb_ext;
+	byte fcb_ex, fcb_s1, fcb_s2, fcb_rc;
+	[16] byte fcb_d;
+	byte fcb_cr;
+	word fcb_pos;
+	byte fcb_posHigh;
+    };
+    extern
+	OpenFile(FCB f)byte,
+	DeleteFile(FCB f)byte;
+
+    FCB f;
+    [128] char name;
+    char answer;
+    ushort i, j;
+
+    while
+	write("File to DELete? ");
+	readln(&name[0]) and name[0] ~= '\e'
+    do
+	if name[1] = ':' then
+	    i := 2;
+	    f.fcb_drive := name[0] - ('A' - 1);
+	else
+	    i := 0;
+	    f.fcb_drive := 0;
+	fi;
+	j := 0;
+	while name[i] ~= '\e' and name[i] ~= '.' do
+	    if j ~= 8 then
+		f.fcb_name[j] := name[i];
+		j := j + 1;
+	    fi;
+	    i := i + 1;
+	od;
+	while j ~= 8 do
+	    f.fcb_name[j] := ' ';
+	    j := j + 1;
+	od;
+	j := 0;
+	if name[i] = '.' then
+	    i := i + 1;
+	    while name[i] ~= '\e' do
+		if j ~= 8 then
+		    f.fcb_ext[j] := name[i];
+		    j := j + 1;
+		fi;
+		i := i + 1;
+	    od;
+	fi;
+	while j ~= 3 do
+	    f.fcb_ext[j] := ' ';
+	    j := j + 1;
+	od;
+	f.fcb_ex := 0;
+	f.fcb_s2 := 0;
+	if OpenFile(f) = 0xff then
+	    writeln("File '", &name[0], "' does not exist.");
+	else
+	    while
+		write("OK to DELete file '", &name[0], "'? ");
+		if not read(answer) then
+		    if ioerror() = CH_EOF then
+			writeln("*** Aborting ***");
+			exit(1);
+		    fi;
+		    answer := 'x';
+		fi;
+		readln();
+		answer ~= 'y' and answer ~= 'Y' and
+		    answer ~= 'n' and answer ~= 'N'
+	    do
+		writeln("Please answer Y or N.");
+	    od;
+	    if answer = 'y' or answer = 'Y' then
+		if DeleteFile(f) = 0xff then
+		    writeln("*** Can't DELete file '", &name[0], "'! ***");
+		else
+		    writeln("File '", &name[0], "' has been DELeted.");
+		fi;
+	    else
+		writeln("File '", &name[0], "' not DELeted.");
+	    fi;
+	fi;
+	writeln();
+    od;
+corp;
+

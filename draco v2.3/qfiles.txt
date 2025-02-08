@@ -1,0 +1,55 @@
+     Over the last 3 days I've whipped up what might pass as an early 
+version of a skeleton for the Quest system. It contains screen handling 
+routines, a parser, attribute/object handling routines and a simple main 
+program which uses the library routines to implement a small 'world'. 
+There is currently no goal to the world other than moving around in it. 
+It accepts the following commands:
+
+    quit [PUNC]
+    look [around] [PUNC]
+    get [ART] N [PUNC]
+    pick up [ART] N [PUNC]
+    pick [ART] N up [PUNC]
+    drop [ART] N [PUNC]
+    put down [ART] N [PUNC]
+    put [ART] N down [PUNC]
+    DIR [PUNC]
+
+where
+
+    PUNC - '.', '!';
+    ART - 'the', 'a', 'an', 'one'
+    N - 'sword', 'knife', 'amulet', 'purse', 'bottle'
+    DIR - 'north', 'south', 'east', 'west', 'n', 's', 'e', 'w'
+
+Case isn't important, so example commands are:
+
+    get bottle
+    Put the sword down!
+    N
+    South.
+
+     The screen format I've used corresponds to what we have discussed 
+earlier: a horizontal line in the middle separates the lower, textual 
+interaction area from the top areas. A vertical line in the middle of 
+the top separates the bird's-eye-view map area from the status area. 
+I've done routines for handling text I/O (with word break), map scenery 
+generation with movable objects and automatic windowing, and status 
+routines for numeric, string and string-list status objects.
+
+     The code is all Draco code, because that's what was easiest on my 
+system. The files transferred to MTS under id QG8W are:
+
+    DOC - detailed description of what the routines do
+    Q.G - include file describing the routines to the compiler
+    QMAIN.DRC - source for the main program (scenario)
+    QCRT.DRC - source for the CRT handling routines
+    QPARSE.DRC - source for the parser
+    QLIST.DRC - source for list/attribute/property handlers
+
+Files DOC, Q.G and QMAIN.DRC are permitted read to the world. The other 
+three will be permitted to those who want to translate them to 
+MTS/Pascal. Note that I have no intention of doing any of the 
+translation or conversion, but I will offer advice and explanations to 
+those who do it.
+

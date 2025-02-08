@@ -1,0 +1,81 @@
+/*
+ * matrixPrint - print out an integer matrix, together with a heading.
+ */
+
+proc matrixPrint(*char message; [*, *] int m)void:
+    int i, j;
+
+    writeln(message);
+    writeln();
+    for i from 0 upto dim(m, 1) - 1 do
+	for j from 0 upto dim(m, 2) - 1 do
+	    write(m[i, j] : 5);
+	od;
+	writeln();
+    od;
+    writeln();
+corp;
+
+/*
+ * matrixMultiply - multiply the first argument matrix by the second
+ *		    argument matrix, leaving the result in the third.
+ *		    Return 'true' if all is well, else return 'false' if
+ *		    the passed matrixes aren't compatible.
+ */
+
+proc matrixMultiply([*, *] int x; [*, *] int y; [*, *] int z)bool:
+    int i, j, k, sum;
+
+    if dim(x, 2) ~= dim(y, 1) or dim(x, 1) ~= dim(z, 1) or
+	    dim(y, 2) ~= dim(z, 2) then
+	/* the passed arrays don't fit in terms of size, return 'false'
+	   to indicate failure */
+	false
+    else
+	for i from 0 upto dim(z, 1) - 1 do
+	    for j from 0 upto dim(z, 2) - 1 do
+		sum := 0;
+		for k from 0 upto dim(x, 2) - 1 do
+		    sum := sum + x[i, k] * y[k, j];
+		od;
+		z[i, j] := sum;
+	    od;
+	od;
+	/* return 'true' to indicate that the arrays were compatible and the
+	   multiplication has been done. */
+	true
+    fi
+corp;
+
+/*
+ * main - this is the main program. Execution starts here.
+ */
+
+proc main()void:
+    int M = 3, N = 6, P = 15;		/* the sizes for the arrays */
+    int i, j, k;
+    [M, N] int a;
+    [N, P] int b;
+    [M, P] int c;
+
+    /* initialize the first matrix, 'a': */
+    for i from 0 upto M - 1 do
+	for j from 0 upto N - 1 do
+	    a[i, j] := j - i;
+	od;
+    od;
+    matrixPrint("Matrix a:", a);
+    /* initialize the second matrix, 'b': */
+    for i from 0 upto N - 1 do
+	for j from 0 upto P - 1 do
+	    b[i, j] := i - j;
+	od;
+    od;
+    matrixPrint("Matrix b:", b);
+    /* multiply the matrixes and print the result: */
+    if matrixMultiply(a, b, c) then
+	matrixPrint("Product matrix c:", c);
+    else
+	writeln("Error return from 'matrixMultiply'.");
+    fi;
+corp;

@@ -1,0 +1,18 @@
+/*
+ * count to 1,000,000
+ */
+
+proc nonrec main()void:
+    ushort i, j, k;
+
+    write("Press a key to start: ");
+    readln();
+    for i from 1 upto 100 do
+	for j from 1 upto 100 do
+	    for k from 1 upto 100 do
+	    od;
+	od;
+    od;
+    writeln("Done");
+corp;
+

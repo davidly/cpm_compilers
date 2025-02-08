@@ -1,0 +1,231 @@
+XIV. The Draco I/O System
+
+    Draco now has a formal I/O system based on new 'read' and 'write' 
+    constructs added to the language. These constructs are modelled on 
+    those of Pascal, but that language's problems with error handling and 
+    interactive I/O have been overcome. Simple output to the terminal is 
+    done using the 'write' and 'writeln' statements. 'writeln' is identical 
+    to 'write' except that it finishes one "line" of output and starts the 
+    next. On line-oriented systems such as MTS, the destinction between
+    'write' and 'writeln' is much more significant. 
+
+    'write' takes each one of it's arguments and writes them on the 
+    terminal in text form. The following types can be output in this way: 
+    all numeric values, character values, single dimension arrays of 
+    characters, pointer to character ('chars') strings, and I/O channels 
+    (the associated file name, if any, is written). Numeric output by 
+    default uses as few characters as possible to output the value - there 
+    are no leading or trailing spaces. Numeric output can be signed, or 
+    unsigned in decimal, hexadecimal, octal or binary format. 8 bit values 
+    are supported directly, i.e. they are not converted to 16 bit values 
+    before output. 
+
+    The default format for numeric values is signed decimal for signed 
+    values, and unsigned decimal for unsigned values. A different format 
+    can be specified by following the numeric expression with a colon and a 
+    format specifier (i for signed, u for unsigned decimal, x for 
+    hexadecimal, o for octal or b for binary). A fixed field width can be 
+    specified by appending a colon and a numeric expression after the value 
+    or after the format specification. In case of ambiguity (e.g. variable 
+    'i' contains the desired field length), the length can be in 
+    parentheses. The output will be right justified in a field of the 
+    required length. If the length is negative, the field will be filled 
+    with leading zeros instead of spaces. 
+
+	For example, assuming the values
+
+	    i : 123
+	    j : 12
+	    n : 60528
+	    w : 0xabc
+
+	the write statement
+
+	    write(i, n : u, ' ', w:x:-4, i:j)
+
+	will produce the following output: (blanks are represented by '_'s)
+
+	    12360528_0abc_________123
+
+    Input is done using the 'read' and 'readln' constructs. No field width 
+    specification is allowed, however (fixed format input is for the stone 
+    ages). When reading numerics, spaces and tabs are skipped as necessary. 
+    Reading continues with all digits which are valid for the base being 
+    used. Either lower case or upper case is accepted for hexadecimal 
+    digits. If the current input line does not contain the required data, 
+    the next input line will NOT be automatically read; instead, the input 
+    channel will be flagged as having an error (more on that later). 
+
+    When reading arrays of characters, single characters will be read from 
+    the input as needed until the entire array is filled or the end of the 
+    line is reached. If the end of the line is reached, the remainder of 
+    the array is filled with blanks. When reading a character pointer 
+    value ('chars' value), the remainder of the current input line (if any) 
+    is read into the pointed-to region and is terminated by a '\e'. The 
+    input region is assumed to be long enough. Thus, reading a 'chars' 
+    value after doing a 'readln' will read the entire next input line. 
+
+    I/O defaults to the user's terminal, but can be to/from other places 
+    through the use of channels. A channel is strictly typed as either 
+    input or output and either text or binary. Channels are a new data type 
+    in Draco and can be used as all other types. A channel type consists of 
+    the word 'channel', followed by one of 'input' or 'output', followed by 
+    one of 'text' or 'binary'. Such channels can be used with read/write by 
+    giving a channel expression (usually just the name of a declared 
+    channel variable) followed by a semicolon, before any of the values to 
+    be read/written. One of the sources/destinations is a file. Files 
+    consist of some data structures used by the I/O routines, and a buffer 
+    whose size is specified by the programmer. A file type consists of the 
+    word 'file' followed by a parenthesized value giving the size in 
+    characters (bytes) of the desired buffer. The actual size will be 
+    rounded up as required by the host operating system (to the nearest 128 
+    for CP/M). If no value is given within the parentheses, a minimum 
+    default value will be used. Each file variable can be used as either an 
+    input source or an output sink, but not as both at the same time. 
+
+    Text channels convert internal representations to/from character form 
+    and can only be used with the types given earlier. Binary channels can 
+    be used with any type, and do no conversions whatever on the values 
+    read or written. Note that transitory values such as pointers, channels 
+    and files cannot normally be properly saved and restored between runs. 
+
+    Channels must be initialized with the 'open' construct before they can
+    be used. There are different forms of 'open' for different kinds of 
+    channels. The open construct consists of the word 'open'; followed by a 
+    left parenthesis; an expression giving the channel to be opened; and 
+    0, 1 or 2 additional parameters, all separated by commas; and a closing 
+    right parenthesis. A corresponding 'close' construct is passed only the 
+    channel to be closed, all other information has been preserved within 
+    the channel itself. All channels that a program opens must be closed by
+    that program. (Closing input channels isn't necessary on some systems,
+    but it doesn't hurt, and it aids porting to systems that do care.)
+
+    If no additional parameters are given to 'open', then the channel is 
+    connected to the user's terminal (this provides a way to get normal 
+    I/O, but through an explicit channel). A channel can be connected to a 
+    memory buffer by providing a character pointer ('chars' value) as a 
+    second parameter. The pointed-to buffer is then considered to be a file 
+    of text and may contain several lines, separated by carriage-returns 
+    and/or linefeeds. Such a buffer used for output is assumed to be large 
+    enough for whatever is output to it. When an output channel opened in
+    this way is closed, a '\e' is written to the end of the output buffer.
+    Only text channels can be connected to 'chars' values. 
+
+    The second parameter to 'open' can be a procedure which is to be used 
+    to supply or consume the characters or bytes of data. A supplier 
+    procedure must have no parameters and must return a character for text 
+    input or a byte for binary input. A consumer procedure must have a 
+    single character parameter for text output or a single byte parameter 
+    for binary output. It must not return any result. Input text channels 
+    internally buffer one character, so it is not necessary to have a way 
+    to 'unread' a character. This buffering is done in such a way that 
+    further input lines are not read until an explicit 'readln' is done, 
+    thus allowing input from interactive terminals to operate correctly. As 
+    an example, when doing numeric output within a program which uses 
+    direct screen I/O through the 'CRT' library, a text output channel 
+    which uses the 'CRT_PutChar' routine could be used to position output 
+    on the screen. 
+
+    If the second parameter to 'open' is a file expression, then the third 
+    parameter must be a 'chars' value supplying the name of the file to be 
+    opened for I/O. The details of the filename will vary from system to 
+    system. 
+
+    All of the I/O constructs in Draco return a bool (true/false) value 
+    indicating whether or not they succeeded. In many cases (e.g. writing 
+    to a 'chars' buffer or through a procedure), success is guaranteed, but 
+    some cases provide opportunities for error. A channel which has had an 
+    error cannot be used for further I/O; attempts to do so will result in 
+    an error message from the I/O routines, and termination of the program. 
+    The bool value returned by the I/O constructs is special to the compiler.
+    It can be ignored without the compiler complaining. Thus, the I/O
+    constructs can be either statements or boolean expressions.
+
+    The language construct 'ioerror' can be used to determine the nature of 
+    the error, and to reset the channel so that I/O can continue. The 
+    open construct will only fail if the channel was being opened on a 
+    file and the operating system could not open that file. The most common 
+    reason for failure is the end of the input data on a 'read'. This can 
+    mean the end of the phyical file when reading binary data, a logical or 
+    physical end of file when reading text data, or the end of the string 
+    when reading from a 'chars' value. The other common error is that of 
+    bad data when reading numeric values from a text channel. If 'ioerror' 
+    is given no parameter, then it returns/resets the error code of the 
+    default terminal input text channel. Include file 'util.g' contains 
+    definitions of the various values returned by 'ioerror', along with 
+    declarations of several useful procedures available in the run-time 
+    system. 
+
+    The following example illustrates many of the ideas discussed. It is a 
+    small program which adds up 10 signed decimal integers entered from an 
+    interactive terminal. The input numbers can be spread over as many 
+    input lines as the user wishes. A prompt of '>' is given to the user. 
+
+	\util.g
+
+	proc main()void:
+	    int n, sum, i;
+
+	    sum := 0;
+	    write('>');
+	    for i from 1 upto 10 do
+		while
+		    if read(n) then
+			/* got a number! */
+			false
+		    else
+			case ioerror()
+			incase CH_EOF:
+			    writeln("*** You're not done yet! ***");
+			incase CH_MISSING:
+			    /* nothing left on this line */
+			    ;
+			default:
+			    writeln("*** Invalid number - keep going. ***");
+			esac;
+			write('>');
+			readln();
+			true
+		    fi
+		do
+		od;
+		sum := sum + n;
+	    od;
+	    writeln("Sum = ", sum);
+	corp;
+
+    A slightly smarter program would give more details about what was wrong 
+    with the numbers (bad character - use character input to show it, 
+    overflow), and would tell the user how many numbers were left to input. 
+    The end-of-file condition can only be reset on terminal channels, 
+    since when reading from files, procedures, etc. the run-time system has 
+    no control over it. Input from a non-interactive source (e.g. a file) 
+    is much simpler, in that the run-time system will automatically abort 
+    the program on the next I/O request after an error. E.g. the following 
+    program writes 100 numbers to a file, then reads them back into an 
+    array; 
+
+	proc main()void:
+	    file() f;
+	    channel input text chin;
+	    channel output text chout;
+	    int i;
+	    [100] int array;
+
+	    open(chout, f, "NUMBERS.DAT");
+	    for i from 1 upto 100 do
+		write(chout; i, ' ');
+	    od;
+	    close(chout);
+	    open(chin, f, "NUMBERS.DAT");
+	    for i from 0 upto 99 do
+		read(chin; array[i]);
+	    od;
+	    close(chin);
+	corp;
+
+    Note that this program assumes that file "NUMBERS.DAT" exists. It also 
+    does not do any 'writeln', so the contents of the file will be one long 
+    line. Each 'write' and 'read' could have been changed to 'writeln' and 
+    'readln', forcing each number to a separate line. 
+

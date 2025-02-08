@@ -1,0 +1,48 @@
+#util.g
+
+int BUFFSIZE = 1024;
+
+char CPM_EOF = '\(0x1a)';
+
+proc nonrec main()void:
+    file(BUFFSIZE) fin, fout;
+    channel input binary chin;
+    channel output binary chout;
+    *char namein, nameout;
+    FILENAME fn;
+    char ch, cr;
+
+    namein := GetPar();
+    if namein = nil then
+	writeln("Use is: lftocr infile outfile");
+    else
+	nameout := GetPar();
+	if nameout = nil then
+	    writeln("Use is: lftocr infile outfile");
+	else
+	    if not open(chin, fin, namein) then
+		writeln("Can't open ", namein, '.');
+	    else
+		SetFileName(fn, nameout);
+		pretend(FileDestroy(fn), void);
+		if not FileCreate(fn) then
+		    writeln("Can't create ", nameout, '.');
+		elif not open(chout, fout, nameout) then
+		    writeln("Can't open ", nameout, " for output.");
+		else
+		    cr := '\r';
+		    while read(chin; ch) and ch ~= CPM_EOF do
+			if ch = '\n' then
+			    write(chout; cr);
+			fi;
+			write(chout; ch);
+		    od;
+		    write(chout; ch);
+		    close(chout);
+		fi;
+		close(chin);
+	    fi;
+	fi;
+    fi;
+corp;
+

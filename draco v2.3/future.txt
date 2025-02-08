@@ -1,0 +1,327 @@
+		    Some Possible Changes to Draco
+
+
+    Note that there is very little chance that any of these things will 
+ever be done to the CP/M-80 version of the compiler - there simply isn't 
+enough code space available, nor is that environment likely to last many 
+more years.
+
+
+Numeric Types
+
+    The current set of built-in numeric types in Draco is as follows:
+
+	byte - 8 bits
+	short - signed 127
+	ushort - unsigned 255
+	int - signed 32767
+	word - unsigned 65535
+	long - signed 2147483647
+	ulong - unsigned 4294967295
+
+    This set is fine for many CPU's, but doesn't lend itself for porting
+    to others. For example, on an IBM 370, which can handle 32 bit and 16 
+    bit arithmetic fine, but has trouble with 8 bit arithmetic, it might be 
+    appropriate for short and ushort to be 16 bits, int and word to be 32 
+    bits and ulong and long to be 64 bits. How then can a programmer 
+    portably write a program which must interface to some external standard 
+    which specifies some number of bits, e.g. 16? My current thinking is 
+    that the current set of numeric type generators, 'signed' and 
+    'unsigned', should be augmented by a 'bits' generator, which guarantees 
+    that the type will be of the given number of bits, regardless of how
+    difficult that is on the target CPU. With this, the standard supplied
+    numeric types would be:
+
+	byte - bits 8
+	word - bits 16
+	double - bits 32
+	short - signed 127
+	ushort - unsigned 255
+	int - signed 32767
+	uint - unsigned 65535
+	long - signed 2147483647
+	ulong - unsigned 4294967295
+
+    This schemes would allow most current Draco programs to work as 
+    expected, but standardizes the type names a bit more, and allows for 
+    more portability.
+
+    At one point, I was thinking that there should be NO pre-defined 
+    numeric types - the programmer should use the appropriate generator 
+    with the appropriate size/range for all types needed. This makes it 
+    quite clear what ranges are handled by the program. The only problem 
+    with this idea is that most programmers are lazy, and would quickly 
+    make a standard include file that defined types such as int and byte. 
+    And, since people disagree on what size such things as int should be, 
+    the definitions would be different, leading to no end of confusion.
+
+
+Bit Vectors
+
+    In many situations, the need for compactness in storage, or the need to
+    interface to external hardware devices or code leads to a need to use
+    bytes, words, etc. of bits, each bit of which (or group of bits) has a
+    different, independent meaning. For example, in the Commodore Amiga
+    (and probably the Apple Macintosh and Atari ST series as well), the
+    various window handling and graphics routines often require words of
+    bits defining various attributes of the objects to be created. The
+    traditional way of handling these is to define a set of constants
+    representing the various bits and combinations of bits, and then 'OR' 
+    them together when calling the system routine. For example, straight 
+    from the Amiga RKM, is the 'OpenWindow' call. It accepts a structure as
+    a parameter, and that structure has fields call 'Flags' and
+    'IDCMPFlags' both of which are to be filled with various combinations
+    of bits - which, since the two fields are adjacent, are very easy to
+    confuse. Using just a set of named bits, the compiler can offer NO
+    protection in the way of checking, even though none of the bit names 
+    are shared between the two flag words. I am proposing a new type 
+    generator which gives specific sets of bit and bit group names to 
+    specific types, and will not let them be mixed up. The example from the 
+    Amiga could be declared as follows:
+
+    type
+	OpenWindowFlags_t = bits {
+	    /* which system gadgets do we want? */
+	    WINDOWSIZING :	/* we want the sizing box thing */
+	    WINDOWDRAG :	/* we want the drag bar */
+	    WINDOWDEPTH :	/* we want the depth arranger things */
+	    WINDOWCLOSE :	/* we want the close box */
+	    /* where do we put the sizing gadget? (either or both) */
+	    SIZEBRIGHT :	/* we want it in right border */
+	    SIZEBBOTTOM :	/* we want it in bottom border */
+	    /* what refresh mode (one of four)? */
+	    REFRESHBITS (
+		SMART_REFRESH,	/* Intuition does all our refreshing */
+		SIMPLE_REFRESH,	/* we must do all the refreshing */
+		SUPER_BITMAP	/* we have a whole bitmap to play with */
+	    ) :
+	    BACKDROP :		/* make it a backdrop window */
+	    REPORTMOUSE :	/* want to hear about mouse activities */
+	    GIMMEZEROZERO :	/* magic zero-origin window */
+	    BORDERLESS	:	/* don't draw any borders */
+	    ACTIVATE :		/* make it the active window now */
+	    /* flags set by Intuition */
+	    WINDOWACTIVE :	/* this is the current active window */
+	    INREQUEST :		/* window is in request mode */
+	    MENUSTATE :		/* window's menus are active */
+	    /* other user flags */
+	    RMBTRAP :		/* catch right button instead of menus */
+	    NOCAREREFRESH :	/* don't tell us about refreshes */
+	    /* now there is a gap of 6 bits in the bit space */
+	    6 :
+	    /* some more Intuition flags */
+	    WINDOWREFRESH :	/* it's currently being refreshed */
+	    WBENCHWINDOW	/* Workbench tool ONLY window */
+	},
+	OpenWindowIDCMPFlags_t = bits {
+	    SIZEVERIFY :	/* let program OK size changes */
+	    NEWSIZE :		/* tell program about size changes */
+	    REFRESHWINDOW :	/* tell program about refreshes */
+	    MOUSEBUTTONS :	/* tell program about button presses */
+	    MOUSEMOVE :		/* tell program about mouse movements */
+	    GADGETDOWN :	/* tell about button down on gadget */
+	    GADGETUP :		/* tell about button up on gadget */
+	    REQSET :		/* tell about requesters */
+	    MENUPICK :		/* tell about menu selections */
+	    CLOSEWINDOW :	/* tell about window closings */
+	    RAWKEY :		/* tell about raw keyboard hits */
+	    REQVERIFY :		/* let program OK requestor actions */
+	    REQCLEAR :		/* tell about requesters completing */
+	    MENUVERIFY :	/* let program OK menu actions */
+	    NEWPREFS :		/* tell program about new Preferences */
+	    DISKINSERTED :	/* tell about disks going in */
+	    DISKREMOVED :	/* tell about disks going out */
+	    WBENCHMESSAGE :	/* this is a workbench message ????? */
+	    ACTIVEWINDOW :	/* tell about user picking this window */
+	    INACTIVEWINDOW :	/* tell about user picking other window */
+	    DELTAMOVE :		/* report mouse movements as deltas */
+	    INTUITICKS :	/* tickle me every now and then */
+	    9 :			/* unused so far */
+	    LONELYMESSAGE	/* reserved for Intuition */
+	};
+
+    My current programming style would have selected different 
+    indentifiers (the all upper case with no word separators can be a bit 
+    confusing), but you get the idea. The sets of bits overlap in value, 
+    and all kinds of strange things happen if you put the wrong one in a 
+    given flag word. Constants and expressions of these new types are
+    constructed using the ':' as an operator which 'concatenates' sets of 
+    named bits and bit groups. The resulting type is the minium of 1, 2 or
+    4 bytes that has enough bits. Gaps can be left in the set of bits, and 
+    in the set of names for a given group of bits. Bits can be cleared 
+    using the '~' operator in conjunction with ':' (syntax is still a bit 
+    up in the air). This facility doesn't add any capabilities to the 
+    language, but it can prevent some VERY obscure errors, both in the use 
+    of bit names and in their definition.
+
+
+Modules and/or Packages
+
+    Draco sort-of has modules since each source file can have variables not
+    accessible by other source files, and automagically called startup and
+    terminate routines are available. What is missing is a clearer syntax 
+    and the ability to control the visibility of types needed and 
+    implemented by the modules. I've decided for a variety of reasons that 
+    there will be a separate, NON-HUMAN-READABLE file which specifies the 
+    external interface to a module. This will be produced by the compiler 
+    when compiling the interface definition of a module, and can be 
+    referenced by other programs with something similar to the current 
+    inclusion mechanism (most likely with a keyword, like 'import'). One
+    reason for making it non-readable is that it can therefore contain much 
+    more than just a few declarations - e.g. information to aid in global 
+    optimization (yes, I'm ambitious).
+
+
+Initialized Read-Only Variables
+
+    Draco currently lets you have global structured constants, but these 
+    are generated in each procedure which references them. In some cases, 
+    a preferred alternative is to have one copy, accessible globally. These 
+    would essentially be read-only global variables. I prefer not to allow 
+    read-write global variables to be initialized, since this either makes 
+    the resulting program non-reusable, or places some rather specialized 
+    requirements on the operating system (each task would have to be given 
+    a set of the data space, already initialized from some master copy).
+
+
+Generic Procedures and Types
+
+    I'm not at all sure about this one. Not much can be done with generics 
+    and still keep the language efficient. A short example that IS possible:
+
+	proc sort(type T; [*] T array; proc (*T a, b)bool compare)void:
+	    ...
+	corp;
+
+    All references to values of type T must be through pointers, since we
+    have no idea at compile time how big it is. The size of the type would
+    be passed to 'sort' when it is called, thus it can 'new', 'free' and
+    copy them. They can also be returned from the generic procedure. I'm not
+    sure of the usefulness of this limited facility, so I doubt if it will
+    ever get implemented.
+
+    The other kind of generic is generic types, like:
+
+	type
+	    list(T) = struct {
+		*list(T) l_next;
+		T l_this;
+	    },
+	    intList_t = list(int),
+	    stringList_t = list(*char);
+
+    Implementing these is mostly a matter of compiler gymnastics. They can
+    make a program look prettier, but don't really offer any new 
+    capabilities. When used in conjunction with generic procedures (which 
+    can accept a generic type as parameter), they can ensure uniformity in 
+    the implementation of various actions. Again, I'm not sure that this 
+    kind of thing belongs in what is intended to be a systems 
+    implementation language.
+
+
+Variant Structures
+
+    Draco currently uses the C style for structures and unions. I'm 
+    thinking of switching to something closer to Pascal's variant records. 
+    There are two main reasons for this. One is that the variant record 
+    saves two levels of field names (currently a structure containing a 
+    union of structures has to be accessed through outer.union.inner, which 
+    can be tiresome). The other is that the variant record clearly 
+    associates the variant tags with the variants they select, instead of 
+    living in a quite separate enumerated type. For example, the current 
+    types:
+
+	type
+	    messyKind_t = enum {mk_string, mk_ints, mk_symbol};
+	    messy_t = struct {
+		messyKind_t m_kind;
+		word m_id;
+		union {
+		    *char m_string;
+		    struct {
+			int mi_int1;
+			int mi_int2;
+		    } m_ints;
+		    struct {
+			*char ms_name;
+			byte ms_kind;
+			word ms_value;
+		    } m_symbol;
+		} m_union;
+	    };
+
+    would become:
+
+	type
+	    messy_t = struct {
+		word m_id;
+		case messyKind_t m_kind
+		incase mk_string:
+		    *char m_string;
+		incase mk_ints:
+		    int m_int1;
+		    int m_int2;
+		incase mk_symbol:
+		    *char m_name;
+		    byte m_kind;
+		    word m_value;
+		esac;
+	    };
+
+    We have declared two types here: messy_t and messyKind_t. The second
+    is not declared if we omit the identifier after the 'case'. The 
+    'm_kind' field itself is omitted if we don't say anything after 'case'.
+    We have saved two levels of field selection, since all fields can be
+    selected directly from a 'messy_t' object. The members of the 
+    enumeration messyKind_t are now quite clearly associated with the 
+    variants in messy_t. A standard structure simply doesn't have any 'case'
+    subpart, and a standard union has only a 'case' subpart. The tags on 
+    the 'incase's are omitted if both the kind field and the enumeration 
+    type name are omitted. To follow Pascal even further, if a variant part
+    is at the end of a structure, then a variant tag from that variant part 
+    can be given in the 'call' to 'new' or 'free', and the object is then 
+    assumed to have only enough space for that particular variant. This can 
+    save a lot of space when a large number of a given variant are needed, 
+    and most are fairly short, but some variants are quite large. Such
+    variant structures cannot then be assigned directly, however.
+
+
+Const, Volatile, etc.
+
+    I would like to add 'const' and 'volatile' attributes to Draco, just as 
+    the new ANSI C draft does. These attributes specify that a variable is
+    read-only, or that it's value can change without the compiler's 
+    knowledge. (The latter might be because of multi-tasking or because of 
+    the variable being a mapped hardware register.) Both can let the 
+    compiler generate better code (assuming it can assume that all 
+    variables are non-volatile unless it is told otherwise). 'const' can 
+    also result in clearer code, since the reader can be sure that a given 
+    value is not being changed.
+
+
+Other Parameter Passing Mechanisms
+
+    Like C, Draco currently has only call-by-value parameters. I would like 
+    to add call-by-result and call-by-value-result. These have their own
+    benefits of reability, but, perhaps more importantly, they can allow 
+    the compiler to generate better code - a variable getting a value back 
+    through a result parameter to a procedure call can still live in a 
+    register, whereas if only call-by-value is supported, the variable must 
+    be in storage so that its address can be passed.
+
+
+More Conformant Arrays
+
+    The same facilities that allow the current compiler to support 
+    conformant array parameters can be expanded to allow for dynamically 
+    sized arrays. Again, this is something that I'm not sure belongs in an 
+    implementation language.
+
+
+System Specific Additions
+
+    I would like to add some sort of support to the compiler so that it can 
+    generate resident libraries for use with the Amiga's operating system.
+    Similar special-purpose facilities would probably be of use on the 
+    Macintosh and the ST series.
+

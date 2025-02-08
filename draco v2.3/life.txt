@@ -1,0 +1,380 @@
+			The Game of LIFE
+
+What "Life" Is All About
+
+    This first section of the LIFE writeup describes what the game is, gives
+some of its history, and gives some suggestions as to what can be done with
+it. If you are already familiar with Life, you can skip this entire section
+and go on to the next, which describes the operation of the Northware CP/M
+implementation of Life.
+
+    Life is called a game, but a better term for it is simulation. Life is
+just that - a simulation of life. The simulation is very primitive, but the
+main elements of life as we know it are present - life is produced only by
+other life, a certain amount of it is needed in order for more to be
+produced, and life will die out if the region becomes overcrowded. Life
+reduces the complexities of biologic life to the simplicities of a simple
+arithmetic calculation. Early Life fans spent hours exploring various
+patterns, but we can do the same, and much more, with no effort on our part,
+by getting a computer to do the bookkeeping.
+
+    Life is one of a class of simulations called "Cellular Automata". The
+name describes them quite well - cellular, meaning that the basic idea is a
+large number of simple units; and automata, meaning that the units, and hence
+the entire collection, proceed automatically, according to a set of built-in
+rules. In a cellular automaton, each cell has a number of "states" which
+represent its current condition. In the simplest forms (of which Life is one)
+the cells have only two states - dead and alive (or empty and full). More
+complex forms, with thousands of states, have also been studied. Each cell
+in a cellular automaton is influenced by its neighbours. The entire
+collection of cells undergoes successive "generations", in which all cells
+change their internal state. The changes all occur simultaneously, but vary
+depending on the previous state of the cell, and on the states of its
+neighbours. In Life, this change of state can be one of four possibilites -
+a dead cell stays dead, a dead cell gives birth to life, a live cell stays
+alive, or a live cell dies.
+
+    In order that a cellular automaton be fully specified, two things must be
+given. One is the set of rules which determine, from a cell's previous state
+and the states of its neighbours, what its next state will be. The other is
+the definition of neighbour, i.e. which cells are the neighbours of a given
+cell. Most cellular automata that have been studied are two-dimensional -
+they fill an infinite plane. Other possibilies exist, but they are either too
+limited in their possibilities, or are too complex for easy study. A cellular
+automaton must entirely fill the plane. This limits the physical shape of
+the cells, all of which are identical. Rectangular units, triangular units
+and hexagonal units can all fill up, or "tile" a plane. Life uses square
+cells. With square cells, the pattern appears as follows:
+
+		    a | b | c
+		    ---------
+		    d | e | f
+		    ---------
+		    g | h | i    etc.
+
+Which of the cells shown (and possibly others) are neighbours of cell 'e'?
+In Life, the 8 immediately adjacent cells are considered to be neighbours.
+The state transfer rules for Life can be summarized as follows: a dead or
+empty cell will give birth on the next generation if it has exactly 3 live
+neighbours, otherwise it will stay dead; a live cell will live if it has
+2 or 3 live neighbours, otherwise it will die. This particular set of rules
+treats all neighbours as equivalent - other automata need not do so. These
+particular rules were chosen so that the array of cells doesn't die too
+quickly, but also doesn't become totally live too quickly. These rules have
+provided a very rich set of possibilities.
+
+    As an example, consider the following configuration, where 'X' represents
+a live cell, and a blank represents a dead cell:
+
+		    ---------
+		   |X| | |X| |
+		    ---------
+		   |X|X| | | |
+		    ---------
+		   | | |X| |X|
+		    ---------
+		   |X| | | | |
+		    ---------
+		   |X| | | |X|
+		    ---------
+
+Cells outside the lines are not shown. Only the nine cells in the middle of
+the array can be calculated to the next generation, since not all of the
+neighbours for the outer cells are known. For example, the upper left cell
+of the middle nine has 3 live neighbours, thus it will still be alive on the
+next generation. The cell to the right of it, currently dead, also has three
+live neighbours, so it will become live on the next generation. The next cell
+in line will also give birth on the next generation. In summary, the known
+portions of the above array will become:
+
+		    ---------
+		   |?|?|?|?|?|
+		    ---------
+		   |?|X|X|X|?|
+		    ---------
+		   |?| | | |?|
+		    ---------
+		   |?|X| |X|?|
+		    ---------
+		   |?|?|?|?|?|
+		    ---------
+
+As the reader can readily see, calculating Life generations by hand is very
+tedious.
+
+    What kinds of things are possible with Life? There are a number of
+theoretical questions that can be asked, some of which can be answered
+fairly easily. A first question is: are there any patterns which will survive
+indefinitely? The answer is yes - a simple pattern consisting of four live
+cells arranged in a 2 x 2 block, with no other neighbours, will exist for as
+long as it is undisturbed. Such a pattern is said to be stable. A second
+question is: are there any non-stable patterns that will continue to exist
+forever? Again a simple pattern meets the requirement - a horizontal line
+of 3 isolated live cells will, on the next generation, turn into a vertical
+line of 3 live cells. The vertical line will in turn become a horizontal
+line, and thus the cycle will continue indefinitely. This pattern is quite
+common in Life, and is called a "blinker".
+
+    Other questions are: are there any non-cyclic and non-stable patterns
+which will continue forever? Are there any patterns which will grow forever,
+i.e. in which the number of live cells always increases? Are there any
+patterns consisting of an infinite number of cells which are stable? The
+answer to all three questions is 'yes'.
+
+    Other questions of a more complex nature are asked by computer scientists
+and mathematicians who study cellular automata. One such is: is there a
+pattern which will exactly replicate itself? Another is: is it possible to
+construct patterns which will compute the answer to any computable problem?
+Is there a single pattern which can compute the answer to ANY such problem?
+(This last question relates to the idea of a "Turing Machine" - a simple
+kind of machine which in fact can compute the answer to any computable
+problem which can be stated in the appropriate way.) Does there exist a
+pattern which is a "Universal Constructor", i.e. a pattern which, given a
+description of some sort, can construct any pattern which can be described?
+For the particular cellular automata known as Life, these questions are not
+answered, but scientists have constructed cellular automata that do have some
+of these capabilities.
+
+    The cellular automata, Life, was invented by the mathematician John
+Horton Conway. It was first introduced to the masses in Martin Gardner's
+"Mathematical Games" column in the October 1970 issue of "Scientific
+American". Gardner's column contained further information on Life in the
+November 1970, January 1971, February 1971, April 1971 and January 1972
+issues. His column in the February 1971 issue was devoted to the subject
+of cellular automata. Similarly, Brian Hayes "Computer Recreations" column
+in the March 1984 issue is devoted to cellular automata. The interested
+reader is referred to these columns for excellent discussions of Life and
+other fascinating topics.
+
+
+The LIFE Program
+
+    The CP/M LIFE program is supplied as a file called 'LIFE.SET'. This
+file is basically a '.COM' runnable program, but it has not yet been
+configured to run on any particular terminal. It must be processed by the
+CONFIG program (supplied on the distribution diskette) before it can be
+actually run. The process of configuring a program for a particular terminal
+is described in the enclosed writeup on the CONFIG program. LIFE will run on
+any CP/M system with at least 52K of memory and a CRT terminal with an
+addressable cursor. The terminal need not have a 24 line by 80 column screen,
+and need not be able to display lower case letters.
+
+    When LIFE is run, it presents the user with a screen which is blank
+except for the bottom line. This bottom line is a status line, and contains
+information such as the current row and column of the cursor, the number of
+live cells in the array, the current generation number, etc. The array of
+cells supported by LIFE is 128 rows by 256 columns. The user's terminal is
+a window into that array. The cursor will be initially positioned in the
+top-left corner of the screen. A Life configuration is drawn by moving the
+cursor around the screen and adding and deleting live cells.
+
+    The cursor is best manipulated using a numeric keypad, but an alternate
+keypad is provided on the main keyboard. The keys all move the cursor in a
+direction corresponding to their direction from the '5' or 'J' key. The
+resulting layout looks like this:
+
+		    7, y, Y    8, u, U    9, i, I
+		    up-left       up      up-right
+
+		    4, h, H    5, j, J    6, k, K
+		      left      toggle     right
+
+		    1, b, B    2, n, N    3, m, M
+		   down-left     down    down-right
+
+These keys move the cursor in the indicated direction. The 'toggle' keys will
+toggle the state of the cell under the cursor, i.e. will change a dead cell
+into a live cell or a live cell into a dead cell. These cursor control keys
+will not move the cursor off of the screen. To access portions of the cell
+array out of the initially displayed region, the screen window must be moved.
+This is done by the following windowing keys:
+
+		    < or , - window left 5 columns
+		    > or . - window right 5 columns
+		    v or V - window down 5 lines
+		    ^      - window up 5 lines
+
+As mentioned before, the array supported is 128 rows by 256 columns. A point
+to note here is the operation of the borders of the array. In LIFE, all cells
+outside of the array are assumed to be always dead. Thus, configurations
+which 'hit' the border will no longer be accurate, since one of the basic
+assumptions of Life is that the array is infinite.
+
+    Once a Life configuration has been set up, it can be stepped, one
+generation at a time, by typing a RETURN or LINEFEED. Alternatively, the
+configuration can be 'run' at high speed by pressing the space bar. Small
+patterns will go through several generations per second, producing an effect
+almost like animation. When a configuration is being run, the continuous
+stepping can be stopped by typing any key. The LIFE program does not have
+any modes, i.e. there is no special set-up mode and no special run mode.
+Thus, the configuration can be modified in the usual way even after it has
+progressed through several generations.
+
+    Several other commands have been provided for manipulating patterns.
+Typing a 'c' or 'C' will clear the array (destroy all live cells) and reset
+the generation and other counters to 0. Many people find Life patterns
+fascinating to watch, but often don't want to have to set up configurations.
+LIFE will set up random patterns of cells. If 'f' or 'F' is typed, LIFE will
+request a percentage value, and will fill that percent of the entire screen
+with live cells. The 'a' or 'A' command is similar, except the user is also
+asked for the size of a rectangular region in the middle of the screen to
+be randomly filled. A 10 row by 10 column region filled with between 20 and
+80 percent of live cells provides many interesting patterns. Some such
+patterns die out very quickly, others have been traced for over 1000
+generations.
+
+    LIFE also provides some utility commands. Typing a '?' will cause the
+program's built-in instructions to be displayed, after which the screen will
+be re-drawn with the current configuration. Typing 'r', 'R' or CONTROL-R will
+simply erase and re-draw the screen. This is useful if the terminal has
+troubles, or noise on the communication line has garbled the pattern. Typing
+a 'd' or 'D' will toggle LIFE's display flag. Initially, LIFE displays each
+generation as it is computed, but this display can be disabled. Disabling the
+continuous display will speed up the run; this is useful if you want to trace
+a pattern over a known sequence. The amount of speedup depends on the amount
+of changing material in the viewing window and on the speed of the display.
+LIFE can be exited by typing 'q', 'Q' or CONTROL-C.
+
+    Some configurations are complex and difficult to create. LIFE provides
+a way to save configurations into CP/M files so that they can be restored
+at a later date. When running LIFE, typing 'p' or 'P' (P for 'put') will
+cause the current configuration to be stored into a file whose name will be
+requested. The file will be created with CP/M file extension '.LIF'.
+Similarly, typing a 'g' or 'G' (G for 'get') will read in a pattern from a
+file and enter it into LIFE's cell array. It is thus possible to slowly
+build up complex configurations by storing the pattern at various points
+in it's creation, thus allowing the latest set of changes to be 'undone' if
+they prove to be incorrect. Similarly, the setup can be spread over a longer
+period of time.
+
+
+Things to Try
+
+    Users new to the game of Life should spend some time experimenting with
+both random configurations and manually created configurations. As with many
+such things, Life can be very addictive - many people have spent many hours
+watching life patterns grow, move and die. Others find Life boring. Only
+after a few hours of playing will you know your final reaction. The following
+paragraphs discuss some of the possibilities of Life.
+
+    One of the most fascinating patterns discovered in Life is the 'glider'
+(sometimes called a 'tumblebug'). This pattern of 5 live cells replicates
+itself in four generations, but displaced 2 cells diagonally. Thus it glides
+diagonally across the array. Since it takes four generations to 'move' two
+cells, Life enthusiasts say that it moves at "one-half the speed of light".
+The configuration is:
+
+			    ***
+			    *
+			     *
+
+In this orientation, the glider will move up and to the left, thus it can be
+viewed as moving in the direction it points.
+
+    There are many small patterns in Life which are stable, i.e. which will
+exist forever if not interfered with by other cells. A few of them are:
+
+    **	    *	     **       *	      **       * **       **
+    **     * *      *  *     * *     *  *      ** *       * *
+            *       *  *     * *      * *                  **
+                     **       *        *
+
+Some of these patterns can be extended into longer forms. A common pastime
+is that of investigating what happens when gliders hit these stable forms at
+various angles and at various approach distances. Also, what happens when
+gliders collide?
+
+    One of the fascinating aspects of Life is the major consequences of
+adding or removing a single live cell from a pattern. This can be studied
+by examining the fates of horizontal lines of live cells. Adding another
+live cell to the end of the line can drastically affect the outcome. Another
+set of results is obtained by placing two lines, end-to-end, but with a
+single dead cell between the two lines. This pattern with two length 10 lines
+is especially pleasing. Similarly, the lines can be drawn parallel to
+one-another, separated by various distances.
+
+    Some Life patterns grow very quickly from a small number of live cells
+to a large number of live cells. The following pattern, called 'pi' or the
+'blasting cap' is one such:
+
+				***
+				* *
+				* *
+
+It is aptly named. Various combinations of 'pi's produce various results.
+'pi' will often occur naturally as part of other configurations, and its
+appearance is usually a sign that the configuration will survive for some
+time. Multiple 'pi's will occasionally damp each other out, however. Try
+this pattern:
+
+			    *** ***
+			    *     *
+			    *** ***
+
+A less symmetric, but equally explosive pattern is the 'R-pentomino' (so
+named because it looks a bit like an 'r', and it is composed of 5 live
+cells). It looks like this:
+
+				**
+			       **
+				*
+
+    Many cyclic patterns other than the blinker have been found. Cycles have
+ranged from 2 upto 30 and more. Many cyclic patterns occur in the form of a
+stable outer shell with a cyclic inner portion which is constrained to cycle
+within the shell, but which doesn't permanently harm the shell. Others appear
+to be patterns which just happen to end up in the same configuration again.
+
+
+The Patterns Provided With LIFE
+
+    Some of the more interesting Life patterns have been provided in the
+form of '.LIF' save files which are on the distribution diskette. The first
+of these, 'SHIPS.LIF' (which can be restored by typing 'g' and "SHIPS")
+contains 5 "spaceships" which are patterns similar in operation to the
+glider, in that they move across the array. These patterns move horizontally
+at the speed of light, and move within a messy cloud of exhaust fumes.
+Various sizes of spaceships are possible, but the larger ones seem to require
+accompanying smaller ships to keep them stable. It is interesting to watch
+the spaceships collide with the right-hand edge of the LIFE array.
+
+    A second configuration provided is in file 'GUN.LIF'. This pattern is an
+example of an extraordinary cyclic pattern which 'fires' a glider at regular
+intervals. Such a pattern, in an infinite array, will continue forever, will
+never have the same configuration more than once, and will grow in size
+without bounds. In 'GUN.LIF', the gliders, which are fired every 30
+generations, are caught and destroyed by a pentadecathlon (pattern which
+cycles every 15 generations). An even more extraordinary example is provided
+in the "Mathematical Games" column in the February 1971 "Scientific
+American" - a pattern of 13 gliders which collide to form a glider gun!
+
+    The third save file, 'CYCLES.LIF', fills a 24 x 80 screen with a wide
+variety of cyclic patterns. Patterns are included with cycles of 2, 3, 4,
+8, 14, and 15. In the top-left corner is a pentadecathlon (cycle 15); under
+it is a figure-8 (cycle 8); to the right of them is the large, 4-way
+symmetric pattern known as "Pulsar CP 48-56-72" (cycle 3). Under the pulsar
+is a beacon (cycle 2); and to the right of it is a pinwheel (cycle 4). A
+long, diagonal pattern above the pinwheel is the barber pole (cycle 2), which
+can be extended indefinitely. Above the barber pole is the "Hertz Oscillator"
+(cycle 8); and to the right of it is the tumbler, which turns upside-down
+every 7 generations, yielding an overall cycle of 14. On the right of the
+screen, starting from the top, are two eaters (they'll eat darn near anything
+and are very hard to destroy) in a cycle 3 configuration; a mouth (cycle 2);
+a clock (cycle 2) and the common blinker (cycle 2).
+
+    The possibilities in Life are nearly endless. What happens when gliders
+and various size spaceships hit the various stable and cyclic patterns in
+various ways? Can you set up glider collisions to produce some or all of the
+stable and cyclic patterns? How many more stable and cyclic patterns can you
+find? What is the longest-lived non-cyclic pattern, i.e. what pattern can
+you find that continues growing without degenerating into just stable and
+cyclic portions for the longest time? Is there a stable or cyclic pattern
+which will reflect a glider through a 90 degree corner? If so, you can build
+arbitrarily large 'tracks' for gliders. Can gliders collide to produce a
+spaceship? Is there such a thing as a spaceship gun or factory?
+
+Happy Lifing!!
+
+    LIFE, CONFIG, and the terminal-independent CRT I/O routines were all
+written entirely in the Draco systems programming language.
+

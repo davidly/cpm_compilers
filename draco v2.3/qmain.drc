@@ -1,0 +1,479 @@
+#util.g
+#q.g
+
+/* codes for the types of words in a sentence: */
+
+int
+    VERB = 1,
+    ARTICLE = 2,
+    ADJECTIVE = 3,
+    NOUN = 4,
+    PREPOSITION = 5,
+    PUNCTUATION = 6,
+    AUXILLIARY = 7,
+
+/* id's for some words that we need to know: */
+
+    /* verbs: */
+
+    NORTH = 1001,
+    SOUTH = 1002,
+    EAST = 1003,
+    WEST = 1004,
+    QUIT = 1005,
+    DROP = 1006,
+    PUT = 1007,
+    GET = 1008,
+    PICK = 1009,
+    LOOK = 1010,
+    LONG = 1011,
+
+    /* articles: */
+
+    THE = 2001,
+
+    /* adjectives: */
+
+    /* nouns: */
+
+    SWORD = 4001,
+    BOTTLE = 4002,
+    KNIFE = 4003,
+    PURSE = 4004,
+    AMULET = 4005,
+
+    /* prepositions: */
+
+    /* punctuation: */
+
+    PERIOD = 6001,
+
+    /* auxilliaries: */
+
+    DOWN = 7001,
+    UP = 7002,
+    AROUND = 7003,
+
+    /* some properties and attributes we need: */
+
+    CONTENTS = 8001,		/* contents list */
+    CARRYABLE = 8002;		/* object can be carried */
+
+channel output text TextOut;
+int PlayerLine, PlayerColumn, MoveCount;
+*INTLIST CarryList, CarryNext;
+*char Condition;
+bool Quit;
+
+/*
+ * scenery - simple scenery generator.
+ */
+
+proc nonrec scenery(int l, c)C2:
+    int l1, c1;
+
+    l1 := |l % 30;
+    if l1 >= 15 then l1 := l1 - 30 fi;
+    c1 := |c % 30;
+    if c1 >= 15 then c1 := c1 - 30 fi;
+    if l1 * l1 + c1 * c1 <= 16 or l1 = 0 or c1 = 0 then
+	C2('~', '~')
+    elif l1 * l1 + c1 * c1 <= 25 then
+	C2('\#', '\#')
+    else
+	l := l * 997 + c + 10321;
+	l := l * l;
+	if l / 32 % 8 = 0 then
+	    C2('/', '\\') 
+	else
+	    C2(' ', ' ')
+	fi
+    fi
+corp;
+
+/*
+ * lookAround - list the objects at this location.
+ */
+
+proc nonrec lookAround()bool:
+    *INTLIST il;
+
+    il := pretend(getAttr(PlayerLine * 1000 + PlayerColumn, CONTENTS),
+		  *INTLIST);
+    if il ~= nil then
+	write(TextOut; "Nearby: ");
+	while il ~= nil do
+	    write(TextOut; psGet(il*.il_this));
+	    il := il*.il_next;
+	    if il ~= nil then
+		write(TextOut; ", ");
+	    fi;
+	od;
+	true
+    else
+	false
+    fi
+corp;
+
+/*
+ * move - move our character in the given relative direction.
+ */
+
+proc nonrec move(int lineDelta, columnDelta)void:
+    char ch;
+
+    ch := scAt(PlayerLine + lineDelta, PlayerColumn + columnDelta)[0];
+    if ch = '\#' or ch = '/' or ch = 'T' then
+	write(TextOut; "You can't move there.");
+	Condition := "Dazed";
+	scUpdate(4);
+    else
+	PlayerLine := PlayerLine + lineDelta;
+	PlayerColumn := PlayerColumn + columnDelta;
+	scMove(0, PlayerLine, PlayerColumn);
+	MoveCount := MoveCount + 1;
+	scUpdate(3);
+	if Condition* ~= 'H' then
+	    if Condition* = 'D' then
+		Condition := "Bruised";
+	    else
+		Condition := "Healthy";
+	    fi;
+	    scUpdate(4);
+	fi;
+	if lookAround() then fi;
+    fi;
+corp;
+
+/*
+ * gramInit - set up our dictionary and grammar.
+ */
+
+proc nonrec gramInit()void:
+
+    psWord(NORTH, "north", VERB);
+    psWord(SOUTH, "south", VERB);
+    psWord(EAST, "east", VERB);
+    psWord(WEST, "west", VERB);
+    psWord(NORTH, "n", VERB);
+    psWord(SOUTH, "s", VERB);
+    psWord(EAST, "e", VERB);
+    psWord(WEST, "w", VERB);
+    psWord(QUIT, "quit", VERB);
+    psWord(DROP, "drop", VERB);
+    psWord(PUT, "put", VERB);
+    psWord(GET, "get", VERB);
+    psWord(PICK, "pick", VERB);
+    psWord(LOOK, "look", VERB);
+    psWord(LONG, "long", VERB);
+
+    psWord(THE, "the", ARTICLE);
+    psWord(THE, "a", ARTICLE);
+    psWord(THE, "an", ARTICLE);
+    psWord(THE, "one", ARTICLE);
+
+    psWord(SWORD, "sword", NOUN);
+    psWord(BOTTLE, "bottle", NOUN);
+    psWord(KNIFE, "knife", NOUN);
+    psWord(PURSE, "purse", NOUN);
+    psWord(AMULET, "amulet", NOUN);
+
+    psWord(PERIOD, ".", PUNCTUATION);
+    psWord(PERIOD, "!", PUNCTUATION);
+
+    psWord(DOWN, "down", AUXILLIARY);
+    psWord(UP, "up", AUXILLIARY);
+    psWord(AROUND, "around", AUXILLIARY);
+
+    /* rule #1 - look [around] */
+
+    psgBegin(1);
+    psgWord(REQID, LOOK);
+    psgWord(OPTID, AROUND);
+    psgWord(OPTTYPE, PUNCTUATION);
+    psgEnd();
+
+    /* rule #2 - drop [ART] N */
+
+    psgBegin(2);
+    psgWord(REQID, DROP);
+    psgWord(OPTTYPE, ARTICLE);
+    psgWord(REQTYPE, NOUN);
+    psgWord(OPTTYPE, PUNCTUATION);
+    psgEnd();
+
+    /* rule #3 - put down [ART] N */
+
+    psgBegin(3);
+    psgWord(REQID, PUT);
+    psgWord(REQID, DOWN);
+    psgWord(OPTTYPE, ARTICLE);
+    psgWord(REQTYPE, NOUN);
+    psgWord(OPTTYPE, PUNCTUATION);
+    psgEnd();
+
+    /* rule #4 - put [ART] N down */
+
+    psgBegin(4);
+    psgWord(REQID, PUT);
+    psgWord(OPTTYPE, ARTICLE);
+    psgWord(REQTYPE, NOUN);
+    psgWord(REQID, DOWN);
+    psgWord(OPTTYPE, PUNCTUATION);
+    psgEnd();
+
+    /* rule #5 - get [ART] N */
+
+    psgBegin(5);
+    psgWord(REQID, GET);
+    psgWord(OPTTYPE, ARTICLE);
+    psgWord(REQTYPE, NOUN);
+    psgWord(OPTTYPE, PUNCTUATION);
+    psgEnd();
+
+    /* rule #6 - pick up [ART] N */
+
+    psgBegin(6);
+    psgWord(REQID, PICK);
+    psgWord(REQID, UP);
+    psgWord(OPTTYPE, ARTICLE);
+    psgWord(REQTYPE, NOUN);
+    psgWord(OPTTYPE, PUNCTUATION);
+    psgEnd();
+
+    /* rule #7 - pick [ART] N up */
+
+    psgBegin(7);
+    psgWord(REQID, PICK);
+    psgWord(OPTTYPE, ARTICLE);
+    psgWord(REQTYPE, NOUN);
+    psgWord(REQID, UP);
+    psgWord(OPTTYPE, PUNCTUATION);
+    psgEnd();
+
+    /* rule #8 - V */
+
+    psgBegin(8);
+    psgWord(REQTYPE, VERB);
+    psgWord(OPTTYPE, PUNCTUATION);
+    psgEnd();
+corp;
+
+/*
+ * carryInit - initialize our list of what we are carrying.
+ */
+
+proc nonrec carryInit()void:
+
+    CarryList := nil;
+    lAppend(&CarryList, SWORD);
+    lAppend(&CarryList, BOTTLE);
+    lAppend(&CarryList, KNIFE);
+    lAppend(&CarryList, PURSE);
+    lAppend(&CarryList, AMULET);
+corp;
+
+/*
+ * scanner routine for carry list display.
+ */
+
+proc nonrec carryScan(bool first)*char:
+    int id;
+
+    if first then
+	CarryNext := CarryList;
+    fi;
+    if CarryNext = nil then
+	nil
+    else
+	id := CarryNext*.il_this;
+	CarryNext := CarryNext*.il_next;
+	psGet(id)
+    fi
+corp;
+
+/*
+ * statInit - initialize and set up our status indicators.
+ */
+
+proc nonrec statInit()void:
+
+    PlayerLine := 0;
+    PlayerColumn := 0;
+    MoveCount := 0;
+    Condition := "Healthy";
+    scNumber(1, "Line", 1, 1, 4, &PlayerLine);
+    scNumber(2, "Column", 1, 13, 4, &PlayerColumn);
+    scNumber(3, "Moves", 2, 1, 3, &MoveCount);
+    scString(4, "Condition", 2, 13, 10, &Condition);
+    scMult(5, "Carrying", 3, 1, 3, carryScan);
+corp;
+
+/*
+ * verbOnly - process a verb only input command.
+ */
+
+proc nonrec verbOnly()void:
+    int id;
+
+    id := pspWord(1);
+    case id
+    incase NORTH:
+	move(-1, 0);
+	scUpdate(1);
+    incase SOUTH:
+	move(+1, 0);
+	scUpdate(1);
+    incase EAST:
+	move(0, +1);
+	scUpdate(2);
+    incase WEST:
+	move(0, -1);
+	scUpdate(2);
+    incase QUIT:
+	Quit := true;
+    incase LONG:
+	write(TextOut;
+"This is a very long set of output that the program is told to output when "
+"you type in the word 'long'.  This output doesn't have a whole lot of "
+"significance or intelligence or meaning or whatever, but what the heck, "
+"I just wanted to get something that would make more than one line of "
+"output go through the TextOut channel to the screen's text area."
+	);
+    default:
+	write(TextOut; "You must give an object with verb \"",
+		       psGet(id), "\".");
+    esac;
+corp;
+
+/*
+ * drop - drop something.
+ */
+
+proc nonrec drop(int pos)void:
+    *INTLIST il;
+    int id, i;
+
+    id := pspWord(pos);
+    if lIn(CarryList, id) then
+	lDelete(&CarryList, id);
+	write(TextOut; "Dropped.");
+	scUpdate(5);
+	i := PlayerLine * 1000 + PlayerColumn;
+	il := pretend(getAttr(i, CONTENTS), *INTLIST);
+	if il = nil then
+	    scNew(|i + 1000, PlayerLine, PlayerColumn, C2('?', '?'));
+	    scMove(0, PlayerLine, PlayerColumn);
+	fi;
+	lAppend(&il, id);
+	putAttr(i, CONTENTS, pretend(il, int));
+    else
+	write(TextOut; "You aren't carrying any ", psGet(id), '.');
+    fi;
+corp;
+
+/*
+ * get - get something.
+ */
+
+proc nonrec get(int pos)void:
+    *INTLIST il;
+    int id, i;
+
+    id := pspWord(pos);
+    i := PlayerLine * 1000 + PlayerColumn;
+    il := pretend(getAttr(i, CONTENTS), *INTLIST);
+    if lIn(il, id) then
+	lDelete(&il, id);
+	putAttr(i, CONTENTS, pretend(il, int));
+	lAppend(&CarryList, id);
+	scUpdate(5);
+	if il = nil then
+	    scDelete(|i + 1000);
+	    delAttr(i, CONTENTS);
+	fi;
+	write(TextOut; "Taken.");
+    else
+	write(TextOut; "There is no ", psGet(id), " here.");
+    fi;
+corp;
+
+/*
+ * process - process user's commands.
+ */
+
+proc nonrec process()void:
+    [79] char buffer;
+
+    Quit := false;
+    while not Quit do
+	scRead(&buffer[0]);
+	case psParse(&buffer[0])
+	incase -1:
+	    write(TextOut; "I don't know the word \"", pspBad(), "\".");
+	incase 0:
+	    write(TextOut; "I don't understand that sentence.");
+	incase 1:
+	    if not lookAround() then
+		write(TextOut; "There is nothing here.");
+	    fi;
+	incase 2:
+	incase 4:
+	    drop(3);
+	incase 3:
+	    drop(4);
+	incase 5:
+	incase 7:
+	    get(3);
+	incase 6:
+	    get(4);
+	incase 8:
+	    verbOnly();
+	default:
+	    write(TextOut; "Can't possibly get this!");
+	esac;
+    od;
+corp;
+
+/*
+ * main - main program - the action starts here.
+ */
+
+proc nonrec main()void:
+    word dummy;
+
+    /* set up the various library routine sets: */
+    scInit();
+    psInit(false);
+    lInit();
+    /* open a text output channel through the screen output routine: */
+    open(TextOut, scPut);
+    /* pass a scenery generator and empty object list for map: */
+    dummy := scNewMap(scenery, 0);
+    /* define the initial viewing window for the map area: */
+    scWindow(0, 0);
+    /* define the input prompt: */
+    scPrompt("> ");
+    /* go build our dictionary and grammar: */
+    gramInit();
+    /* go set up our carrying list: */
+    carryInit();
+    /* go initialize and set up our status indicators: */
+    statInit();
+    /* set up the 'objects' in the viewing area: */
+    scNew(0, 0, 0, C2('m', 'e'));	/* this is 'us', the key character */
+    scNew(1, -2, -2, C2('T', '1'));
+    scNew(2, -3, -8, C2('T', '2'));
+    scNew(3, -1, 3, C2('T', '3'));
+    scNew(4, 3, 2, C2('G', '1'));
+    scNew(5, 1, -2, C2('G', '2'));
+    /* say hello: */
+    write(TextOut;
+"     Welcome to the test scenario.  Not much will happen here, but there "
+"should be enough for you to get an idea of the kinds of things that can go "
+"on. So anyway, here goes:"
+    );
+    /* go process user's commands: */
+    process();
+corp;
+

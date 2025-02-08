@@ -1,0 +1,1164 @@
+XVI. Error messages
+
+    The Draco compiler has nearly 150 English-language error message. The
+    compiler flags all errors which it detects. It goes to quite a lot of
+    trouble to avoid multiple messages caused by a single error, but it
+    is by no means perfect. Any persistently bad cases should be reported.
+    Because of the type-tight nature of the Draco language, it is possible
+    for some programs to yield a large number of error messages. The best
+    approach to handling this situation is incrementally - take care of the
+    messages that stand out as the first of a group, then compile again.
+    This might take longer, but is usually less frustrating. It is not
+    unusual for a single compilation to produce dozens of messages, which
+    can be rather disconcerting. In most cases, many of the messages will
+    have similar causes, and understanding one message will give
+    understanding of many messages caused by repetitions of the same error.
+    The most persistent message will probably be that which insists that
+    some value is not type compatible with some other. This can be caused
+    by several situations, but in general means just what it says - the
+    programmer has tried to use a value which is not appropriate for the
+    position it was used in, whether it is an assignment statement, a
+    parameter to a procedure, an operand to an operator, the result of an
+    if expression, an array index, etc.
+
+    Some errors are purely syntactic in nature, and have no effect on the
+    compilation of the program, other than to require that an error message
+    be printed out. The Draco compiler gives a warning instead of an error
+    in these situations, and then proceeds as if the error had not ocurred.
+    If a compilation has only warnings, and no true errors, then it will
+    succeed, and the .REL file will not be deleted.
+
+    The approach to error messages taken by the compiler may seem like
+    overkill to some. For example, all occurrences of an undefined symbol
+    are flagged (successive occurrences are, however, flagged as such). These
+    messages could easily have been left out, but it was felt that all errors
+    detected by the compiler should be reported. For this particular error,
+    it may have resulted from spelling a given name two different ways. If
+    that is the case, it is handy to know where all of the mispellings are,
+    so that they can be corrected. Some people would also argue that the
+    compiler should simply ignore simple syntactic errors. If the compiler
+    were smart enough to actually modify the source file so as to remove
+    the errors permanently, this might be desireable. Since this is not the
+    case, the errors are flagged (perhaps as warnings), so that the
+    programmer will fix them. No programmer with any sense of pride would
+    want to distribute a program containing known errors, even trivial
+    syntax errors. The other problem with this situation is that the compiler
+    might not be right in it's assumptions - the error may be a true error,
+    which must be fixed in some other way than the obvious (e.g. inserting
+    a semicolon). The compiler would be doing a great disservice if it
+    failed to flag such an error, and since it cannot always be SURE, it must
+    flag all errors it notices.
+
+    The error messages produced by the CP/M version of the Draco compiler,
+    along with their usual causes and cures, are as follows:
+
+    (The text for the following errors is stored in file DRCERR.DAT. If this
+    file is not present, the compiler will simply print the error numbers
+    without the corresponding text. Also, if the compiler is running under an
+    old version 1 CP/M which doesn't support random-access file I/O, the
+    text will not be printed even if the file is present.)
+
+    (All of the following 15 errors are fatal, in that the compiler cannot
+    readily recover from them. The compilation terminates immediately.)
+
+    0 - cannot open source file
+
+	The specified .DRC or include file cannot be opened. Normally, this 
+	means that the file doesn't exist, and is typically caused by 
+	mistyping the 'draco ...' command. Try again. 
+
+    1 - cannot create .REL file
+
+	The compiler was unable to create a .REL file corresponding to the
+	current .DRC file. This will normally indicate that either the disk
+	is full, or the directory is full. Delete some unneeded files and
+	try again.
+
+    2 - cannot close .REL file
+
+	This should not happen. It indicates a CP/M error. This may occur if
+	the disk and/or directory are full. Try again; if the error persists,
+	remove some unneeded files.
+
+    3 - error on write to .REL file
+
+	This indicates a CP/M error (disk error), or that the disk and/or
+	directory are full. Delete some unneeded files and try again.
+
+    4 - unexpected end-of-file on source input
+
+	This occurs when the compiler's parser expects more input, but the
+	end of the input source file has been reached. This indicates that
+	the source file has somehow been truncated (check it by TYPEing it
+	out), or that the parser has been confused. If the compilation has
+	already produced a number of syntax-related errors, this message can
+	probably be ignored.
+
+    5 - program buffer overflow (procedure too long)
+
+	The compiler has a single large buffer which contains both the text
+	of all identifiers, and the machine code being produced. This message
+	indicates that that buffer has overflowed. If the procedure where the
+	message occurred is large, split it up into 2 or more pieces,
+	otherwise you must shorten the identifiers you have used.
+
+    6 - constant buffer overflow (too much constant)
+
+	Constants used in declarations are contained in a single large 
+	buffer. That buffer has overflowed. You must reduce the amount of 
+	constant present at the location at which the error occurred. Since 
+	all local constants are removed at the end of each procedure, this 
+	problem is usually fixed by splitting up the current procedure, 
+	balancing the constant(s) among the pieces. Note that this limit 
+	only refers to string, array and structure constants; simple scalar 
+	constants are stored directly in the symbol table. 
+
+    7 - constant table overflow (too many constants)
+
+	Each individual constant requires an entry in a table. That table 
+	has overflowed. Reduce the number of different constants present, 
+	usually by splitting up the current procedure. 
+
+    8 - case table overflow (too many alternatives)
+
+	Each alternative in a case statement or expression is recorded in a
+	table. This allows the compiler to generate the appropriate indexing
+	code based on knowledge of all alternatives. When case statements are
+	nested, the number of alternatives present is the sum of those in the
+	innermost case, plus all of those up to the present point in all
+	outer cases. The total number of alternatives present must be
+	reduced, ususally by moving some inner cases to separate procedures.
+
+    9 - descriptor table overflow (nesting too deep)
+
+	Each level of expression nesting requires a descriptor to describe
+	the left-hand operand of an operator whose right-hand operand is
+	currently being parsed. If this error occurs, simplify the expression
+	in which it occurs.
+
+    10 - relocation table overflow (too many constant indexes)
+
+	In order that the program written to the .REL file be relocatable
+	by the link editor, the compiler must include, as part of the .REL
+	file, information which indicates all uses of different variable
+	addresses used in each procedure. This information is dumped out at
+	the end of the machine code for each procedure. To do that, the
+	information must be held in a table until that time. That table
+	(actually one of several) has overflowed. The simplest fix for this
+	is to split up the current procedure. Because of optimizations done
+	by the compiler, references to different addresses can occur in ways
+	that may not be expected. For example, indexing an array by an
+	expression whose value the compiler can determine, will use a direct
+	reference to the selected element, rather than a reference to the
+	beginning of the array plus run-time code to index it. Similarly,
+	field selection is usually a strictly compile-time operation. These
+	hidden relocation table entries can cause a table overflow, even if
+	there is only one variable being referenced in the procedure.
+
+    11 - symbol table overflow (too many indentifiers)
+
+	At this point in the program, there are too many identifiers present.
+	This includes all indentifiers from include files, file declarations,
+	and local declarations. All procedure names, field names, enumeration
+	type value names, constant names, variable names, type names, etc.
+	are included. This error indicates that you are truly straining the
+	limits of your version of the compiler. You can attempt to avoid the
+	problem in a limited way by splitting up procedures and/or source
+	files, but the only proper fix is to reduce the number of identifiers
+	in your program. The number of entries in the table can easily be
+	increased, but it would increase the size of the compiler, which is
+	already straining CP/M's limits. Currently, the table has space for
+	701 symbols, including the compiler's reserved words and predefined
+	symbols.
+
+    12 - type table overflow (too many types)
+
+	Your program has too many types for your version of the compiler.
+	Types are generated explictly by type declarations and implicitly by
+	procedure declarations (the type of the procedure indicates the
+	number and type of its parameters, and the type of its result), and
+	by variable declarations of other than simple variables.
+
+    13 - type information table overflow (types too complex)
+
+	There is no inherent limit to the complexity of types, but the
+	descriptions of the types must be maintained. Information is needed
+	for array, procedure and structure/union types. The table holding
+	this information has overflowed. A good cure is to split up the
+	current source file. If that doesn't work, you will have to find
+	ways to use less complex or fewer complex types.
+
+    14 - compiler error - bad case in 'typSize' or 'checkDuplicate'
+
+	This should not happen. If it does, please send me an exact copy
+	of the program and include files which caused it.
+
+    (The remaining errors are not fatal - the compiler will continue.)
+
+    (The following 4 error messages will be accompanied by an identifier
+    from the program. This identifier is the one the message refers to. In
+    the descriptions below, the identifier is represented by XXX.)
+
+    15 - "XXX" is already defined
+
+	The symbol in question already has an existing declaration. You
+	cannot give it another meaning. This can also occur at the end of the
+	header for a procedure being defined, if the definition does not
+	match a previous forward declaration using 'extern'.
+
+    16 - "XXX" is not defined
+
+	The symbol in question has no current declaration. This indicates a
+	spelling error (either in the current use or in the declaration), a
+	missing include file, or simply a forgotten declaration.
+
+    17 - "XXX" is not defined (subsequent use)
+
+	This is the same error as #16, but subsequent uses are distinguished,
+	since in most cases these messages will disappear when the cause of
+	the corresponding #16 message is fixed.
+
+    18 - Type "XXX" has been used but not defined
+
+	As previously mentioned in the section on types, the subtype for the
+	'*' pointer-type constructer can be an undeclared identifier, which
+	is taken to be a type name which will be declared later. If this
+	message occurs, then symbol XXX has been used in that way, but there
+	was no later declaration of it as a type. The cause could be a
+	spelling error, or simply forgetting to supply the declaration.
+
+    19 - error # 19
+
+	This error currently has no meaning
+
+    20 - expecting global declaration in include file
+
+	When processing the declarations in an include file (.G file), the
+	compiler encountered something which it didn't recognize as a
+	declaration. The usual cause will be a syntax error (typo) in the
+	declarations in the include file. Some of the declarations may not be
+	processed as a result, and references to those identifiers in the
+	program will yield 'not defined' messages. In cases such as this, it
+	is usually best to fix the problem in the declarations, then try
+	again, since many later error messages will go away.
+
+    21 - expecting procedure header or file global declaration
+
+	When processing a source file, and a procedure definition has not yet
+	been processed, the compiler encountered something which it didn't
+	recognize as either a declaration or a procedure header. The usual
+	cause is a syntax error (typo) in the declarations or in the first
+	procedure header. As with error #20, it may be best to fix the error
+	and try again, ignoring any subsequent messages in this compilation.
+
+    22 - expecting procedure header for new procedure
+
+	This is similar to error #21, except that at least one procedure
+	definition has been encountered, therefore more declarations are not
+	valid. This message usually results from syntax errors in the body of
+	the previous (or current) procedure, which have confused the parser.
+
+    23 - value must be 0 - 255
+
+	Several situations, e.g. an escaped character value and the port
+	number for the 8080 specific input/output constructs, require a
+	constante expression whose value is between 0 and 255. The constant
+	expression given was outside of that range.
+
+    24 - 'signed' range must be <= 32767
+
+	The value of a compile-time expression used in the 'signed' type
+	constructer must be between 0 and 32767 for this version of the
+	compiler. Other versions will support at least this much range.
+
+    25 - missing ')' in escaped character
+
+	The compiler was expecting the closing ')' in an escaped character,
+	but did not find it. This can occur if the ')' is indeed missing, or
+	if syntax errors in the expression have caused the parser to
+	prematurely terminate the expression.
+
+    26 - bad digit in numeric constant
+
+	The valid digits in numeric constants depend on the base being used.
+	Binary numbers allow only '0' and '1', octal allows '0' - '7',
+	decimal allows '0' - '9', and hexadecimal allows '0' - '9', 'a' - 'f'
+	and 'A' - 'F'.
+
+    27 - overflow in numeric constant
+
+	The maximum value for a numeric constant depends on the particular
+	version of the compiler. The CP/M version for 8080's supports only
+	16 bit values, hence the maximum value allowed is 0b1111111111111111,
+	0o177777, 65535, 0xffff.
+
+    28 - missing closing "'" in character constant
+
+	The closing apostrophe in a single character constant was not found
+	when expected. This can because it was actually forgotten, or because
+	syntax errors in an escaped character have confused the parser.
+
+    29 - missing closing '"' in string constant
+
+	The closing quote of a chars constant is missing. As with error #28, 
+	this can be an actual missing quote, or a syntax error in an escaped 
+	character. In this case, the remainder of the input line will have 
+	been swallowed as part of the constant. 
+
+    30 - illegal character
+
+	A character was encountered, outside of quote marks and not as part
+	of a comment, which is not part of any valid Draco symbol. If the
+	character is not visible when you examine the source file, it may be
+	a control character, or a character with the high bit set. In such
+	cases, completely retype the line on which the error occurred.
+
+    31 - cannot use 'sizeof' on arrays with '*' dimensions
+
+	The total size of an array parameter which is declared using one or
+	more dimensions as '*', is not known until run-time. Since 'sizeof'
+	is a strictly compile-time operation, it cannot be applied to such
+	arrays.
+
+    32 - expecting identifier in declaration
+
+	When parsing a declaration (of any kind - type, variable, constant,
+	field, enumeration type value, etc.) an identifier was not
+	encountered when one was expected. This normally means that you have
+	accidentally tried to use one of Draco's reserved words (including
+	the machine-specific ones) as a variable name. This message can also
+	occur if the parser gets confused by syntax errors in a set of
+	declarations.
+
+    33 - expecting ',' as separator in list
+
+	The compiler uses the same code to check for separating commas in 
+	lists of several types (e.g. declarations, procedure parameteters). 
+	The expected comma was not found. Again, this can be caused by an 
+	actual missing or mistyped comma, or by a previous syntax error in 
+	the declaration, call, etc.
+
+    34 - expecting '{'
+
+	The left brace bracket which is part of a structure, union or
+	enumeration type was not found. Normally, you will have just
+	forgetten to put it in, but this can also mean a preceeding syntax
+	error, or just that you are trying to do something that the language
+	doesn't allow.
+
+    35 - missing ']'
+
+	The closing square bracket in an array declaration or the indexing
+	of an array was not found when expected. As usual, this indicates
+	either a forgotten or mistyped ']', or preceeding syntax errors
+	which have confused the parser.
+
+    36 - identifier is not a defined type
+
+	In a situation where a type is expected, an identifier has occurred
+	which is not a type which has already been declared. Note that the
+	use of undefined types (identifiers which will later be declared as
+	types) is ONLY allowed following the '*' type constructor. Again,
+	this message can occur if the parser is confused by previous syntax
+	errors.
+
+    37 - numeric constant required
+
+	Several placed in the language require a numeric constant (or a
+	compile-time expression yielding a numeric value). In one of these
+	places, the expression found either could not be evaluated at
+	compile time, or it yielded a non-numeric type. Some of these places
+	are: 'signed'/'unsigned' types, array bounds, simple constants 
+	inside array or structure constants and case indices.
+
+    38 - positive value required
+
+	This is related to error number 37. Many of those same places require
+	that the constant be positive. The value was negative or 0.
+
+    39 - missing '}' in enumeration type
+
+	The closing brace bracket for an enumeration type was not found when
+	it was expected. As usual, this can be caused by an actual missing or
+	mistyped '}', or by a preceeding syntax error.
+
+    40 - only parameter arrays can have '*' dimensions
+
+	The '*' form of array dimension can only be used at the top level of
+	arrays which are the formal parameters of a procedure. All other
+	array dimensions must be constant expressions.
+
+    41 - error # 41
+
+	This error number is not currently uses.
+
+    42 - syntax error - expecting type
+
+	The parser is in a situation where a type is expected, but the
+	current input is not a symbol which can be the start of a type. This,
+	as usual can result from a typo in the current symbol, or from a
+	preceeding syntax error.
+
+    43 - missing '=' in type definition
+
+	The form when declaring new types is the name of the new type,
+	followed by an equals sign, followed by the definition of the type.
+	In such a declaration, the '=' was missing.
+
+    44 - constant value must be string or compile-time expression
+
+	When declaring named constants, the value given to the constant must 
+	be either a string ('chars' or single character), or a numeric value 
+	which is the result of a compile-time expression. The current value 
+	isn't one of those. This can result from the use of a variable 
+	instead of a constant in the expression, a syntax error in the 
+	expression, the use of an undeclared symbol in the expression, or the
+	use of a construct which cannot be evaluated at compile-time. 
+
+    45 - parameters to 'code' must be constants or variables
+
+	The machine specific 'code' construct, which allows the insertion of
+	native machine code into the emitted code stream, must be given 
+	simple constant expressions specifying the bytes to be emitted, or
+	the names (possibly indexed) of local or global variables. The
+	expression in question was not one of those alternatives.
+
+    46 - missing 'corp' at end of procedure
+
+	The parser has decided that the current procedure has ended, since
+	the current symbol cannot start a statement, but the symbol found was
+	not the expected 'corp'. This can be an actual forgotten 'corp', but
+	is more likely to result from previous syntax errors.
+
+    47 - 'vector' procedures cannot return a result
+
+	Procedures declared as interrupt vectors using the 'vector' word,
+	cannot return a result, they must yield 'void'.
+
+    48 - missing ':' after procedure header
+
+	When defining a procedure, there must be a colon after the returned
+	type. This message most often results from putting a semicolon there
+	instead of a colon. It could also occur as a result of syntax errors
+	in the procedure header.
+
+    49 - 'vector' procedures cannot have parameters
+
+	Procedures declared as interrupt vectors using the 'vector' word,
+	cannot have any parameters.
+
+    50 - result expression given for 'void' procedure
+
+	A procedure declared as yielding 'void' cannot have a result
+	expression (the expression at the end of the body of a procedure
+	which is to yield a result).
+
+    51 - no result given for procedure when one was declared
+
+	A procedure declared as yielding a result (type other than 'void'),
+	did not have a result expression at the end of it's body.
+
+    52 - statement cannot be used as 'bool' condition
+
+	The value used for a condition (the part after the 'if' or the part
+	after the 'while') was a statement, or a call of a procedure which
+	yields 'void'. Unlikely to occur.
+
+    53 - only 'bool' values can be used as conditions
+
+	The value used for a condition (the part after the 'if' or the part
+	after the 'while') must be an expression of type 'bool'. This will
+	usually mean that an ex- C programmer has forgotten to compare a
+	value with 0.
+
+    54 - statement cannot be used as expression
+
+	Somewhere in an expression, a statement, or a call of a procedure
+	which yields 'void' has been used. This will normally result when
+	a large program is restructured, and this particular use of a
+	procedure was missed. This message could also occur as a result of
+	preceeding syntax errors.
+
+    55 - constant is out of range for the destination type
+
+	When assigning values (either in a constant declaration, an actual
+	assignment statement, or when passing a parameter), the value being
+	used is too large for the type it is being used with. E.g. if X is
+	declared as 'signed 10', this message will result from trying to use
+	a value less than -10 or greater than +10 with X. This checking does
+	not apply in expressions, where all numeric types are compatible.
+	This error can also occur in a 2nd or succeeding branch of an if-
+	expression or case-expression. The type of the result of these
+	constructs is taken from the type of the first alternative. If this
+	is a numeric type, then succeeding alternatives must be compatible
+	with it.
+
+    56 - statements cannot be used as expressions in assignments
+
+	When assigning a value (either in a constant declaration, an actual
+	assignment statement, or when passing a parameter), the value being
+	assigned is actually a statement, not an expression. This can happen
+	if a procedure which used to return a value has been changed to not
+	return a value, and this use of it was not fixed up. It can also
+	happen as a result of preceeding syntax errors.
+
+    57 - value is not type compatible with destination
+
+	This is the most common error message in Draco programs. You will 
+	quickly learn to hate this message. It can occur in a large number 
+	of circumstances (the compiler uses common code to check for type 
+	compatibility). Basically, the value flagged has a type which is not 
+	compatible with what is currently expected. Unfortunately, the same 
+	location in the program can have several expected types, resulting 
+	from the type of a destination in an assignment statement, the 
+	expected type of a right hand operand which the current symbol is a 
+	rightmost part of (there can be several such situations for a given 
+	symbol) or the expected type of a parameter to a procedure. You will 
+	have to examine the expected types of the various situations in 
+	which the current symbol is participating (often by checking the 
+	declarations of various identifiers), and follow through the rules 
+	for the needed types for the various operators nearby. Fortunately, 
+	most situations will be fairly straightforward - passing the wrong 
+	type of value to a procedure, assigning a character to an integer, 
+	etc. See the note on error #55 for another tricky case.
+
+    58 - mixed statements/expressions as 'if' or 'case' alternatives
+
+	The current branch of an 'if' or 'case' is an expression, when the
+	first branch was a statement, or the current branch is a statement
+	when the first branch was an expression. This message will often
+	result from putting a semicolon after the expression, since the
+	semicolon is used to 'throw the previous thing away, turn it into a
+	statement'. It can also result from changing a convention in your
+	program, but forgetting to change a use of that convention in the
+	current 'if' or 'case'.
+
+    59 - alternatives in 'if' or 'case' are not type compatible
+
+	The resulting type of an 'if' or 'case' expression is determined from
+	the first alternative which is not an undefined symbol. The types of
+	later alternatives must be compatible with this chosen type. All
+	numeric types are compatible, but various enumeration types, pointer
+	types, procedure types, structure types, etc. are not compatible with
+	anything except themselves (if both types are named) or an equivalent
+	type (if one or more are unnamed types). Again, note that the
+	compiler will object to a constant which will not fit in the
+	determined numeric type.
+
+    60 - missing 'then' in 'if'
+
+	After the condition in an 'if' or 'elif', there must be a 'then'. If
+	this message occurs, there has probably been a syntax error in the
+	condition (unless you actually omitted or misspelled the 'then').
+
+    61 - missing 'else' or 'fi' in 'if'
+
+	After a body in an 'if', there must be either the closing 'fi', the
+	'else' part or an 'elif' part. The current symbol is none of these
+	words. This will normally be caused by misspelling the word, or by a
+	preceeding syntax error which has got the compiler confused. This
+	type of error (missing keyword) will often occur when 'while's and
+	'if's are nested, and the closing keyword of the nested compound was
+	forgotten or misspelled.
+
+    62 - 'if' expressions must have an 'else' part
+
+	When the first alternative of an 'if' is an expression, the 'if' is
+	assumed to be an if expression. As such, it must have an 'else' part
+	(an expression must always yield a value). Syntax errors can also
+	cause this message to appear spuriously.
+
+    63 - missing 'fi' in 'if'
+
+	The closing 'fi' in an if statement or if expression is missing or
+	was misspelled. Again, this can occur spuriously as a result of
+	earlier syntax errors.
+
+    64 - missing 'do' in 'while' or 'for'
+
+	The 'do' in a while statement or a for statement did not appear when
+	it was expected. Either it was forgotten or misspelled, or a previous
+	syntax error has confused the parser.
+
+    65 - missing 'od' in 'while' or 'for'
+
+	The closing 'od' in a while statement or for statement did not appear
+	when it was expected. Either it was forgotten or misspelled, or a
+	preceeding syntax error has confused the parser.
+
+    66 - body of 'while' must not be an expression
+
+	The body of a while statement (the part between the 'do' and the
+	'od') must not be an expression. This error would most likely result
+	from a convention change which changes a procedure which previously
+	did not return a value into one which does return a value.
+
+    67 - expressions cannot be used as statements
+
+	Unlike C, Draco will not automatically throw away the value of an
+	expression if that expression is used as a statement. The value must
+	be handled by assigning it to a variable, or by some other means.
+	('pretend'ing the value to be 'void' works, but is very ugly.) This
+	message will appear in a position where the parser expects a semi-
+	colon in a statement sequence.
+
+    68 - missing ';'
+
+	The parser has just parsed a complete statement, and, since the
+	current symbol is not a statement-sequence terminator like 'fi' or
+	'od', a separating ';' is expected. This error often results from a
+	forgotten semicolon, but can also result from a preceeding syntax
+	error having confused the parser.
+
+    69 - missing ','
+
+	The comma, expected as part of a 'pretend', 'dim', 'input', etc.
+	construct was missing. This is normally just a typo, but can be
+	caused (as usual) by a preceeding syntax error.
+
+    70 - missing ')'
+
+	The closing parenthesis is missing from a 'pretend', 'dim', 'input',
+	etc. construct. A typo.
+
+    71 - value being called is not a procedure
+
+	In a procedure call, where the value to be called is not just a
+	simple procedure name, but is a more complex expression, the value
+	resulting is not of a procedure type. This message can be caused by
+	a syntax error, since any name expression, followed immediately by
+	an open parenthesis, is taken to be a procedure call.
+
+    72 - too many parameters to procedure
+
+	When calling a procedure, you have attempted to pass more parameters
+	then the declaration or definition of that procedure specified.
+
+    73 - actual parameter to procedure is of wrong type
+
+	A procedure expects two or more parameters of the same type. A
+	successive actual parameter was not of the required type.
+
+    74 - actual array parameter does not match required type
+
+	A procedure, which expects an array parameter, was called with a
+	parameter of the wrong type (either the array had the wrong number
+	of dimensions, some dimension didn't match, or the element types
+	differed).
+
+    75 - array with '*' dimension cannot be passed as fixed array
+
+	A procedure declared with an array parameter with a '*' dimension can
+	be passed any compatible array - that dimension can be any size. The
+	reverse situation does not hold. An array parameter with a '*'
+	dimension cannot be passed to a procedure which requires an array of
+	fixed size in that dimension.
+
+    76 - not enough parameters to procedure
+
+	The declaration or definition of the procedure being called included
+	more parameters than were given in this call. Parameters may not be
+	omitted.
+
+    77 - missing '('
+
+	The opening parenthesis in a 'pretend', 'dim', 'input', etc.
+	construct is missing. A typo.
+
+    78 - too many values
+
+	In an array or structure constant, the number of values required in
+	any give sublist is determined by the size of the array in that
+	dimension or by the number of fields in the structure. In this 
+	instance, too many values were encountered. This could actually be
+	caused by previous syntax errors confusing the parser.
+
+    79 - too few values
+
+	This error is very similar to error # 78, except that it is less
+	likely to result from a syntax error.
+
+    80 - cannot change the type of statements
+
+	The 'pretend' construct cannot be used to force a type onto a
+	statement (which has type 'void'). To do so would not yield any
+	useful value.
+
+    81 - 'dim' can only be used with arrays
+
+	The first arguement to the 'dim' construct must be the name of an
+	array variable whose dimension is being retrieved.
+
+    82 - error # 82
+    
+	This error number is not currently used.
+
+    83 - dimension selector is 0 or too big
+
+	The value given as a dimension selector was <= 0, or was greater than
+	the number of dimensions in the array.
+
+    84 - cannot next structured constants
+
+	Inside an array or structure constant, nested array and structure
+	constants are done directly - the subtype name is not given. What
+	appeared to be a subtype name requesting a nested structured
+	constant appeared. This is likely to be an accidental inclusion of
+	the subtype name, but could also be a syntax error.
+
+    85 - cannot bracket a statement
+
+	Parentheses were used to mark off an inner expression, but that
+	expression turned out to be a statement (or a call to a procedure
+	which yields 'void'). This will normally result from a change in
+	convention, in which a procedure which used to return a value no
+	longer does so.
+
+    86 - mismatched ')'
+
+	This message occurs when the parser finds a closing parenthesis when
+	it isn't expecting one. This will usually indicate a missing opening
+	parenthesis, or too many closing parentheses, but can also result
+	from a previous syntax error having confused the parser.
+
+    87 - syntax error - undecipherable statement or expression
+
+	This is a catch-all message given by the parser when the current
+	symbol is not the beginning of any construction of the language. For
+	example, starting a statement with '/', 'do', or ':=' will yield
+	this message. This usually indicates a typo, but can be caused by
+	a preceeding syntax error having confused the compiler.
+
+    88 - improper use of field name
+
+	Field names can only be used in field selection, where they follow
+	the '.' field selector. Any other use of a field name will cause this
+	message. The problem is usually a typo (misspelled name), but can
+	also result from the parser not recognizing a field selection
+	because the type of the value being selected from is wrong. A common
+	case of this is with dereferencing, as in 'x* .next'. If the type of
+	'x' isn't a pointer type, and there is a blank between the '*' and
+	the '.', then the '*' will be taken as a multiplication operator,
+	and the field selection will not be recognized.
+
+    89 - cannot index anything except arrays
+
+	The only use of '[' in a Draco program is in array declarations and
+	array indexing. In indexing, the expression to the left of the '['
+	must yield an array value. Any other type of value will cause this
+	message.
+
+    90 - this value cannot be used as an array index
+
+	Arrays can only be indexed by numeric and enumeration types.
+
+    91 - value is greater than declared array dimension
+
+	If a value indexing an array is a constant, the compiler will check
+	that it is appropriate for that array. If the value is negative or
+	greater than the size of that dimension, this message will be
+	produced. Note that the compiler will accept an index equal to the
+	size of the dimension, which is actually one too large since indexing
+	starts with 0. This slight fudge is done to allow the C convention
+	of creating a pointer to just past the last element of an array and
+	having some process continue until a pointer into that array hits
+	the limit. E.g.
+
+	    [N] int a;
+	    *int p;
+
+	    p := &a[0];
+	    while p ~= &a[N] do
+		...
+		p := p + sizeof(int);
+	    od;
+
+    92 - not enough indexes for this array
+
+	The closing ']' in array indexing was encountered before there had
+	been enough index values for the array. I.e. the declared number of
+	dimensions is greater than the number provided.
+
+    93 - too many indexes for this array
+
+	The declared dimensions in the array have run out, but more index
+	expressions appear to be present. I.e. the number of index
+	expressions provided is greater than the declared number of
+	dimensions in the array.
+
+    94 - this value is not a structure - can't select from it
+
+	The '.' field selection operator can only be applied to values which
+	are of structure or union types. This can be caused by a typo, or by
+	a syntax error which has caused the compiler to be confused about the
+	type of the current object.
+
+    95 - this identifier is not a field name
+
+	The identifier following the '.' field selection operator was not
+	declared as a field of a structure. This will normally result from
+	mistyping the identifier.
+
+    96 - this field is not an element of this structure/union
+
+	For a value of a given structure or union type, only the fields
+	declared in that type can be selected from the value. This is unlike
+	some versions of C, which allow any field to be selected from any
+	structure - a rather error-prone choice.
+
+    97 - expecting field name
+
+	The symbol appearing after the '.' field selection operator was not
+	an identifier. This can result from mistyping the field name, or
+	from a preceeding syntax error having confused the parser.
+
+    98 - cannot take the address of this value
+
+	Only objects which have an address in memory can be used as the
+	operand for the '&' address-of operator. E.g. an expression like
+	'a + b' exists only in a register, it does not have an address.
+
+    99 - this value is not suitable for bit operations
+
+	The bit shift operators (<< and >>) can only shift unsigned numeric
+	values. Signed shifts can be done using the multiplication and
+	division operators.
+
+    100 - this value is not suitable for numeric operations
+
+	The various numeric operators (unary +, -, and |; binary +, -, *, /
+	and %) must have numeric values as their operands (exception: one
+	operand of +, the left operand of -, or both operands of - can be
+	of pointer or enumeration types).
+
+    101 - this value is not suitable for the '+'/'-' operations
+
+	The operands to binary '+' must be both numeric, or one can be of a
+	pointer or enumeration type. The operands to binary '-' must be both
+	numeric, or the left-hand operand can be of a pointer or enumeration
+	type, or both operands can be of the same pointer or enumeration
+	type.
+
+    102 - illegal combination of pointer or enumeration with number
+
+	The operands to binary '+' must be both numeric, or one can be of a
+	pointer or enumeration type. The operands to binary '-' must be both
+	numeric, or the left-hand operand can be of a pointer or enumeration
+	type, or both operands can be of the same pointer or enumeration
+	type.
+
+    103 - expression value cannot be made into an array or structure
+
+	When the 'pretend' construct is being used to type-cheat, some type
+	changes are never meaningful. In particular, an expression, as in
+	'a + b' cannot possibly be used as an array or structure. It can,
+	however, be used as a pointer to an array or structure.
+
+    104 - cannot compare signed v.s. unsigned except with '=' or '~='
+
+	Signed and unsigned numeric values use the same bit pattern to
+	represent different values. For example, in 16 bits, the value 0xffff
+	is -1 if signed, but 65535 if unsigned. In comparing a signed value
+	to an unsigned value, what is the result? Since it is often useful
+	to compare such values, and since the '=' and '~=' comparisons
+	yield the same answers for signed and unsigned values, those
+	comparisons, and not any others, are allowed between a signed value
+	and an unsigned value. Note, however, that in 16 bit arithmetic,
+	the result is that -1 (a signed value) will be equal to 65535 (an
+	unsigned value). Similar results hold for all negative values.
+
+    105 - attempted multiplication/division by zero
+
+	During the compile time evaluation of an arithmetic expression, the
+	compiler detected an attempt to divide by zero.
+
+    106 - 'not' can only be used with 'bool' values
+
+	The argument to the 'not' construct must be of type 'bool'. Use the
+	'~' operator to complement bits in a value.
+
+    107 - 'and' and 'or' can only be used with 'bool' values
+
+	Both arguments to the 'and' and 'or' boolean constructs must be of
+	type 'bool'. Use the operators '&' and '|' to operate on the bits
+	of values. C programmers may run into this message by forgetting to
+	compare a value with 0.
+
+    108 - cannot assign to this
+
+	The object to the left of the ':=' construct or one of the 
+	parameters to a 'read' or 'readln' construct, must be one which has 
+	storage associated with it, i.e. which has an address. E.g. it is 
+	not meaningful to say 'a + b := c'. Draco does not support nested 
+	or multiple assignments. 
+
+    109 - 'case' selectors must be numeric or an enumeration type
+
+	The value being used as a selector or index in a case statement or a
+	case expression must be of a numeric or enumeration type. It would
+	perhaps be marginally useful to allow other types, such as pointer
+	or procedure types, but Draco does not support this usage.
+
+    110 - 'case' cannot have more than one 'default'
+
+	Case statements and case expressions can have a 'default' case which
+	is selected if no other explicit selector value is matched. It is
+	not meaningful to have more than one default. Delete one of them.
+
+    111 - 'case' index must be compile-time expression
+
+	The values used to identify the various alternatives in a case
+	statement or a case expression must all be values which can be
+	computed at compile time. Some languages allow such values to be
+	computed at run-time, but Draco does not. The same effect can be
+	achieved by using an 'if' statement or expression.
+
+    112 - 'case' indexes cannot occur more than once
+
+	The constants used as the various alternative indexes in a case
+	statement or a case expression must all be unique. This will normally
+	be a typo in a number or a logic error when using compile-time
+	expressions as the 'case' indexes.
+
+    113 - missing ':' after 'case' index
+
+	The syntactic form of case indexes is the word 'incase', followed by
+	the index value, followed by a colon. That colon is missing, or the
+	value contained a syntax error which has confused the parser.
+
+    114 - 'case' must have at least one alternative
+
+	Each case statement or case expression must have at least one
+	alternative, otherwise they are not meaningful. This unlikely
+	message could occur if syntax errors have caused the parser to not
+	recognize all of the alternatives, or have caused it to prematurely
+	end the case.
+
+    115 - missing 'esac' in 'case'
+
+	Case statements and expressions are terminated by a closing 'esac'
+	('case' spelled backwards). That 'esac' was not found when it was
+	expected. This can be caused by forgetting the 'esac', spelling it
+	wrong, or perhaps by a syntax error having confused the parser.
+
+    116 - body of 'for' must not be an expression
+
+	The body of a for statement (the part between the 'do' and the 'od')
+	must not be an expression, i.e. must not yield a value. This is most
+	likely caused by a change in convention in which a procedure which
+	did not previously yield a value now yields one.
+
+    117 - 'for' counter must be numeric, enum or pointer variable
+
+	The object appearing immediately after the 'for' in a for statement
+	is the location which is to be stepped through the sequence of
+	values generated in the for statement. In Draco, this object must be
+	a simple variable (global, file or local). Also, the type of the
+	variable must be a numeric type, an enumeration type or a pointer
+	type. This error would normally be caused by using the wrong variable
+	for the counter variable.
+
+    118 - missing 'from' in 'for'
+
+	The starting point for a for statement is specified via the word
+	'from' followed by an expression giving the starting point. The
+	word 'from' was missing. This unlikely error is probably caused by
+	typing the word 'from' incorrectly, or by forgetting it altogether.
+
+    119 - missing 'upto' or 'downto' in 'for'
+
+	The ending point for a for statement is specified via the word
+	'upto' or the word 'downto' followed by an expression giving the
+	ending point. Neither 'upto' nor 'downto' was found. This error is
+	typically caused by mispelling 'upto' or 'downto' (people have a
+	tendency to use 'to'), or by a preceeding syntax error in the 'from'
+	or 'by' expression.
+
+    120 - value is not a pointer
+
+	The '*' postfix operator (the de-referencing operator) can only be
+	applied to values of pointer types. The value used with this '*'
+	operator was not of a pointer type. This will normally result from
+	a bad declaration, or a typo in the expression before the '*'.
+
+    121 - can only 'free' pointers
+
+	The 'free' construct, which is used to release areas of storage
+	obtained dynamically with 'new', accepts as its singe parameter a
+	pointer to the region to be released. The type of the parameter must
+	therefore be a pointer type.
+
+    122 - can only take 'range' of numerics and enumerations
+
+	The 'range' construct is used to return the upper bound on a numeric
+	type, whether built-in or user defined, or to return the number of
+	elements in an enumeration type. It cannot be applied to other types.
+
+    123 - 'by' value is out of range for loop variable
+
+	The 'by' value in a 'for' statement is such that, with that value,
+	the 'for' does not make sense.
+
+    124 - expecting 'input' or 'output' in channel type
+    125 - expecting 'text' or 'binary' in channel type
+
+	The 'channel' type specifier consists of one of the word 'channel',
+	followed by one of 'input' or 'output', followed by one of 'text' or
+	'binary'. Something else occurred. This is most likely a mispelling
+	of one of the keywords, or an attempt to use the 'channel' keyword
+	as a normal identifier.
+
+    126 - first operand of 'open' must be a channel
+
+	All forms of the 'open' construct require a channel expression as
+	their first operand. The expression found was not of a channel type.
+
+    127 - channel for standard input/output must be text channel
+
+	The default (standard) input/output channels are attached to the
+	CP/M console. They must therefore be 'text' channels. Special
+	control sequences, etc. can be sent using escaped characters.
+
+    128 - file name for 'open' must be a chars value
+
+	The form of the 'open' construct which is used to open files must 
+	have a chars value (expression of type *char) as its third operand.
+	This operand is the name of the file to open. Remember that Draco
+	does not change an array expression into a pointer to the first
+	element of the array as C does.
+
+    129 - wrong proc type for this channel type
+
+	When opening a channel to read/write through a procedure, the type
+	of the supplied procedure must be correct. For a text input 
+	channel, the procedure must be 'proc()char'; for a text output 
+	channel, the procedure must be 'proc(char ch)void'; for a binary 
+	input channel, the procedure must be 'proc()byte'; and for a binary 
+	output channel, the procedure must be 'proc(byte b)void'.
+
+    130 - cannot open binary channel on a *char value
+
+	The memory-to-memory formatting capabilities provided by attaching 
+	a channel to a memory buffer only work on text channels.
+
+    131 - illegal second operand of 'open'
+
+	The second operand (if any) to the 'open' construct varies, 
+	depending on what kind of channel is being opened. The expression 
+	given was not one of the allowed types. Check the description of 
+	Draco's I/O facilities for details.
+
+    132 - operand to 'close'/'ioerror' must be a channel
+
+	The operand (if any) to the 'close' and 'ioerror' constructs must 
+	be an expression yielding a channel to close or check.
+
+    133 - special first operand of 'read'/'write' must be a channel
+
+	When reading from or writing to anything other than the terminal, a 
+	channel expression is supplied to the 'read' and 'write' 
+	constructs. This special first operand is recognized by being 
+	followed by a semicolon instead of the usual comma. The semicolon is
+	required even if nothing is being read/written (e.g. when doing a
+	'readln'/'writeln'). An expression followed by a semicolon was 
+	found, but the expression was not of a channel type.
+
+    134 - invalid operation for a channel of this type
+
+	Certain of the I/O operations can only be performed on channels of 
+	the appropriate type. For example, you can't read on an output 
+	channel and vice versa. Other cases are trying to 'readln'/'writeln'
+	on a binary channel, or trying to use a format code on a binary 
+	channel.
+
+    135 - format codes can only be used with numeric values
+
+	Format and size specifiers, given after colons after the expression 
+	to be output in a 'write' or 'writeln', can only be used with 
+	numeric expressions.
+
+    136 - invalid format code
+
+	The only format codes recognized in 'write'/'writeln' statements 
+	are as follows:
+
+	    i - signed decimal
+	    u - unsigned decimal
+	    x - hexadecimal
+	    o - octal
+	    b - binary
+
+    137 - field width must be numeric value
+
+	The field width given on a 'write'/'writeln' for formatted output 
+	of numeric values must be a numeric expression.
+
+    138 - invalid type for text I/O
+
+	In binary I/O, all values can be read/written since the operation
+	simply involves the passing of byte streams. For text I/O, however, 
+	only types which have a language known textual representation can 
+	be read/written. This includes character, chars and numeric values.
+
+    139 - input/output constructs not supported by this version
+
+	This error occurs only when trying to use one of the I/O constructs 
+	with a version of the compiler which has them conditioned out. They 
+	are conditioned out to save compiler code space for use on a 
+	smaller memory system.
+
+    140 - this type has no constants
+
+	A type or subtype encountered when parsing a structured (array or
+	structure) constant is one which doesn't have a textual 
+	representation. For example, procedure types cannot currently be
+	used in such constants.
+
+    141 - type is not an array or structure
+
+	Structured constants in line, which consist of the name of the type 
+	followed by a parenthesized list of values, can only be used with 
+	array and structure constants. Other types, such as simple numeric 
+	types, have constant forms of their own.
+
+    142 - missing external name in operator type
+
+	An operator type construct appears to be missing the string 
+	constant specifying the external name the compiler is to prefix the 
+	function names with. This string constant appears after the opening 
+	parenthesis of an operator type. Note that types in Draco have no 
+	syntactic ambiguities such as C types have, so parenthesization is
+	neither needed nor supported.
+
+    143 - operation not supported by this operator type
+
+	The operation requested on a value of an operator type is one which 
+	the operator type specification did not enable. This could result 
+	from a variety of causes, such as a bad declaration, or a very 
+	confusing syntax error.
+
+    144 - operator types cannot be mixed with other types
+
+	Values of operator types can only participate in expressions with
+	values of that same operator type. The compiler has no way to do
+	conversions, and it was felt inappropriate to either require the
+	type implementor to supply a whole range of conversion routines, or
+	to have the error not detected until link time (by not finding the
+	special-named conversion routine).
+
+    145 - can only compare with '=' or '~=' for this type
+
+	The compiler currently allows array and structure types to be 
+	compared using '=' and '~='. This is OK on the 8080 version where 
+	there will be no padding in structures, but is in general not very 
+	meaningful, so will be removed from later versions of the compiler. 
+	This error message results from trying to use an order comparison 
+	with such a type (or an operator type for which OPCPR was not 
+	specified).
+
+    146 - 'error' must have string argument
+
+	The 'error' construct, which takes a string constant and prints it
+	as an error message at compile time, was given an argument which 
+	did not have type *char.
+

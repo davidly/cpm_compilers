@@ -1,0 +1,198 @@
+ushort
+    W1 = 1,
+    W2 = 5,
+    W3 = 25;
+
+type
+    TTTMOVE = enum {TTT_EMPTY, TTT_X, TTT_O};
+
+[3, 3] TTTMOVE TTTBoard;
+[3] ushort TTTValue;
+
+proc nonrec initBoard()void:
+    ushort r, c;
+
+    for r from 0 upto 2 do
+	for c from 0 upto 2 do
+	    TTTBoard[r, c] := TTT_EMPTY;
+	od;
+    od;
+corp;
+
+proc nonrec eval(TTTMOVE player)short:
+    short score;
+    ushort i, j, count1, count2, count3, count4;
+
+    score := 0;
+    count3 := 0;
+    count4 := 0;
+    for i from 0 upto 2 do
+	if TTTBoard[i, i] = player then
+	    count3 := count3 + 1;
+	elif TTTBoard[i, i] ~= TTT_EMPTY then
+	    count3 := 10;
+	fi;
+	if TTTBoard[i, 2 - i] = player then
+	    count4 := count4 + 1;
+	elif TTTBoard[i, 2 - i] ~= TTT_EMPTY then
+	    count4 := 10;
+	fi;
+	count1 := 0;
+	count2 := 0;
+	for j from 0 upto 2 do
+	    if TTTBoard[i, j] = player then
+		count1 := count1 + 1;
+	    elif TTTBoard[i, j] ~= TTT_EMPTY then
+		count1 := 10;
+	    fi;
+	    if TTTBoard[j, i] = player then
+		count2 := count2 + 1;
+	    elif TTTBoard[j, i] ~= TTT_EMPTY then
+		count2 := 10;
+	    fi;
+	od;
+	if count1 ~= 0 and count1 < 10 then
+	    score := score + TTTValue[count1 - 1];
+	fi;
+	if count2 ~= 0 and count2 < 10 then
+	    score := score + TTTValue[count2 - 1];
+	fi;
+    od;
+    if count3 ~= 0 and count3 < 10 then
+	score := score + TTTValue[count3 - 1];
+    fi;
+    if count4 ~= 0 and count4 < 10 then
+	score := score + TTTValue[count4 - 1];
+    fi;
+    score
+corp;
+
+proc nonrec genMove()void:
+    short score1, score2, maxscore;
+    ushort i, j, maxi, maxj;
+
+    maxscore := -128;
+    maxi := 0;
+    maxj := 0;
+    for i from 0 upto 2 do
+	for j from 0 upto 2 do
+	    if TTTBoard[i, j] = TTT_EMPTY then
+		TTTBoard[i, j] := TTT_O;
+		score1 := eval(TTT_O);
+		if score1 >= W3 then
+		    score1 := 127;
+		else
+		    score2 := eval(TTT_X);
+		    TTTBoard[i, j] := TTT_X;
+		    if eval(TTT_X) >= W3 then
+			score1 := 126;
+		    else
+			score1 := score1 - score2;
+		    fi;
+		fi;
+		if score1 > maxscore then
+		    maxscore := score1;
+		    maxi := i;
+		    maxj := j;
+		fi;
+		TTTBoard[i, j] := TTT_EMPTY;
+	    fi;
+	od;
+    od;
+    writeln("My move is ", maxi * 3 + maxj + 1, ".");
+    TTTBoard[maxi, maxj] := TTT_O;
+corp;
+
+proc nonrec printBoard()void:
+    ushort r, c;
+
+    writeln();
+    for r from 0 upto 2 do
+	if r ~= 0 then
+	    writeln("---------");
+	fi;
+	for c from 0 upto 2 do
+	    write(
+		if TTTBoard[r, c] = TTT_X then
+		    'X'
+		elif TTTBoard[r, c] = TTT_O then
+		    'O'
+		else
+		    r * 3 + c + '1'
+		fi
+	    );
+	    if c ~= 2 then
+		write(" | ");
+	    fi;
+	od;
+	writeln();
+    od;
+    writeln();
+corp;
+
+proc nonrec play()void:
+    ushort r, c, moves;
+    char ch;
+    bool gameOver;
+
+    initBoard();
+    gameOver := false;
+    moves := 0;
+    while not gameOver do
+	printBoard();
+	while
+	    write("Your move (1-9)? ");
+	    if not read(ch) then
+		moves := ioerror();
+		gameOver := true;
+		writeln("Game aborted.");
+		false
+	    elif ch < '1' or ch > '9' then
+		true
+	    else
+		r := (ch - '1') / 3;
+		c := (ch - '1') - r * 3;
+		TTTBoard[r, c] ~= TTT_EMPTY
+	    fi
+	do
+	    readln();
+	    writeln("Illegal move - try again.");
+	od;
+	readln();
+	if not gameOver then
+	    TTTBoard[r, c] := TTT_X;
+	    moves := moves + 1;
+	    if eval(TTT_X) >= W3 then
+		gameOver := true;
+		writeln("You win!");
+	    elif moves = 9 then
+		gameOver := true;
+		writeln("Tie game.");
+	    fi;
+	fi;
+	if not gameOver then
+	    genMove();
+	    moves := moves + 1;
+	    if eval(TTT_O) >= W3 then
+		gameOver := true;
+		writeln("I win!");
+	    fi;
+	fi;
+    od;
+corp;
+
+proc nonrec main()void:
+    char ch;
+
+    TTTValue[0] := W1;
+    TTTValue[1] := W2;
+    TTTValue[2] := W3;
+    while
+	play();
+	writeln();
+	write("Play again? (Y/N) ");
+	readln(ch) and (ch = 'y' or ch = 'Y')
+    do
+    od;
+corp;
+

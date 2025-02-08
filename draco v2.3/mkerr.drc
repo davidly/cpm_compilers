@@ -1,0 +1,268 @@
+#util.g
+
+file() Fyle;
+channel output binary Chout;
+int Count;
+
+proc nonrec err(*char message)void:
+    ushort i;
+    char end;
+
+    i := 0;
+    while message* ~= '\e' do
+	write(Chout; message*);
+	i := i + 1;
+	message := message + 1;
+    od;
+    if i > 64 then
+	writeln("Error message \#", Count, " is ", i - 64,
+		" characters too long.");
+	i := 64;
+    fi;
+    end := '\e';
+    while i ~= 64 do
+	write(Chout; end);
+	i := i + 1;
+    od;
+    Count := Count + 1;
+corp;
+
+proc nonrec err0()void:
+    /* 0 */
+    err("cannot open source file\r\n$");
+    err("cannot create .REL file\r\n$");
+    err("cannot close .REL file\r\n$");
+    err("error on write to .REL file\r\n$");
+    err("unexpected end-of-file on source input\r\n$");
+    err("program buffer overflow (procedure too long)\r\n$");
+    err("constant buffer overflow (too much constant)\r\n$");
+    err("constant table overflow (too many constants)\r\n$");
+    err("case table overflow (too many alternatives)\r\n$");
+    err("descriptor table overflow (nesting too deep)\r\n$");
+corp;
+
+proc nonrec err1()void:
+    /* 10 */
+    err("relocation table overflow (too many constant indexes)\r\n$");
+    err("symbol table overflow (too many identifiers)\r\n$");
+    err("type table overflow (too many types)\r\n$");
+    err("type information table overflow (types too complex)\r\n$");
+    err("compiler error - bad case in 'typSize' or 'checkDuplicate'\r\n$");
+    err("\" is already defined\r\n$");
+    err("\" is not defined\r\n$");
+    err("\" is not defined (subsequent use)\r\n$");
+    err("\" has been used but not defined\r\n$");
+    err("error \# 19\r\n$");
+corp;
+
+proc nonrec err2()void:
+    /* 20 */
+    err("expecting global declaration in include file\r\n$");
+    err("expecting procedure header or file global declaration\r\n$");
+    err("expecting procedure header for new procedure\r\n$");
+    err("value must be 0 - 255\r\n$");
+    err("'signed' range must be <= 32767\r\n$");
+    err("missing ')' in escaped character\r\n$");
+    err("bad digit in numeric constant\r\n$");
+    err("overflow in numeric constant\r\n$");
+    err("missing closing \"'\" in character constant\r\n$");
+    err("missing closing '\"' in string constant\r\n$");
+corp;
+
+proc nonrec err3()void:
+    /* 30 */
+    err("illegal character\r\n$");
+    err("cannot use 'sizeof' on arrays with '*' dimensions\r\n$");
+    err("expecting identifier in declaration\r\n$");
+    err("expecting ',' as separator in list\r\n$");
+    err("expecting '{'\r\n$");
+    err("missing ']'\r\n$");
+    err("identifier is not a defined type\r\n$");
+    err("numeric constant required\r\n$");
+    err("positive value required\r\n$");
+    err("missing '}' in enumeration type\r\n$");
+corp;
+
+proc nonrec err4()void:
+    /* 40 */
+    err("only parameter arrays can have '*' dimensions\r\n$");
+    err("error \#41\r\n$");
+    err("syntax error - expecting type\r\n$");
+    err("missing '=' in type definition\r\n$");
+    err("constant value must be string or compile-time expression\r\n$");
+    err("parameters to 'code' must be constants or variables\r\n$");
+    err("missing 'corp' at end of procedure\r\n$");
+    err("'vector' procedures cannot return a result\r\n$");
+    err("missing ':' after procedure header\r\n$");
+    err("'vector' procedures cannot have parameters\r\n$");
+corp;
+
+proc nonrec err5()void:
+    /* 50 */
+    err("result expression given for 'void' procedure\r\n$");
+    err("no result given for procedure when one was declared\r\n$");
+    err("statement cannot be used as 'bool' condition\r\n$");
+    err("only 'bool' values can be used as conditions\r\n$");
+    err("statement cannot be used as expression\r\n$");
+    err("constant is out of range for the destination type\r\n$");
+    err("statements cannot be used as expressions in assignments\r\n$");
+    err("value is not type compatible with destination\r\n$");
+    err("mixed statements/expressions as 'if' or 'case' alternatives\r\n$");
+corp;
+
+proc nonrec err6()void:
+    err("alternatives in 'if' or 'case' are not type compatible\r\n$");
+    /* 60 */
+    err("missing 'then' in 'if'\r\n$");
+    err("missing 'else' or 'fi' in 'if'\r\n$");
+    err("'if' expressions must have an 'else' part\r\n$");
+    err("missing 'fi' in 'if'\r\n$");
+    err("missing 'do' in 'while' or 'for'\r\n$");
+    err("missing 'od' in 'while' or 'for'\r\n$");
+    err("body of 'while' must not be an expression\r\n$");
+    err("expressions cannot be used as statements\r\n$");
+    err("missing ';'\r\n$");
+    err("missing ','\r\n$");
+corp;
+
+proc nonrec err7()void:
+    /* 70 */
+    err("missing ')'\r\n$");
+    err("value being called is not a procedure\r\n$");
+    err("too many parameters to procedure\r\n$");
+    err("actual parameter to procedure is of wrong type\r\n$");
+    err("actual array parameter does not match required type\r\n$");
+    err("array with '*' dimension cannot be passed as fixed array\r\n$");
+    err("not enough parameters to procedure\r\n$");
+    err("missing '('\r\n$");
+    err("too many values\r\n$");
+    err("too few values\r\n$");
+corp;
+
+proc nonrec err8()void:
+    /* 80 */
+    err("cannot change the type of statements\r\n$");
+    err("'dim' can only be used with arrays\r\n$");
+    err("error \#82\r\n$");
+    err("dimension selector is 0 or too big\r\n$");
+    err("cannot nest structured constants\r\n$");
+    err("cannot bracket a statement\r\n$");
+    err("mismatched ')'\r\n$");
+    err("syntax error - undecipherable statement or expression\r\n$");
+    err("improper use of field name\r\n$");
+    err("cannot index anything except arrays\r\n$");
+corp;
+
+proc nonrec err9()void:
+    /* 90 */
+    err("this value cannot be used as an array index\r\n$");
+    err("value is greater than declared array dimension\r\n$");
+    err("not enough indexes for this array\r\n$");
+    err("too many indexes for this array\r\n$");
+    err("this value is not a structure - can't select from it\r\n$");
+    err("this identifier is not a field name\r\n$");
+    err("this field is not an element of this structure/union\r\n$");
+    err("expecting field name\r\n$");
+    err("cannot take the address of this value\r\n$");
+    err("this value is not suitable for bit operations\r\n$");
+corp;
+
+proc nonrec err10()void:
+    /* 100 */
+    err("this value is not suitable for numeric operations\r\n$");
+    err("this value is not suitable for the '+'/'-' operations\r\n$");
+    err("illegal combination of pointer or enumeration with number\r\n$");
+    err("expression value cannot be made into an array or structure\r\n$");
+    err("cannot compare signed v.s. unsigned except with '=' or '~='\r\n$");
+    err("attempted multiplication/division by zero\r\n$");
+    err("'not' can only be used with 'bool' values\r\n$");
+    err("'and' and 'or' can only be used with 'bool' values\r\n$");
+    err("cannot assign to this\r\n$");
+    err("'case' selectors must be numeric or an enumeration type\r\n$");
+corp;
+
+proc nonrec err11()void:
+    /* 110 */
+    err("'case' cannot have more than one 'default'\r\n$");
+    err("'case' index must be compile-time expression\r\n$");
+    err("'case' indexes cannot occur more than once\r\n$");
+    err("missing ':' after 'case' index\r\n$");
+    err("'case' must have at least one alternative\r\n$");
+    err("missing 'esac' in 'case'\r\n$");
+    err("body of 'for' must not be an expression\r\n$");
+    err("'for' counter must be numeric, enum or pointer variable\r\n$");
+    err("missing 'from' in 'for'\r\n$");
+    err("missing 'upto' or 'downto' in 'for'\r\n$");
+corp;
+
+proc nonrec err12()void:
+    /* 120 */
+    err("value is not a pointer\r\n$");
+    err("can only 'free' pointers\r\n$");
+    err("can only take 'range' of numerics and enumerations\r\n$");
+    err("'by' value is out of range for loop variable\r\n$");
+    err("expecting 'input' or 'output' in channel type\r\n$");
+    err("expecting 'text' or 'binary' in channel type\r\n$");
+    err("first operand of 'open' must be a channel\r\n$");
+    err("channel for standard input/output must be text channel\r\n$");
+    err("file name for 'open' must be a *char value\r\n$");
+    err("wrong proc type for this channel type\r\n$");
+corp;
+
+proc nonrec err13()void:
+    /* 130 */
+    err("cannot open binary channel on a *char value\r\n$");
+    err("illegal second operand of 'open'\r\n$");
+    err("operand to 'close'/'ioerror' must be a channel\r\n$");
+    err("special first operand of 'read'/'write' must be a channel\r\n$");
+    err("invalid operation for a channel of this type\r\n$");
+    err("format codes can only be used with numeric values\r\n$");
+    err("invalid format code\r\n$");
+    err("field width must be numeric value\r\n$");
+    err("invalid type for text I/O\r\n$");
+    err("input/output constructs not supported by this version\r\n$");
+    /* 140 */
+    err("this type has no constants\r\n$");
+    err("type is not an array or structure\r\n$");
+    err("missing external name in operator type\r\n$");
+    err("operation not supported by this operator type\r\n$");
+    err("operator types cannot be mixed with other types\r\n$");
+    err("can only compare with '=' or '~=' for this type\r\n$");
+    err("'error' must have string argument\r\n$");
+corp;
+
+proc nonrec main()void:
+    FILENAME fn;
+
+    SetFileName(fn, "DRCERR.DAT");
+    pretend(FileDestroy(fn), void);
+    if not FileCreate(fn) then
+	writeln("Can't create error file.");
+	exit(1);
+    fi;
+    if not open(Chout, Fyle, "DRCERR.DAT") then
+	writeln("Can't open error file.");
+	exit(1);
+    fi;
+    Count := 0;
+    err0();
+    err1();
+    err2();
+    err3();
+    err4();
+    err5();
+    err6();
+    err7();
+    err8();
+    err9();
+    err10();
+    err11();
+    err12();
+    err13();
+    if not close(Chout) then
+	writeln("Error on close of error file.");
+	exit(1);
+    fi;
+    writeln(Count, " error messages written.");
+corp;
+

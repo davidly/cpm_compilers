@@ -1,0 +1,20 @@
+int SIZE = 14;
+
+proc main()void:
+    int i, j, k;
+    [SIZE] int oldArray, newArray;
+
+    for i from 1 upto SIZE - 1 do
+	newArray[i] := 0;
+    od;
+    newArray[0] := 1;
+    for i from 0 upto SIZE - 1 do
+	write(newArray[0] : (40 - 3 * i));
+	for j from 1 upto i do
+	    newArray[j] := oldArray[j] + oldArray[j - 1];
+	    write(newArray[j] : 6);
+	od;
+	oldArray := newArray;
+	writeln();
+    od;
+corp;

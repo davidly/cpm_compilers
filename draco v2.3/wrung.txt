@@ -1,0 +1,180 @@
+			The Game of WRUNG
+
+    WRUNG is a semi-graphical game which can be played on any CP/M computer
+system on which the terminal has an addressable cursor. It does not require
+any graphical output hardware. Instead, characters from the standard ASCII
+character set are moved around on the display screen to simulate the feel of
+graphic animation. WRUNG is not a real-time game, i.e. things do not happen
+at a fixed rate, but instead are triggered only by the player's actions.
+Attempting to do real-time operations on a wide variety of systems is
+hindered by the various CPU speeds, terminal communication speeds, etc. Also,
+when playing fast-paced real-time games, most players would tend to hit the
+keyboard harder than is good for it.
+
+    Within these constraints, WRUNG is still a fast-paced game with
+considerable opportunity for surprise, especially at the higher levels. It
+is best played on a 24 x 80 screen operating at at least 9600 baud, but
+other combinations will also work. The key layout used in WRUNG (along with
+other games in this series) is designed to use a standard numeric keypad
+arranged with 7, 8, 9 on the top row, 4, 5, 6 on the middle row, and 1, 2, 3
+on the bottom row. Users without such a keypad on their terminal can use the
+alternate pad on the main keyboard. The alternate keys are accepted in
+either upper or lower case, and correspond to the numerical keypad:
+
+		7, y, Y		8, u, U		9, i, I
+		4, h, H		5, j, J		5, k, K
+		1, b, B		2, n, N		3, m, M
+
+    The 5, j, J keys can be viewed as the player's current position, with the
+others being movement and action in the corresponding direction from the
+current position. Thus 8, u, U represent moving up, and 4, h, H represent
+moving left.
+
+    WRUNG is an original game, but does borrow several ideas from other
+games. It can be thought of as a cross between the various "Pacman" type
+games and games of the "Apple-Panic" type. At the higher levels, however,
+WRUNG has several features not found in either of the other games. The first
+version of WRUNG was written by Rick Gillespie while he was a graduate
+student in the Department of Computing Science at the University of Alberta.
+This version is a complete rewrite, including many new features. A similar
+version of WRUNG, written by Chris Thierman, runs on the University's Amdahl
+mainframe, under the MTS operating system.
+
+    The basic screen format used by WRUNG consists of a playing area and a
+statistics area. The statistics area is a single line at the bottom of the
+screen, and the playing area is the rest of the screen (normally 23 lines).
+In the playing area are several (normally 6) platforms, drawn with equals
+signs. Connecting these platforms are several (normally 6) ladders, drawn
+using vertical bars and underscores. On top of the platforms will be several
+monsters eggs, represented by periods, one or more monsters, represented by
+letters, and the player, represented by the 'at' sign. At higher levels,
+other characters will appear.
+
+    The eggs are stationary, but the player and the monsters can move around
+on the platforms and can move up and down the ladders. The monsters move
+each time the player moves. If they are on the same platform as the player,
+they move towards the player; if they are on a ladder, they move towards the
+platform the player is on; and if they are on some other platform, they move
+towards the nearest ladder which gets them to a platform closer to the one
+the player is on. This behaviour is fixed throughout the game, and can be
+used to advantage by the player.
+
+    The player must move around the platforms, smashing all of the monster
+eggs by running over them. At the same time, he/she must avoid being eaten
+by any monster. Asside from being able to move, the player can dig and fill
+in holes in the platforms. This can be done either to the left of the
+player or to the right. Typing any of 1, b or B will dig a hole to the left
+of the player; 3, m or M will dig to the right of the player; 7, y or Y will
+fill in a hole to the left of the player; and 9, i or I will fill in a hole
+to the right of the player. It takes 3 digs to produce a complete hole.
+Monsters and the player fall through any complete hole they pass over.
+Partial holes have a 1/3 or 2/3 chance of breaking through (after which they
+become complete holes) when something passes over them.
+
+    The player is hardy and survives all falls through holes. Monsters come
+in a range of strengths. 'a' monsters die after falling through any hole
+(except one in the bottom platform). 'b' monsters are stronger and do not
+die after falling from a platform to the platform below. They must fall
+through a pair of aligned holes in two platforms before they are killed.
+Similarly, 'c' monsters must fall 3 platforms, etc. Thus, there is much
+strategy in the placement of holes. If a monster or the player falls through
+a hole in the bottom platform, then they are positioned randomly on the top
+platform (possibly falling through a hole there!).
+
+    Points are given for breaking eggs and killing monsters. Each egg is
+worth one point, and each monster is worth points equal to it's strength
+(1 point for 'a's, 2 points for 'b's, 3 points for 'c's, etc.). As an added
+bonus, an extra 100 points is given for clearing all eggs from the screen.
+Each time the player digs or fills in a hole, one point is taken away, so
+optimal strategy can net greater points.
+
+    When all of the monsters have been killed, the round is over. The first 
+round has only a single 'a' monster, so it can be over quickly. At the end 
+of the round, a new set of platforms, ladders and eggs is produced. As 
+rounds go by, the number of monsters, and their strength, will increase. 
+Every 5 rounds, a new level of play will be reached. In the second level, 
+the monsters are all metamorphs - they will occasionally change their 
+strength. Thus a weak 'a' monster can suddenly become a strong 'e' monster. 
+The points given will increase in proportion to the level number. Points 
+taken away for digging and filling stay fixed at 1 each. 
+
+    After some practice, the first couple of levels will be fairly easy to
+handle. Later levels introduce new features which make survival and clearing
+the screen considerably more difficult. It takes a lot of time and work to
+progress to the higher levels. To aid in doing this, the game state may be
+saved at any time by pressing the 's' or 'S' keys. This produces a save
+file with type .RNG and file name derived from the player name. After saving,
+the log file is displayed and WRUNG terminates. A saved game can be resumed
+by giving the save file name as a parameter to WRUNG. Thus, for a player
+called "John", the saved game can be resumed by entering 'WRUNG JOHN' at
+the command level. Restoring from a save file does not delete or empty that
+save file, so there is no need to make backup copies of save files.
+
+    The space bar can be used along with the 5, j, J set to simply wait,
+i.e. to allow the monsters to move, without the player moving or digging.
+Keys r, R, and CONTROL-R will clear and redraw the screen. This is useful
+if your terminal resets itself (WRUNG assumes the terminal can keep up with
+it, which in some cases is not true) or if you get a transmission error to
+the terminal. During the game, entering '?' instead of a normal game key
+will display the instructions built-in to the game.
+
+    WRUNG will automatically maintain a log file, WRUNG.LOG, containing the 
+top ten scores. This file is an editable ASCII file, so you can edit in the 
+scores attained by your friends, thus giving yourself something to shoot 
+for. Scores approaching 100,000 are feasible, but will require considerable 
+skill. If 'WRUNG -' is entered at the command level, WRUNG will simply 
+display the log file. Entries in the log file are updated, and the file is 
+displayed, whenever a game is saved or lost. WRUNG will only use a WRUNG.LOG 
+file if one exists on the current disk. An empty file will be initialized 
+automatically, so you can enable logging by just creating an empty file
+called WRUNG.LOG. This can be done with any file editor. 
+
+    A typical section of the playing area might look like this:
+                                 _              _
+	     .              .   |_|      c     | |
+	=========|_|============|_|===-====================
+	         |_|            |_|
+	         |_|            |_|
+	    .    |_|     @ .  . |_|           ..        .
+	=========|_|==== =_================================
+	         |a|
+		 |_|
+	       . |_|     ..             .     b  .  .
+	=========|_|=======================================
+
+This section shows portions of 3 levels and 3 ladders, along with 14 monster
+eggs, 3 monsters and the player. The 'a' monster is on the ladder, moving up
+towards the player. If the player simply waits, it will fall through the
+completed hole and die when it hits the platform below the hole. The 'b'
+monster will be moving left, towards the ladder the 'a' monster is currently
+on. The 'c' monster will be moving left, towards the middle ladder. It has
+a 1/3 chance of falling through the 1/3 dug hole, and a 2/3 chance of falling
+through the 2/3 dug hole to the right of the player. Neither fall would kill
+it. If the player were to move left, he would fall through the hole. If he
+were to move right, he would have a 2/3 chance of falling through the hole
+to the right. If he fell, he would be between the 'a' and 'b' monsters, and
+would be doomed, unless he could quickly dig a new hole and escape through
+it. Note that the player has no control over the game when he is falling, and
+that the monsters get a move for each screen line that the player falls.
+
+    WRUNG must be configured to operate on specific terminals. In it's
+distributed form, it is supplied as CP/M file 'WRUNG.SET', which is actually
+a runnable .COM file, except that the terminal description information has
+not been filled in. This must be done using the CONFIG program (file
+CONFIG.COM, along with the database file CONFIG.DAT) which is included on
+the distribution diskette. See the accompanying writeup on CONFIG for details
+on how to configure programs.
+
+    One small hint to the desperate: the game's random number generator is
+set by having the CPU count while waiting for the user's response in certain
+cases. This is done in a standard CRT library, rather than in the WRUNG game
+itself. No such responses occur when playing a restored game, thus the random
+seed is not random. In such a case, if you absolutely MUST have a different
+roll of the dice, then simply request the instruction display by entering
+a '?'; this requires two user responses, and thus resets the random seed.
+This technique is normally considered cheating, but might be useful to those
+who can't bear to lose at a given position.
+
+    WRUNG, CONFIG, and the terminal independent CRT I/O routines are all
+written entirely in the Draco systems programming language.
+

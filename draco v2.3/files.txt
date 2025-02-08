@@ -1,0 +1,31 @@
+Draco Diskette #1 - Documentation and Sample Sources
+
+Documentation files:
+
+    DRACO.REF - first section of language and utility description
+    DRIO.REF - description of Draco's I/O facilities
+    OPTYPE.REF - description of Draco's "operator type" facility
+    DRUTIL.REF - description of the utility library
+    DRCERR.REF - description of all compiler error messages
+    DAS.REF - description of the simple Draco assembler
+    CRT.REF - description of the CRT routines in CRT.LIB
+    DED.DOC - description of DED (Draco EDitor)
+    DEDMAP.TXT - template to print to show key bindings in DED
+    QUEST.DOC - description of the workings of the Quest game system
+    CONFIG.TXT - writeup on the CONFIG CRT configuration program
+    ROBOTS.TXT - writeup on the ROBOTS game
+    NUCLEAR.TXT - writeup on the NUCLEAR game
+    LIFE.TXT - writeup on the LIFE game
+    WRUNG.TXT - writeup on the WRUNG game
+    SWITCH.TXT - writeup on the SWITCH system
+    FUTURE.TXT - notes on possible changes/extensions to Draco
+
+Source files:
+
+    XREF.DRC - the Draco cross referencer
+    HEDIT.DRC - hexadecimal file editor
+    - several of the traditional benchmark programs
+    - several small programs illustrating various points of the language
+    - the complete source to the Quest adventure system - just add an
+	adventure
+

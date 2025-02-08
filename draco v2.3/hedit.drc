@@ -1,0 +1,858 @@
+#util.g
+#crt.g
+
+word BUFFSIZE = 1024;
+
+ushort
+    FILECOL = 2,
+    ROCOL = 17,
+    POSCOL = 22,
+    HEXCOL = 29,
+    ERRORCOL = 34;
+
+ushort NLines, NCols;
+
+file(BUFFSIZE) Fyle;
+channel input binary Chin;
+channel output binary Chout;
+channel output text CRTOut;
+
+*char FileName;
+
+word FilePos, WindowPos, EndPos;
+ushort FilePosHigh, WindowPosHigh, EndPosHigh;
+
+ushort CursorLine, CursorColHex, CursorColChar;
+
+bool ReadOnly, Binary, HadError;
+
+proc nonrec err(*char message)void:
+
+    CRT_Move(NLines - 1, ERRORCOL);
+    CRT_EnterHighLight();
+    write(CRTOut; message);
+    CRT_ExitHighLight();
+    HadError := true;
+corp;
+
+proc nonrec abort(*char message)void:
+
+    CRT_Move(NLines - 1, ERRORCOL);
+    CRT_EnterHighLight();
+    write(CRTOut; message, ' ', ioerror(Chin), ' ', ioerror(Chout));
+    CRT_ExitHighLight();
+    CRT_Scroll();
+    CRT_Abort();
+corp;
+
+proc nonrec endOfFile()void:
+
+    err("End of file");
+corp;
+
+proc nonrec startOfFile()void:
+
+    err("Beginning of file");
+corp;
+
+proc nonrec displayPos()void:
+
+    CRT_Move(NLines - 1, POSCOL);
+    write(CRTOut; FilePosHigh : x : -2, FilePos : x : -4);
+corp;
+
+proc nonrec displayStatus()void:
+    ushort i;
+
+    HadError := false;
+    CRT_ClearLine(NLines - 1);
+    for i from 0 upto NCols - 2 do
+	write(CRTOut; '-');
+    od;
+    CRT_Move(NLines - 1, FILECOL);
+    write(CRTOut; FileName);
+    if ReadOnly then
+	CRT_Move(NLines - 1, ROCOL);
+	write(CRTOut; "[RO]");
+    fi;
+    displayPos();
+    CRT_Move(NLines - 1, HEXCOL);
+    write(CRTOut; if Binary then "hex-" else "char" fi);
+corp;
+
+proc nonrec clearError()void:
+    ushort i;
+
+    if HadError then
+	HadError := false;
+	CRT_Move(NLines - 1, ERRORCOL);
+	for i from ERRORCOL + 2 upto NCols do
+	    write(CRTOut; '-');
+	od;
+    fi;
+corp;
+
+proc nonrec getChar1()char:
+    char ch;
+
+    while
+	ch := CRT_GetChar();
+	ch = '\e'
+    do
+    od;
+    ch
+corp;
+
+proc nonrec getChar()char:
+    char ch;
+
+    ch := getChar1();
+    clearError();
+    ch
+corp;
+
+proc nonrec ASCIIPut(byte b)void:
+
+    write(CRTOut; if b + '\e' >= ' ' and b + '\e' <= '~' then
+		      b + '\e'
+		  else
+		      '.'
+		  fi);
+corp;
+
+proc nonrec seek(ushort posHigh; word pos)void:
+
+    if not SeekIn(Chin, posHigh, pos) then
+	abort("Seek failed");
+    fi;
+corp;
+
+proc nonrec unCursor()void:
+    byte b;
+
+    seek(FilePosHigh, FilePos);
+    read(Chin; b);
+    CRT_Move(CursorLine, CursorColHex);
+    write(CRTOut; b : x : -2);
+    CRT_Move(CursorLine, CursorColChar);
+    ASCIIPut(b);
+corp;
+
+proc nonrec putCursor()void:
+    byte b;
+
+    seek(FilePosHigh, FilePos);
+    read(Chin; b);
+    CRT_EnterHighLight();
+    CRT_Move(CursorLine, CursorColHex);
+    write(CRTOut; b : x : -2);
+    CRT_Move(CursorLine, CursorColChar);
+    ASCIIPut(b);
+    CRT_ExitHighLight();
+corp;
+
+proc nonrec displayScreen()void:
+    word pos;
+    ushort posHigh, l, c;
+    [16] byte buff;
+
+    CRT_Move(0, 0);
+    posHigh := WindowPosHigh;
+    pos := WindowPos;
+    l := 0;
+    seek(WindowPosHigh, WindowPos);
+    while read(Chin; buff[0]) and l ~= NLines - 1 do
+	l := l + 1;
+	write(CRTOut; posHigh : x : -2, pos : x : -4, ":  ",
+	      buff[0] : x : -2, ' ');
+	pos := pos + 1;
+	for c from 1 upto 15 do
+	    read(Chin; buff[c]);
+	    write(CRTOut; buff[c] : x : -2, ' ');
+	    pos := pos + 1;
+	od;
+	pos := pos - 16;
+	write(CRTOut; " *");
+	for c from 0 upto 15 do
+	    ASCIIPut(buff[c]);
+	    pos := pos + 1;
+	od;
+	if pos = 0x0000 then
+	    posHigh := posHigh + 1;
+	fi;
+	write (CRTOut; "*\r\n");
+    od;
+    pretend(ioerror(Chin), void);
+    while l ~= NLines - 1 do
+	CRT_ClearLine(l);
+	l := l + 1;
+    od;
+    putCursor();
+corp;
+
+proc nonrec scroll()void:
+    word pos;
+    ushort posHigh, c;
+    [16] byte buff;
+
+    pos := WindowPos + make(NLines - 1, word) * 16;
+    posHigh :=
+	if pos < WindowPos then WindowPosHigh + 1 else WindowPosHigh fi;
+    if EndPosHigh > posHigh or EndPosHigh = posHigh and EndPos > pos then
+	CRT_ClearLine(NLines - 1);
+	seek(posHigh, pos);
+	write(CRTOut; posHigh : x : -2, pos : x : -4, ":  ");
+	for c from 0 upto 15 do
+	    read(Chin; buff[c]);
+	    write(CRTOut; buff[c] : x : -2, ' ');
+	od;
+	write(CRTOut; " *");
+	for c from 0 upto 15 do
+	    ASCIIPut(buff[c]);
+	od;
+	write(CRTOut; "*\r\n");
+	WindowPos := WindowPos + 16;
+	if WindowPos = 0x0000 then
+	    WindowPosHigh := WindowPosHigh + 1;
+	fi;
+	if CursorLine = 0 then
+	    FilePos := FilePos + 16;
+	    if FilePos = 0x0000 then
+		FilePosHigh := FilePosHigh + 1;
+	    fi;
+	    putCursor();
+	else
+	    CursorLine := CursorLine - 1;
+	fi;
+	displayStatus();
+    else
+	endOfFile();
+    fi;
+corp;
+
+proc nonrec cursorForward()void:
+
+    if FilePos & 0x000f = 0x000f and CursorLine = NLines - 2 then
+	scroll();
+    fi;
+    if FilePosHigh ~= EndPosHigh or FilePos ~= EndPos - 1 then
+	unCursor();
+	if FilePos = 0xffff then
+	    FilePos := 0;
+	    FilePosHigh := FilePosHigh + 1;
+	else
+	    FilePos := FilePos + 1;
+	fi;
+	if FilePos & 0x000f = 0x0000 then
+	    CursorLine := CursorLine + 1;
+	    CursorColHex := 9;
+	    CursorColChar := 59;
+	else
+	    CursorColHex := CursorColHex + 3;
+	    CursorColChar := CursorColChar + 1;
+	fi;
+	putCursor();
+	displayPos();
+    else
+	endOfFile();
+    fi;
+corp;
+
+proc nonrec cursorBackward()void:
+
+    if FilePos ~= 0 or FilePosHigh ~= 0 then
+	unCursor();
+	if FilePos = 0 then
+	    FilePos := 0xffff;
+	    FilePosHigh := FilePosHigh - 1;
+	else
+	    FilePos := FilePos - 1;
+	fi;
+	if FilePos & 0x000f = 0x000f then
+	    CursorColHex := 9 + 30 + 15;
+	    CursorColChar := 59 + 15;
+	    if CursorLine = 0 then
+		if WindowPos = 0 then
+		    WindowPos := 0xfff0;
+		    WindowPosHigh := WindowPosHigh - 1;
+		else
+		    WindowPos := WindowPos - 16;
+		fi;
+		CRT_ClearScreen();
+		displayScreen();
+		displayStatus();
+	    else
+		CursorLine := CursorLine - 1;
+	    fi;
+	else
+	    CursorColHex := CursorColHex - 3;
+	    CursorColChar := CursorColChar - 1;
+	fi;
+	putCursor();
+	displayPos();
+    else
+	startOfFile();
+    fi;
+corp;
+
+proc nonrec cursorUp()void:
+
+    if FilePosHigh ~= 0 or FilePos >= 16 then
+	unCursor();
+	if FilePos <= 0x000f then
+	    FilePosHigh := FilePosHigh - 1;
+	fi;
+	FilePos := FilePos - 16;
+	if CursorLine = 0 then
+	    if WindowPos = 0 then
+		WindowPos := 0xfff0;
+		WindowPosHigh := WindowPosHigh - 1;
+	    else
+		WindowPos := WindowPos - 16;
+	    fi;
+	    CRT_ClearScreen();
+	    displayScreen();
+	    displayStatus();
+	else
+	    CursorLine := CursorLine - 1;
+	fi;
+	putCursor();
+	displayPos();
+    else
+	startOfFile();
+    fi;
+corp;
+
+proc nonrec cursorDown()void:
+
+    if CursorLine = NLines - 2 then
+	scroll();
+    fi;
+    if FilePosHigh ~= EndPosHigh or FilePos < EndPos - 16 then
+	unCursor();
+	FilePos := FilePos + 16;
+	if FilePos <= 0x000f then
+	    FilePosHigh := FilePosHigh + 1;
+	fi;
+	CursorLine := CursorLine + 1;
+	putCursor();
+	displayPos();
+    else
+	endOfFile();
+    fi;
+corp;
+
+proc nonrec cursorHome()void:
+    bool redraw;
+
+    unCursor();
+    redraw := WindowPosHigh ~= 0 or WindowPos ~= 0;
+    FilePosHigh := 0;
+    FilePos := 0;
+    WindowPosHigh := 0;
+    WindowPos := 0;
+    CursorLine := 0;
+    CursorColHex := 9;
+    CursorColChar := 59;
+    if redraw then
+	CRT_ClearScreen();
+	displayScreen();
+	displayStatus();
+	putCursor();
+    else
+	putCursor();
+	displayPos();
+    fi;
+corp;
+
+proc nonrec pageForward()void:
+    word pos, old;
+    ushort posHigh;
+
+    pos := WindowPos + make(NLines - 3, word) * 16;
+    posHigh :=
+	if pos < WindowPos then WindowPosHigh + 1 else WindowPosHigh fi;
+    if EndPosHigh > posHigh or EndPosHigh = posHigh and EndPos > pos then
+	WindowPos := pos;
+	WindowPosHigh := posHigh;
+	old := FilePos;
+	FilePos := FilePos + make(NLines - 3, word) * 16;
+	if FilePos < old then
+	    FilePosHigh := FilePosHigh + 1;
+	fi;
+	if FilePosHigh > EndPosHigh or
+		FilePosHigh = EndPosHigh and FilePos >= EndPos then
+	    CursorLine := (EndPos - WindowPos) / 16 - 1;
+	    CursorColHex := 9 + 30 + 15;
+	    CursorColChar := 59 + 15;
+	    FilePosHigh := EndPosHigh;
+	    FilePos := EndPos - 1;
+	fi;
+	CRT_ClearScreen();
+	displayScreen();
+	displayStatus();
+    else
+	endOfFile();
+    fi;
+corp;
+
+proc nonrec pageBackward()void:
+    word old;
+
+    if WindowPosHigh ~= 0 or WindowPos ~= 0 then
+	if WindowPosHigh ~= 0 or WindowPos >= make(NLines - 1,word) * 16 then
+	    old := WindowPos;
+	    WindowPos := WindowPos - make(NLines - 3, word) * 16;
+	    if WindowPos > old then
+		WindowPosHigh := WindowPosHigh - 1;
+	    fi;
+	    old := FilePos;
+	    FilePos := FilePos - make(NLines - 3, word) * 16;
+	    if FilePos > old then
+		FilePosHigh := FilePosHigh - 1;
+	    fi;
+	else
+	    FilePos := FilePos - WindowPos;
+	    FilePosHigh := 0;
+	    WindowPos := 0;
+	    WindowPosHigh := 0;
+	fi;
+	CRT_ClearScreen();
+	displayScreen();
+	displayStatus();
+    else
+	startOfFile();
+    fi;
+corp;
+
+proc nonrec getHex()byte:
+    char ch;
+
+    while
+	ch := getChar1();
+	not (ch >= '0' and ch <= '9' or
+	     ch >= 'a' and ch <= 'f' or
+	     ch >= 'A' and ch <= 'F' or
+	     ch = '\r' or ch = '\b')
+    do
+    od;
+    if ch >= 'A' and ch <= 'F' then
+	ch - 'A' + 10
+    elif ch >= 'a' and ch <= 'f' then
+	ch - 'a' + 10
+    elif ch = '\r' then
+	255
+    elif ch = '\b' then
+	254
+    else
+	ch - '0'
+    fi
+corp;
+
+proc nonrec gotoDisplay(ushort posHigh; word pos; bool redraw)void:
+
+    if not redraw then
+	unCursor();
+	CursorLine := CursorLine + (pos / 16 - FilePos / 16);
+    fi;
+    FilePosHigh := posHigh;
+    FilePos := pos;
+    CursorColHex := (FilePos & 0x000f) * 3 + 9;
+    CursorColChar := (FilePos & 0x000f) + 59;
+    if redraw then
+	CRT_ClearScreen();
+	CursorLine := 0;
+	displayScreen();
+	displayStatus();
+    else
+	displayPos();
+    fi;
+    putCursor();
+corp;
+
+proc nonrec goto()void:
+    word pos, endPos;
+    byte b;
+    ushort posHigh, endPosHigh, p, q;
+    [6] byte buff;
+
+    err("Enter location to go to");
+    CRT_Move(NLines - 1, POSCOL);
+    write(CRTOut; "      ");
+    CRT_Move(NLines - 1, POSCOL);
+    p := 0;
+    while
+	while
+	    b := getHex();
+	    b = 0 and p = 0
+	do
+	od;
+	b ~= 255
+    do
+	if b = 254 then
+	    if p ~= 0 then
+		p := p - 1;
+		write(CRTOut; "\b \b");
+	    fi;
+	elif p = 6 then
+	    write(CRTOut; '\(0x07)');
+	else
+	    write(CRTOut; if b < 10 then b + '0' else b - 10 + 'a' fi);
+	    buff[p] := b;
+	    p := p + 1;
+	fi;
+    od;
+    if p = 0 then
+	clearError();
+	err("OK - no goto done");
+	displayPos();
+    else
+	q := 6;
+	while p ~= 0 do
+	    p := p - 1;
+	    q := q - 1;
+	    buff[q] := buff[p];
+	od;
+	while q ~= 0 do
+	    q := q - 1;
+	    buff[q] := 0;
+	od;
+	posHigh := buff[0] << 4 + buff[1];
+	pos := (make(buff[2], word) << 12) +
+	       (make(buff[3], word) << 8) +
+	       (make(buff[4], word) << 4) +
+	        make(buff[5], word);
+	if posHigh = FilePosHigh and pos = FilePos then
+	    ;
+	elif posHigh < FilePosHigh or
+		posHigh = FilePosHigh and pos < FilePos then
+	    if posHigh < WindowPosHigh or
+		    posHigh = WindowPosHigh and pos < WindowPos then
+		WindowPosHigh := posHigh;
+		WindowPos := pos & 0xfff0;
+		gotoDisplay(posHigh, pos, true);
+	    else
+		gotoDisplay(posHigh, pos, false);
+	    fi;
+	else
+	    if posHigh > EndPosHigh or
+		    posHigh = EndPosHigh and pos >= EndPos then
+		endOfFile();
+		posHigh := EndPosHigh;
+		pos := EndPos - 1;
+	    fi;
+	    endPos := WindowPos + make(NLines - 1, word) * 16;
+	    endPosHigh :=
+		if endPos < WindowPos then
+		    WindowPosHigh + 1
+		else
+		    WindowPosHigh
+		fi;
+	    if posHigh > endPosHigh or
+		    posHigh = endPosHigh and pos >= endPos then
+		WindowPosHigh := posHigh;
+		WindowPos := pos & 0xfff0;
+		gotoDisplay(posHigh, pos, true);
+	    else
+		gotoDisplay(posHigh, pos, false);
+	    fi;
+	fi;
+	clearError();
+    fi;
+corp;
+
+proc nonrec toDec()void:
+    word num;
+    ushort p;
+    byte b;
+
+    err("Enter hex value to convert");
+    CRT_Move(NLines - 1, POSCOL);
+    write(CRTOut; "-    -");
+    CRT_Move(NLines - 1, POSCOL + 1);
+    num := 0;
+    p := 0;
+    while
+	while
+	    b := getHex();
+	    b = 0 and p = 0
+	do
+	od;
+	b ~= 255
+    do
+	if b = 254 then
+	    if p ~= 0 then
+		num := num >> 4;
+		p := p - 1;
+		write(CRTOut; "\b \b");
+	    fi;
+	elif p = 4 then
+	    write(CRTOut; '\(0x07)');
+	else
+	    write(CRTOut; if b < 10 then b + '0' else b - 10 + 'a' fi);
+	    num := (num << 4) + b;
+	    p := p + 1;
+	fi;
+    od;
+    clearError();
+    if p ~= 0 then
+	err("Decimal value is ");
+	CRT_Move(NLines - 1, ERRORCOL + 17);
+	CRT_EnterHighLight();
+	write(CRTOut; num : u);
+	CRT_ExitHighLight();
+    fi;
+    displayPos();
+corp;
+
+proc nonrec toHex()void:
+    word num;
+    ushort p;
+    char ch;
+
+    err("Enter decimal value to convert");
+    CRT_Move(NLines - 1, POSCOL);
+    write(CRTOut; "     -");
+    CRT_Move(NLines - 1, POSCOL);
+    num := 0;
+    p := 0;
+    while
+	while
+	    while
+		ch := getChar1();
+		not (ch >= '0' and ch <= '9' or
+		     ch = '\r' or ch = '\b')
+	    do
+	    od;
+	    ch = '0' and p = 0
+	do
+	od;
+	ch ~= '\r'
+    do
+	if ch = '\b' then
+	    if p ~= 0 then
+		num := num / 10;
+		p := p - 1;
+		write(CRTOut; "\b \b");
+	    fi;
+	elif p = 5 then
+	    write(CRTOut; '\(0x07)');
+	else
+	    write(CRTOut; ch);
+	    num := (num * 10) + (ch - '0');
+	    p := p + 1;
+	fi;
+    od;
+    clearError();
+    if p ~= 0 then
+	err("Hex value is ");
+	CRT_Move(NLines - 1, ERRORCOL + 13);
+	CRT_EnterHighLight();
+	write(CRTOut; num : x : -4);
+	CRT_ExitHighLight();
+    fi;
+    displayPos();
+corp;
+
+proc nonrec helpScreen()void:
+
+    CRT_ClearScreen();
+    write(CRTOut;
+	    "\n"
+	    "\n"
+	    "\n"
+	    "\n"
+	    "\t\tCommands are:\r\n"
+	    "\n"
+	    "\tESC - exit\r\n"
+	    "\tarrow keys - move cursor\r\n"
+	    "\tHOME - move to beginning of file\r\n"
+	    "\tRETURN - scroll screen\r\n"
+	    "\tCNTL-Q - page forward\r\n"
+	    "\tCNTL-S - page backward\r\n"
+	    "\tCNTL-G - go to specific location\r\n"
+	    "\tCNTL-T - toggle hex/char mode\r\n"
+	    "\tCNTL-R - redraw screen\r\n"
+	    "\tCNTL-X - convert decimal value to hex\r\n"
+	    "\tCNTL-D - convert hex value to decimal\r\n"
+	    "\tnon-control - replace char when not Read-Only"
+    );
+    CRT_Continue();
+    CRT_ClearScreen();
+    displayScreen();
+    displayStatus();
+corp;
+
+proc nonrec writeByte(byte b)void:
+
+    if not SeekOut(Chout, FilePosHigh, FilePos) then
+	abort("Write seek failed");
+    fi;
+    write(Chout; b);
+    cursorForward();
+corp;
+
+proc nonrec edit()void:
+    byte b, b2;
+    char cmd;
+
+    EndPos := GetInMax(Chin, &EndPosHigh);
+    displayScreen();
+    while
+	CRT_Move(CursorLine,
+		 if Binary then CursorColHex else CursorColChar fi);
+	cmd := getChar();
+	cmd ~= '\(0x1b)'
+    do
+	case cmd
+	incase '\(0x06)':
+	    cursorForward();
+	incase '\(0x15)':
+	incase '\(0x08)':
+	    cursorBackward();
+	incase '\(0x1a)':
+	    cursorUp();
+	incase '\(0x0a)':
+	    cursorDown();
+	incase '\(0x01)':
+	    cursorHome();
+	incase '\(0x0d)':
+	    scroll();
+	incase '\(0x11)':
+	    pageForward();
+	incase '\(0x13)':
+	    pageBackward();
+	incase '\(0x07)':
+	    goto();
+	incase '\(0x12)':
+	    CRT_Reset();
+	    CRT_ClearScreen();
+	    displayScreen();
+	    displayStatus();
+	incase '\(0x14)':
+	    CRT_Move(NLines - 1, HEXCOL);
+	    if Binary then
+		Binary := false;
+		write(CRTOut; "char");
+	    else
+		Binary := true;
+		write(CRTOut; "hex-");
+	    fi;
+	incase '\(0x04)':
+	    toDec();
+	incase '\(0x18)':
+	    toHex();
+	incase '\(0x1c)':
+	    helpScreen();
+	default:
+	    if cmd >= ' ' and cmd <= '~' then
+		if ReadOnly then
+		    err("Modifications not allowed");
+		elif Binary then 
+		    if cmd >= '0' and cmd <= '9' or
+			    cmd >= 'a' and cmd <= 'f' or
+			    cmd >= 'A' and cmd <= 'F' then
+			b :=
+			    if cmd >= '0' and cmd <= '9' then
+				cmd - '0'
+			    elif cmd >= 'a' and cmd <= 'f' then
+				cmd - 'a' + 10
+			    else
+				cmd - 'A' + 10
+			    fi;
+			CRT_EnterHighLight();
+			write(CRTOut;
+			      if b >= 10 then b - 10 + 'a' else b + '0' fi);
+			CRT_ExitHighLight();
+			b2 := getHex();
+			if b2 = 255 then
+			    writeByte(b);
+			elif b2 = 254 then
+			    putCursor();
+			else
+			    writeByte(b << 4 + b2);
+			fi;
+		    else
+			err("Bad hexadecimal digit");
+		    fi;
+		else
+		    write(CRTOut; cmd);
+		    CRT_Move(CursorLine, CursorColHex);
+		    write(CRTOut; cmd - '\e' : x : -2);
+		    writeByte(cmd - '\e');
+		fi;
+	    else
+		err("Invalid; CNTL-\\ for help");
+	    fi;
+	esac;
+    od;
+    if not ReadOnly then
+	close(Chout);
+    fi;
+    close(Chin);
+corp;
+
+proc nonrec badUse()void:
+
+    writeln("Use is: hedit [-w] file1.typ ... filen.typ");
+    exit(1);
+corp;
+
+proc nonrec main()void:
+    *char par;
+
+    ReadOnly := true;
+    Binary := true;
+    par := GetPar();
+    if par ~= nil and par* = '-' then
+	while
+	    par := par + 1;
+	    par* ~= '\e'
+	do
+	    case par*
+	    incase 'W':
+		ReadOnly := false;
+	    default:
+		badUse();
+	    esac;
+	od;
+	par := GetPar();
+    fi;
+    if par = nil then
+	badUse();
+    fi;
+    CRT_AbortDisable();
+    NLines := CRT_NLines();
+    NCols := CRT_NCols();
+    open(CRTOut, CRT_PutChar);
+    while par ~= nil do
+	FilePosHigh := 0;
+	WindowPosHigh := 0;
+	FilePos := 0;
+	WindowPos := 0;
+	CursorLine := 0;
+	CursorColHex := 9;
+	CursorColChar := 59;
+	CRT_ClearScreen();
+	FileName := par;
+	if open(Chin, Fyle, FileName) then
+	    displayStatus();
+	    if not ReadOnly then
+		ReOpen(Chin, Chout);
+	    fi;
+	    if not SeekIn(Chin, 0, 0) then
+		err("File is empty - press a key");
+		pretend(getChar(), void);
+	    else
+		edit();
+	    fi;
+	else
+	    displayStatus();
+	    err("File doesn't exist - press a key");
+	    pretend(getChar(), void);
+	fi;
+	par := GetPar();
+    od;
+    CRT_Abort();
+corp;
+

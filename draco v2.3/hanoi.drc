@@ -1,0 +1,39 @@
+\util.g
+
+/*
+ * simple program to solve the "Towers of Hanoi" problem.
+ */
+
+bool Print;
+int N;
+
+proc hanoi(*char fromPeg, usingPeg, toPeg; int n)void:
+    int i;
+
+    if n ~= 0 then
+	hanoi(fromPeg, toPeg, usingPeg, n - 1);
+	if Print then
+	    for i from 1 upto N - n do
+		write(' ');
+	    od;
+	    writeln("Move disk ", n, " from ", fromPeg,
+		    " peg to ", toPeg, " peg.");
+	fi;
+	hanoi(usingPeg, fromPeg, toPeg, n - 1);
+    fi;
+corp;
+
+proc main()void:
+    channel input text chin;
+    char ch;
+
+    open(chin, GetPar());
+    if read(chin; ch) and (ch = '-' or ch = '+') and
+	    read(chin; N) and N >= 0 then
+	Print := ch = '-';
+	hanoi("left", "middle", "right", N);
+    else
+	writeln("Use is: hanoi {-|+}n     where n is \# of disks (>= 0)");
+    fi;
+corp;
+

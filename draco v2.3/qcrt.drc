@@ -1,0 +1,640 @@
+#util.g
+#crt.g
+
+/*
+ * CRT library for Quest system.
+ */
+
+ushort
+    NLINES = 24,			/* # lines on screen */
+    NCOLUMNS = 80,			/* # columns on screen */
+    TEXTTOP = NLINES / 2,		/* 0-origin # of first text line */
+    STATUSLEFT = NCOLUMNS / 2,		/* 0-origin # of first status col */
+    MAPLINES = TEXTTOP - 1,		/* # lines in map window */
+    MAPCOLUMNS = STATUSLEFT / 2 - 1;	/* # columns in map window */
+
+type
+
+    /* type of a map displayable object list: */
+
+    OBJECT = struct {
+	*OBJECT ob_next;		/* ptr to next (behind this one) */
+	int ob_id;			/* object's id */
+	int ob_line, ob_column;		/* world co-ords of object */
+	[2]char ob_chars;		/* chars to display */
+    },
+
+    STATUSKIND = enum {STNUMBER, STSTRING, STMULTIPLE},
+
+    /* type of a status area object: */
+
+    STATUS = struct {
+	*STATUS st_next;		/* ptr to next in list */
+	int st_id;			/* status object's id */
+	*char st_name;			/* heading for status object */
+	ushort st_line, st_column;	/* position in status area */
+	ushort st_length;		/* length of display */
+	STATUSKIND st_kind;		/* kind of this status object */
+	union {
+	    *int n_ptr;			/* pointer to value */
+	    **char s_ptr;		/* pointer to string */
+	    proc(bool first)*char m_gen;/* value generator */
+	} st_;
+    };
+
+proc(int line, column)[2]char Scenery;	/* user's scenery generator */
+*char TextPrompt;			/* current input prompt */
+ushort
+    TextLine,				/* current text line */
+    TextColumn,				/* current text column */
+    TextLinePos,			/* pos in TextBuff of next char */
+    TextWordPos;			/* pos in TextBuff of "word" */
+[NCOLUMNS] char TextBuff;		/* the current output text line */
+*OBJECT Objects;			/* list of objects, sorted by l, c */
+int WindowLine, WindowColumn;		/* co-ords of center of window */
+
+*STATUS Statuses;			/* list of display statuses */
+
+/*
+ * _scAbort - abort with an error message.
+ */
+
+proc nonrec _scAbort(*char message)void:
+
+    CRT_ClearLine(NLINES - 1);
+    CRT_PutChars(message);
+    exit(1);
+corp;
+
+/*
+ * scInit - screen initialization.
+ */
+
+proc nonrec scInit()void:
+    ushort i;
+
+    TextPrompt := "";
+    TextLine := TEXTTOP;
+    TextColumn := 0;
+    TextLinePos := 0;
+    TextWordPos := 0;
+    Objects := nil;
+    Statuses := nil;
+    CRT_ClearScreen();
+    CRT_Move(MAPLINES, 0);
+    for i from 0 upto NCOLUMNS - 1 do
+	CRT_PutChar('-');
+    od;
+    for i from 0 upto MAPLINES - 1 do
+	CRT_Move(i, MAPCOLUMNS * 2 + 1);
+	CRT_PutChar('|');
+    od;
+    CRT_Move(TEXTTOP, 0);
+corp;
+
+/*
+ * _scFlush - flush the text line upto the given point.
+ */
+
+proc nonrec _scFlush(ushort pos)void:
+    ushort i;
+
+    CRT_Move(TextLine, 0);
+    i := 0;
+    while i ~= pos do
+	CRT_PutChar(TextBuff[i]);
+	i := i + 1;
+    od;
+corp;
+
+/*
+ * _scNextLine - go to the next line on text output.
+ */
+
+proc nonrec _scNextLine(bool needPause)void:
+    *char p;
+    ushort l;
+
+    TextLine := TextLine + 1;
+    if TextLine = NLINES then
+	TextLine := TEXTTOP;
+	if needPause then
+	    p := "M O R E";
+	    l := TEXTTOP;
+	    CRT_EnterHighLight();
+	    while
+		l := l + 1;
+		CRT_Move(l, NCOLUMNS - 1);
+		p* ~= '\e'
+	    do
+		CRT_PutChar(p*);
+		p := p + 1;
+	    od;
+	    CRT_ExitHighLight();
+	    while CRT_GetChar() = '\e' do
+	    od;
+	fi;
+	CRT_ClearToEnd(TEXTTOP);
+    else
+	CRT_Move(TextLine, 0);
+    fi;
+corp;
+
+/*
+ * _scNewLine - a new line on text output.
+ */
+
+proc nonrec _scNewLine(bool needPause)void:
+
+    _scFlush(TextLinePos);
+    _scNextLine(needPause);
+    TextColumn := 0;
+    TextLinePos := 0;
+    TextWordPos := 0;
+corp;
+
+/*
+ * scPut - put a character to the text display area.
+ */
+
+proc nonrec scPut(char ch)void:
+
+    if ch = '\r' then
+	/* ignore it - assume it only comes with '\n' */
+    elif ch = '\n' then
+	_scNewLine(true);
+    else
+	if TextColumn >= NCOLUMNS - 1 then
+	    if TextWordPos ~= 0 and ch ~= ' ' and ch ~= '\t' then
+		_scFlush(TextWordPos);
+		TextColumn := TextLinePos - TextWordPos;
+		BlockMove(pretend(&TextBuff[0], *byte),
+			  pretend(&TextBuff[TextWordPos], *byte),
+			  TextColumn);
+		TextWordPos := 0;
+		TextLinePos := TextColumn;
+		_scNextLine(true);
+	    else
+		_scNewLine(true);
+		if ch = ' ' or ch = '\t' then
+		    ch := '\e';
+		fi;
+	    fi;
+	fi;
+	if ch ~= ' ' and ch ~= '\t' and TextLinePos ~= 0 and
+		(TextBuff[TextLinePos - 1] = ' ' or
+		 TextBuff[TextLinePos - 1] = '\t') then
+	    TextWordPos := TextLinePos;
+	fi;
+	if ch ~= '\e' then
+	    TextBuff[TextLinePos] := ch;
+	    TextLinePos := TextLinePos + 1;
+	    TextColumn :=
+		if ch = '\t' then
+		    (TextColumn + 8) & 0xf8
+		else
+		    TextColumn + 1
+		fi;
+	fi;
+    fi;
+corp;
+
+/*
+ * scPrompt - set up the prompt to use for subsequent reads.
+ */
+
+proc nonrec scPrompt(*char prompt)void:
+
+    TextPrompt := prompt;
+corp;
+
+/*
+ * scRead - read an input line.
+ */
+
+proc nonrec scRead(*char buffer)void:
+
+    if TextLinePos ~= 0 then
+	_scNewLine(true);
+    else
+	CRT_Move(TextLine, 0);
+    fi;
+    CRT_PutChars(TextPrompt);
+    CRT_GetLine(buffer, NCOLUMNS - CharsLen(TextPrompt));
+    _scNewLine(false);
+corp;
+
+/*
+ * scNewMap - switch to a new "map" display.
+ */
+
+proc nonrec scNewMap(proc(int l, c)[2]char scenery; *OBJECT newList)*OBJECT:
+    *OBJECT oldList;
+
+    WindowLine := 0xffff;
+    WindowColumn := 0xffff;
+    oldList := Objects;
+    Objects := newList;
+    Scenery := scenery;
+    oldList
+corp;
+
+/*
+ * scWindow - window map region to another location.
+ */
+
+proc nonrec scWindow(int line, column)void:
+    *OBJECT p;
+    int l, c;
+    [2]char pattern;
+
+    if line ~= WindowLine or column ~= WindowColumn then
+	p := Objects;
+	for l from line - MAPLINES / 2 upto line + MAPLINES / 2 do
+	    while p ~= nil and p*.ob_line < l do
+		p := p*.ob_next;
+	    od;
+	    CRT_Move(l - line + MAPLINES / 2, 0);
+	    for c from column - MAPCOLUMNS / 2 upto column + MAPCOLUMNS/2 do
+		while p ~= nil and p*.ob_line = l and
+			p*.ob_column < c do
+		    p := p*.ob_next;
+		od;
+		pattern :=
+		    if p ~= nil and p*.ob_line = l and
+			    p*.ob_column = c then
+			p*.ob_chars
+		    else
+			Scenery(l, c)
+		    fi;
+		CRT_PutChar(pattern[0]);
+		CRT_PutChar(pattern[1]);
+	    od;
+	od;
+	WindowLine := line;
+	WindowColumn := column;
+    fi;
+corp;
+
+/*
+ * _scOnScreen - check for a position visible. Move there if so.
+ */
+
+proc nonrec _scOnScreen(int line, column)bool:
+
+    if line >= WindowLine - MAPLINES / 2 and
+	    line <= WindowLine + MAPLINES / 2 and
+	    column >= WindowColumn - MAPCOLUMNS / 2 and
+	    column <= WindowColumn + MAPCOLUMNS / 2 then
+	CRT_Move(line - WindowLine + MAPLINES / 2,
+		 (column - WindowColumn + MAPCOLUMNS / 2) * 2);
+	true
+    else
+	false
+    fi
+corp;
+
+/*
+ * _scInsert - insert an object into the location sorted list.
+ */
+
+proc nonrec _scInsert(*OBJECT p; int line, column)void:
+    **OBJECT pp;
+
+    p*.ob_line := line;
+    p*.ob_column := column;
+    pp := &Objects;
+    while pp* ~= nil and
+	    (pp**.ob_line < line or
+	     pp**.ob_line = line and pp**.ob_column < column) do
+	pp := &pp**.ob_next;
+    od;
+    p*.ob_next := pp*;
+    pp* := p;
+    if _scOnScreen(line, column) then
+	CRT_PutChar(p*.ob_chars[0]);
+	CRT_PutChar(p*.ob_chars[1]);
+    fi;
+corp;
+
+/*
+ * scNew - add a new object to the list of objects.
+ */
+
+proc nonrec scNew(int id, line, column; [2]char chars)void:
+    *OBJECT p;
+
+    p := new(OBJECT);
+    p*.ob_id := id;
+    p*.ob_chars := chars;
+    _scInsert(p, line, column);
+corp;
+
+/*
+ * _scFind - find and delete the given object.
+ */
+
+proc nonrec _scFind(int id)*OBJECT:
+    **OBJECT pp;
+    *OBJECT p;
+
+    pp := &Objects;
+    while pp* ~= nil and pp**.ob_id ~= id do
+	pp := &pp**.ob_next;
+    od;
+    if pp* = nil then
+	_scAbort("_scFind: object does not exist.")
+    fi;
+    p := pp*;
+    pp* := p*.ob_next;
+    p
+corp;
+
+/*
+ * scAt - return characters at this location.
+ */
+
+proc nonrec scAt(int line, column)[2]char:
+    *OBJECT p;
+
+    p := Objects;
+    while p ~= nil and
+	    (p*.ob_line < line or
+	     p*.ob_line = line and p*.ob_column < column) do
+	p := p*.ob_next;
+    od;
+    if p ~= nil and p*.ob_line = line and
+	    p*.ob_column = column then
+	p*.ob_chars
+    else
+	Scenery(line, column)
+    fi
+corp;
+
+/*
+ * _scUndo - make the current view of an object go away.
+ */
+
+proc nonrec _scUndo(int id)*OBJECT:
+    *OBJECT p;
+    int line, column;
+    [2]char chars;
+
+    p := _scFind(id);
+    line := p*.ob_line;
+    column := p*.ob_column;
+    if _scOnScreen(line, column) then
+	chars := scAt(line, column);
+	CRT_PutChar(chars[0]);
+	CRT_PutChar(chars[1]);
+    fi;
+    p
+corp;
+
+/*
+ * scMove - move an object that is in the list of objects.
+ */
+
+proc nonrec scMove(int id, line, column)void:
+
+    _scInsert(_scUndo(id), line, column);
+    if id = 0 and (
+	    line <= WindowLine - MAPLINES / 2 or
+	    line >= WindowLine + MAPLINES / 2 or
+	    column <= WindowColumn - MAPCOLUMNS / 2 or
+	    column >= WindowColumn + MAPCOLUMNS / 2) then
+	scWindow(line, column);
+    fi;
+corp;
+
+/*
+ * scDelete - delete an OBJECT.
+ */
+
+proc nonrec scDelete(int id)void:
+
+    free(_scUndo(id));
+corp;
+
+/*
+ * _scUpdate - update the screen display of the status object.
+ */
+
+proc nonrec _scUpdate(*STATUS st)void:
+    *char ptr;
+    [7] char buffer;
+    int n;
+    ushort col, len, cnt;
+    bool isNeg, quit;
+
+    col := st*.st_column + CharsLen(st*.st_name) + (STATUSLEFT + 2);
+    CRT_Move(st*.st_line, col);
+    len := st*.st_length;
+    case st*.st_kind
+    incase STNUMBER:
+	ptr := &buffer[6];
+	ptr* := '\e';
+	n := st*.st_.n_ptr*;
+	if n < 0 then
+	    isNeg := true;
+	else
+	    n := -n;
+	    isNeg := false;
+	fi;
+	while
+	    if len ~= 0 then
+		len := len - 1;
+	    fi;
+	    ptr* := -(n % 10) + '0';
+	    n := n / 10;
+	    n ~= 0
+	do
+	    ptr := ptr - 1;
+	od;
+	if isNeg then
+	    if len ~= 0 then
+		len := len - 1;
+	    fi;
+	    ptr := ptr - 1;
+	    ptr* := '-';
+	fi;
+	while len ~= 0 do
+	    len := len - 1;
+	    CRT_PutChar(' ');
+	od;
+	CRT_PutChars(ptr);
+    incase STSTRING:
+	ptr := st*.st_.s_ptr*;
+	while ptr* ~= '\e' and len ~= 0 do
+	    len := len - 1;
+	    CRT_PutChar(ptr*);
+	    ptr := ptr + 1;
+	od;
+	while len ~= 0 do
+	    len := len - 1;
+	    CRT_PutChar(' ');
+	od;
+    incase STMULTIPLE:
+	cnt := st*.st_line;
+	len := cnt + len - 1;
+	isNeg := true;
+	quit := false;
+	while
+	    if quit then
+		false
+	    else
+		ptr := st*.st_.m_gen(isNeg);
+		ptr ~= nil
+	    fi
+	do
+	    if isNeg then
+		isNeg := false;
+	    else
+		CRT_PutChars(", ");
+		col := col + 2;
+	    fi;
+	    if col + CharsLen(ptr) + 2 >= NCOLUMNS - 1 then
+		if cnt = len then
+		    quit := true;
+		    CRT_PutChars("\b\b..");
+		else
+		    CRT_ClearTail();
+		    col := st*.st_column + (STATUSLEFT + 2);
+		    cnt := cnt + 1;
+		    CRT_Move(cnt, col);
+		fi;
+	    fi;
+	    if not quit then
+		CRT_PutChars(ptr);
+		col := CharsLen(ptr) + col;
+	    fi;
+	od;
+	while
+	    CRT_ClearTail();
+	    cnt < len
+	do
+	    cnt := cnt + 1;
+	    CRT_Move(cnt, STATUSLEFT + 2);
+	od;
+    esac;
+corp;
+
+/*
+ * _scAdd - add a new status object.
+ */
+
+proc nonrec _scAdd(int id; *char name; ushort line, column, length;
+		   *STATUS st)void:
+
+    st*.st_next := Statuses;
+    st*.st_id := id;
+    st*.st_name := name;
+    st*.st_line := line;
+    st*.st_column := column;
+    st*.st_length := length;
+    Statuses := st;
+    CRT_Move(line, column + STATUSLEFT);
+    CRT_PutChars(name);
+    CRT_PutChars(": ");
+    _scUpdate(st);
+corp;
+
+/*
+ * scNumber - add a number status object.
+ */
+
+proc nonrec scNumber(int id; *char name; ushort line, column, length;
+		     *int ptr)void:
+    *STATUS st;
+
+    st := new(STATUS);
+    st*.st_kind := STNUMBER;
+    st*.st_.n_ptr := ptr;
+    _scAdd(id, name, line, column, length, st);
+corp;
+
+/*
+ * scString - add a string status object.
+ */
+
+proc nonrec scString(int id; *char name; ushort line, column, length;
+		     **char ptr)void:
+    *STATUS st;
+
+    st := new(STATUS);
+    st*.st_kind := STSTRING;
+    st*.st_.s_ptr := ptr;
+    _scAdd(id, name, line, column, length, st);
+corp;
+
+/*
+ * scMult - add a multiple status object.
+ */
+
+proc nonrec scMult(int id; *char name; ushort line, column, lines;
+		   proc(bool first)*char gen)void:
+    *STATUS st;
+
+    st := new(STATUS);
+    st*.st_kind := STMULTIPLE;
+    st*.st_.m_gen := gen;
+    _scAdd(id, name, line, column, lines, st);
+corp;
+
+/*
+ * scUpdate - update the specified status object.
+ */
+
+proc nonrec scUpdate(int id)void:
+    *STATUS st;
+
+    st := Statuses;
+    while st ~= nil and st*.st_id ~= id do
+	st := st*.st_next;
+    od;
+    if st = nil then
+	_scAbort("scUpdate: bad status id.");
+    fi;
+    _scUpdate(st);
+corp;
+
+/*
+ * scRemove - remove the specified status object.
+ */
+
+proc nonrec scRemove(int id)void:
+    **STATUS pst;
+    *STATUS st;
+    ushort len, line;
+
+    pst := &Statuses;
+    while pst* ~= nil and pst**.st_id ~= id do
+	pst := &pst**.st_next;
+    od;
+    if pst* = nil then
+	_scAbort("scRemove: bad status id.");
+    fi;
+    st := pst*;
+    pst* := st*.st_next;
+    CRT_Move(st*.st_line, st*.st_column + STATUSLEFT);
+    len := st*.st_length;
+    if st*.st_kind = STMULTIPLE then
+	line := st*.st_line;
+	len := line + len - 1;
+	while
+	    CRT_ClearTail();
+	    line ~= len
+	do
+	    line := line + 1;
+	    CRT_Move(line, STATUSLEFT + 2);
+	od;
+    else
+	len := CharsLen(st*.st_name) + len + 2;
+	while len ~= 0 do
+	    len := len - 1;
+	    CRT_PutChar(' ');
+	od;
+    fi;
+    free(st);
+corp;
+

@@ -1,0 +1,598 @@
+		Ded - the Draco Screen Editor
+
+     Ded is a screen editor for CP/M-80 systems which can be
+configured to run on a variety of terminals. Also, it's 62
+commands can be assigned by the user to any desired keystroke or
+keystroke sequence. It is NOT a word processor. It has no
+concept of boldface, italics, footnotes, etc. It does have some
+commands and features (such as automatic word-wrap) which are
+useful in editing text files. It has several commands and
+features (such as automatic indentation and block shifts) which
+are designed specifically for working with source files for
+structured programming languages.
+
+     Ded is invoked from CP/M by the command
+
+	ded file.typ
+
+where 'file.typ' is the name of the file to be edited. If the
+file doesn't exist, it will be created. If the file does exist
+then it will be renamed as 'file.BAK' and a new file called
+'file.typ' will be created. When Ded terminates normally, it
+writes the new version of the file to the newly created file,
+thus the entire editing session can be later discarded by ERAsing
+'file.typ' and RENameing 'file.BAK' to be 'file.typ'. Note,
+however than any existing 'file.BAK' is deleted when Ded first
+reads in 'file.typ'. If more than one file is given on the
+command line then Ded edits them one after another.
+
+     Internally, Ded is a line editor. This means that it treats
+a file as a sequence of lines of text. This has little effect on
+the user, but will show up in some situations. One minor point is
+that Ded will always put a CR/LF sequence at the end of each line
+of text in a file.
+
+     One aspect of this nature is that Ded does not handle lines
+longer than 79 characters. The user will be warned when an
+operation attempts to make a longer line. Similarly, lines are
+truncated to 79 characters when files are read in.
+
+     Ded does not do disk buffering. This means that the entire
+file being edited must fit in memory. Ded uses a compressed form
+of internal storage in which sequences of blanks are stored as
+single bytes (the high order bit is set and the remaining 7 bits
+are a count of the number of blanks). This compressed form can be
+used for file storage, to reduce the space used by files
+containing a lot of whitespace. Ded will also generate standard
+8-column tabs or fully expanded blanks. If Ded runs out of memory
+space, it will inform the user gracefully, and allow editing to
+continue.
+
+     User-settable typewriter-style tabstobs are available in
+Ded. When it is initially run, the tab-stops are set at the
+standard 8-column boundary, but they can be cleared and set to
+any arbitrary columns. The TAB key causes blanks to be generated
+until the cursor is at the next tab-stop. When not in insert
+mode, the character under the cursor is replaced by the blanks.
+
+     Since Ded uses special characters internally to represent
+sequences of blanks, these characters should not appear (as other
+than the intended compressed blanks) in any files edited with
+Ded. As a special case, if these characters are between matching
+quotes (as scanned left-to-right), they are acceptable and will
+be displayed in highlighted mode on the screen. The ASCII HT
+character is similarly restricted. Control characters other than
+CR, LF, SUB and HT can appear anywhere in a line with no ill
+effects. They will be displayed in reverse video as their
+non-control forms.
+
+     One of the concepts used in Ded is that of a region of
+lines. Such a region can be shifted, aligned, printed, written to
+a file, etc. A region is defined by first selecting the start
+point of the region with the POINT command, moving to the
+end-point of the region, and then executing the command which is
+to affect the entire region. Regions must be marked in the
+forward direction, i.e. the end-point must be later in the file
+than the start point, whether on the same line or on a later
+line.
+
+     Ded's screen display consists of 23 lines for the text of
+the file, each of which is 79 columns long (the last column is
+not used other than by the cursor). Also present is a status line
+at the bottom of the screen. This line contains 7 indicators, the
+name of the file being edited, the line and column of the cursor
+and an area which is used for error messages, status messages,
+and user prompts. The 7 indicators are as follows:
+
+    1 - the first end of a region has been marked
+    T - there is currently text in the 'text buffer'
+    I - insert mode is enabled
+    W - word-wrap mode is enabled
+    M - multi-column mode is enabled
+    S - a search subject has been given
+    C - a global change 'to' has been given
+
+     Insert mode should be familiar to all computer users:
+characters typed are inserted before the one under the cursor
+instead of replacing the ones currently on the line. Characters
+to the right are moved over to make room. Word-wrap is also
+fairly common - when typing, if a character is about to be typed
+just beyond the word-wrap column, then an automatic carriage
+return is generated. Also, if the character to be typed is a
+non-blank, then the full word which that character is part of is
+moved down to the new line. Any left indent set is applicable to
+the newly inserted line.
+
+     Multi-column mode is a special feature of Ded. It interacts
+with the carriage return and word-wrap operations. Instead of
+causing a new line to be inserted, these operations move the
+cursor to the left indent column of an existing next line. Blanks
+are added to that line only as needed to reach the left indent
+and any word carried over by word-wrap is moved to the next line
+replacing any text that might have been there. Multiple columns
+can be easily made by setting the left indent at the desired
+left edge of the column (remember that the left indent is the
+number of spaces before the first character of the column) and
+the word-wrap column to the desired right edge of the column.
+Such columns can be entered in any order, and with careful typing
+and the use of insert mode, columns can even be inserted.
+
+     Since the keystrokes which select the various commands can
+be modified by the user, it is not possible to discuss the
+commands based on the keys typed to execute them. Thus, all of
+the commands in Ded have been named. The detailed description of
+the commands is arranged in several related groups. A separate
+page included with this writeup lists the commands in a short
+form, with space in which the user can write in the keystrokes
+which have been selected to perform the commands.
+
+
+Cursor Movement Commands
+
+LEFT - the cursor moves left one column. Moving left past the
+    first column will cause the cursor to wrap to the next
+    available column in the previous line.
+
+RIGHT - the cursor moves right one column. Moving right past the
+    right-hand edge of the screen causes the cursor to wrap to
+    the first column of the next line.
+
+UP - the cursor moves up one line. If the cursor was originally
+    on the top line of the screen, then the file is windowed
+    backwards one line first.
+
+DOWN - the cursor moves down one line. If the cursor was
+    originally on the last line of the screen, then the file is
+    scrolled up one line first.
+
+SKIPWORD - the cursor moves forward to the beginning of the next
+    word. It will not move past the end of the line.
+
+BACKWORD - the cursor moves backward to the beginning of the
+    previous word. It will not move past the beginning of the
+    line.
+
+BOL - the cursor moves to the first column of the current line.
+
+EOL - the cursor moves to the next free column of the line. (Just
+    past the last character on the line.)
+
+NEXTLINE - the cursor moves to the first column of the next line.
+
+TOP - the cursor moves to the top line on the screen.
+
+BOTTOM - the cursor moves to the bottom line on the screen.
+
+PAGEUP - the screen is scrolled backwards 20 lines through the
+    file. The cursor will stay at the same screen position unless
+    the full 20 line scroll was not possible.
+
+PAGEDOWN - the screen is scrolled forwards 20 lines through the
+    file. The cursor will stay at the same screen position unless
+    the full 20 line scroll was not possible.
+
+HOME - the cursor (and screen window if necessary) is moved to
+    the first column of the first line in the file.
+
+GOTO - the user is asked to enter a number. The cursor (and
+    screen window if necessary) is moved to that line.
+
+GOPOINT - the cursor is moved to the position last set using the
+    POINT command. The presence of a marked point is indicated by
+    a highlighted '1' (for 1st region end) in the status line.
+
+
+Commands Which Change the Current Line
+
+DELCHAR - the character under the cursor is deleted. Characters
+    which were to the right of it are moved left one space.
+
+BACKSPACE - the character before the cursor is deleted and the
+    cursor backs up one column.
+
+TAB - if insert mode is active (an 'I' is showing in the status
+    line), then blanks are inserted before the character under
+    the cursor to move that character to the next tab-stop. If
+    insert mode is not active, the character under the cursor is
+    deleted first (it is replaced or typed over by the TAB).
+
+DELWORD - the next word is deleted. If the cursor is within a
+    word, then the trailing portion of that word is deleted.
+
+DELBACKWORD - the previous word is deleted. If the cursor is
+    within a word, then the leading portion of that word is
+    deleted.
+
+DELEOL - the characters from the current position to the end of
+    the line are deleted.
+
+INSERTSPECIAL - a special character is inserted before the
+    current character. The user is asked for the decimal value of
+    the character to be inserted. Characters with the high-order
+    bit set, or the ASCII HT character, should only be inserted
+    inside matching quotes, else they will be expanded into
+    blanks. CP/M end-of-file characters (decimal 26), carriage
+    returns (decimal 13) or linefeeds (decimal 10) should never
+    be inserted into the file.
+
+UNDO - any changes made to the current line since the cursor was
+    moved onto that line are undone. Commands which require user
+    input or redraw the screen will finalize the line so that
+    changes made before then cannot be undone.
+
+REDRAW - the entire screen is redrawn. This is useful if your
+    terminal goes bonkers.
+
+
+Commands Which Affect Entire Lines
+
+DELLINE - the current line is deleted.
+
+RETURN (this key cannot be redefined) - the normal action here is
+    to insert a new line after the current one, add blanks to
+    that line to make up the current left indent, and leave the
+    cursor after the indent column. The cursor does not have to
+    be at the end of a line for RETURN to work. The new line is
+    considered to be inserted, since that is the action when
+    RETURN is given when the cursor is not on the last line of
+    the file. The action of RETURN is modified when the multi-
+    column flag is set (an 'M' appears in the status line).
+
+INSERTLINE - a new line is inserted after the current one, and
+    blanks will be added to it to come up to the current left
+    indent column. This command is NOT affected by the multi-
+    column flag.
+
+JOIN - the next line is joined to the end of the current line.
+
+SPLIT - the current line is split into two lines. The characters
+    from the cursor position onwards are moved to the next line.
+    The left indent column is ignored.
+
+INDENT - the left indent is incremented by the current value of
+    the indent increment. The current line is adjusted to the new
+    indent amount if the line is longer than the new indent.
+
+OUTDENT - the left indent is decremented by the current value of
+    the indent increment. The current line is adjusted to the new
+    indent amount if the line is longer than the old indent.
+
+ADJUSTLINE - the current line is adjusted to the current indent
+    amount.
+
+
+Commands for Doing Global Changes and Searches
+
+CHANGE - the user is asked for a subject ('from') string, a 'to'
+    string, and a count. The first 'count' occurrences of the
+    'from' string are changed to the 'to' string. The cursor will
+    be left at the end of the last changed string. If not enough
+    are found, the cursor will be left at the end of the file.
+    The changes done by CHANGE cannot be undone by UNDO even if
+    the last change is on the line the cursor ends up on. The
+    presence of a 'to' change string is indicated by a
+    highlighted 'C' in the status line.
+
+CHANGENEXT - the previously selected 'from' and 'to' (if still
+    active), are used for a single further search. CHANGENEXT
+    freezes changes to the line before it operates, but the
+    single change it makes can be undone using UNDO. CHANGENEXT
+    can only be done if the 'C' and 'S' indicators are on.
+
+FIND - the user is asked to enter a subject string and Ded
+    searches for the first occurence of that string after the
+    current position. The cursor is moved to just after the first
+    found occurrence. If none is found, the cursor is left at the
+    end of the file.
+
+FINDNEXT - the next occurrence of the given search subject is
+    scanned for. The presence of a search subject is indicated by
+    an 'S' in the status line.
+
+
+Commands Dealing With Entire Regions of the File
+
+POINT - this command marks the first end of a region. The
+    presence of such a first end is indicated by the presence of
+    a '1' in the status line.
+
+ADJUST - the lines in the selected region are adjusted to the
+    current left indent.
+
+SHIFTLEFT - the lines in the selected region are shifted left by
+    'IndentIncrement' characters, where 'IndentIncrement' is the
+    current value of the indent increment (default 4).
+
+SHIFTRIGHT - the lines in the selected region are shifted right
+    by 'IndentIncrement' characters (blanks are inserted at the
+    beginning of the lines).
+
+YANK - the text in the selected region is removed from the file
+    and put into the 'text buffer'. If the two end points are in
+    the same line and the same column, then the entire line is
+    taken. If they are in the same line but different columns,
+    then the text moved is a string from the single line. If the
+    end points are in different lines, then the entire region
+    between the end points (inclusive) is moved. This is the
+    quickest way to delete a large group of lines from the file.
+    Any previous text in the text buffer is freed first. The
+    presence of text in the 'text buffer' is indicated by a 'T'
+    in the status line.
+
+COPY - a copy of the selected region is made in the 'text
+    buffer'. Other than copying instead of moving, this command
+    is the same as the YANK command.
+
+PUT - a copy of the text in the 'text buffer' is inserted into
+    the file. If the buffered text is a string from a single
+    line, then it is inserted into the current line at the
+    current cursor position. If the buffered text is a group of
+    lines, then a copy of those lines is inserted before the
+    current line.
+
+FORMAT - the format command is fairly simple in what it does, but
+    the effects of it can be quite complex. Basically, it takes
+    the text in the 'text buffer' and feeds it through the input
+    routine just as if the user had typed it in. Initially, the
+    user is asked whether or not to do line-by-line formatting.
+    If the answer is no, then the text on the saved lines is
+    pushed through in a single stream. Multiple blanks in the
+    buffered text are replaced by a single blank. If a line being
+    processed doesn't end in a blank, then a blank is generated
+    (this prevents words from being joined together). If the line-
+    by-line mode is selected, the further option of deleting
+    instead of inserting is offered. Ignore the delete option for
+    now. In line-by-line mode, a carriage return is generated at
+    the end of each of the processed lines. The key to this
+    command (and why it is called FORMAT) is that the word-wrap
+    flag is forced on during the processing, thus the text being
+    processed is formatted within the current left-indent to
+    wrap margin space. The multi-column flag is also respected,
+    so FORMAT can be used to create new columns. Paragraph
+    indents and hanging indents can be created in the new text by
+    properly positioning the cursor when issuing the FORMAT
+    command - the first character will be placed at the cursor
+    position, and the left indent will not take effect until the
+    next line. See the section on hints for more information on
+    using the FORMAT command. Currently, the FORMAT command has
+    some minor problems concerning the definition of "words".
+
+PRINT - the selected group of lines is printed on the printer.
+    Output to the printer always uses fully expanded blanks.
+
+WRITE - the user is asked for a file name, and the selected group
+    of lines is written to that file. The file is deleted and
+    re-created first. A disk-full condition during this operation
+    will be reported.
+
+READ - the user is asked for a file name and a first and last
+    line number in that file. Those lines are copied into the
+    current file before the current line.
+
+
+Commands for Manipulating Files
+
+DELETEFILE - the user is asked for the name of a file to delete.
+    This is useful for handling the 'disk full' condition.
+
+NEWFILEEXIT - the user is asked for the name of another file to
+    edit. The current file is written out and the new file is
+    read in and edited. The sequence of files given on the CP/M
+    command line which ran Ded is not disturbed. A disk-full
+    condition during the write operation will be reported and the
+    user will be left editing the original file.
+
+NEWFILEQUIT - the user is asked for the name of another file to
+    edit. All changes made to the current file in this editing
+    session are abandoned.
+
+EXIT - the current file is written out, and the next one in Ded's
+    parameter list is read in and edited. If no more files
+    remain in the list (the usual case), Ded returns to CP/M.
+    Again, the disk-full condition is reported and the user is
+    left still editing the intact file.
+
+QUIT - all changes made to the current file in this editing
+    session are abandoned and Ded moves on to the next file.
+
+
+Commands for Setting Options and Tabstops
+
+SET - this command is used to set any of 3 different numeric
+    values, depending on the character typed after the SET
+    command (this character will not be echoed anywhere, but the
+    appropriate prompt will appear). The 3 parameters and their
+    code letters are:
+
+	i - indent increment (any value from 0 to 70, default 4)
+	l - the current left margin (any value from 0 to 1 less
+	    than the current wrap column, default 0)
+	w - the current word-wrap column (any value from 1
+	    greater than the current left margin to 79, default
+	    79)
+
+BLANKMODE - this command cycles through the three modes of
+    storing blanks in disk files. The default mode, that of using
+    standard 8-column tabs, is compatible with CP/M, MSDOS, Dec
+    operating systems, etc. Blank-count mode is compatible only
+    with Ded, but is handled by the Draco compiler also. Fully
+    expanded mode is handled by everything, but takes up more
+    disk space and I/O time.
+
+CLEARALL - all tabstops are cleared
+
+TABSET - a tabstop is set for the current column
+
+TABCLEAR - any tabstop in the current column is cleared
+
+INSERT - the character insert mode is toggled between on and off.
+    Insert mode on is indicated by an 'I' in the status line.
+
+WRAP - the word-wrap mode is toggled between on and off. Wrap
+    mode on is indicated by a 'W' in the status line. For the
+    purposes of word wrapping, along with word movement and word
+    deletion, characters of a word are letters, digits, '_', '^',
+    '"', ''', and '$'.
+
+MULTICOLUMN - the multicolumn mode is toggled between on and off.
+    Multi-column mode on is indicated by an 'M' in the status
+    line.
+
+
+Some Hints and Tricks
+
+     The left margin is of great use when typing in structured
+program source. Indentation tends to change a lot, so the INDENT
+and UNDENT commands should be on easily reached keys. Similarly
+the ADJUST, SHIFTLEFT and SHIFTRIGHT commands are of great use
+when modifying programs.
+
+     A useful(?) trick involves the combination of word-wrap and
+multi-column mode. Set the left indent and wrap-column 1 column
+apart, then pick a key (say the vertical bar) and let it
+auto-repeat. You will get a column of that character stretching
+vertically down the file. Such a column can be inserted as a
+separator by setting insert mode on also.
+
+     Because of the way the INDENT and OUTDENT commands operate,
+they can be used to create hanging indents in text. When a
+hanging indent is desired, use carriage return to go to the line
+to be hanging left, then use OUTDENT to move left to the desired
+outdent position. Type in the first few words of the line and
+then use INDENT to re-set the proper indent level. The current
+line will not move since the cursor is beyond the indent column.
+You can then continue typing and word-wrap will take over.
+Similarly, when entering structured program text, the INDENT or
+OUTDENT commands for the next line can be entered before hitting
+return or after hitting return. After is usually easiest.
+
+     Additional capabilities of the FORMAT command can be used to
+manipulate columns of text. An example should suffice to
+illustrate some of the possibilities. Enter Ded editing a new
+file and enter the following (Ded command names are in upper
+case, comments are indicated by a '*', and additional
+instructions are indicated by ':'):
+
+	SET w 20
+	WRAP
+	Now is the time for all good men to come to the aid of
+	    their party. Now is the time for all good men to come
+	    to the aid of their party. Now is the time for all
+	    good men to come to the aid of their party.
+	HOME
+	EOL
+	WRAP
+	: space to column 22 (cursor in column 22)
+	SET w 79
+	SET l 21
+	MULTICOLUMN
+	: hit RETURN until cursor is in last line of text
+	* You have now created a rectangular block of text - the
+	    last set of RETURNs served to pad all of the lines
+	    to exactly 21 characters each.
+	HOME
+	POINT
+	: move cursor to last line
+	COPY
+	* the rectangular region is now in the text buffer
+	HOME
+	EOL
+	SET l 21
+	FORMAT y n
+	* we have created a second, identical column - nothing
+	    special so far.
+	TOP
+	INSERT
+	FORMAT y n
+	* the new column has been INSERTED between the other two.
+	TOP
+	FORMAT y y
+	* the new third column has been DELETED (if nothing else,
+	    it's fun to watch!)
+
+     With appropriate use of the FORMAT command and the various
+modes, it is possible to change a single column of material into
+2 or more columns, and vice versa (SHIFTLEFT is useful here to
+wipe away the left-hand column, and FORMAT with the delete option
+to wipe away the right-hand column). 
+
+Configuring Ded
+
+     Configuring Ded for your system and preferences takes two
+steps. The first step is that of configuring it to generate the
+appropriate terminal control sequences for your terminal or
+computer. This is normally only done once. The process is
+described in the writeup for the CONFIG program, which is also
+used to similarly configure other programs written using the
+Draco terminal independent CRT routines. In summary, perform the
+following steps:
+
+    1) Have files CONFIG.COM, CONFIG.DAT and DED.SET on your
+	default drive. Enter
+
+	    config ded
+
+    2) Issue the CONFIG command 'L' and find your terminal on the
+	list of terminals. If it isn't there, use the information
+	provided with your terminal to create a new entry in the
+	database using the 'C' command.
+
+    3) Issue the CONFIG command 'S' and select your terminal
+	type.
+
+    4) Issue the CONFIG command 'P' to configure Ded.
+
+    5) Issue the CONFIG command 'Q' to return to CP/M.
+
+    6) Enter
+
+	    ren ded.cnf=ded.com
+
+     The second configuration step is used to assign keystroke
+sequences to the various Ded commands. This can be done as many
+times as desired until you are happy with your assignment. Ded
+allows keystroke sequences to be any of the following:
+
+    a single control character (other than CR, also known as
+	CONTROL-M).
+
+    a single character in the range (hex) 0x80 - 0xff
+
+    one of one or two first escape characters (usually ESC,
+	CONTROL-[ and perhaps CNTL-X) followed by any single
+	character
+
+    one of the first escape characters followed by one of a
+	set of 'second escape characters', followed by any
+	single character
+
+During the configuration process, you must inform the
+configuration program (DCONFIG.COM) of the first escape
+characters and any 'second escape characters' (up to 5).
+
+     To perform the keystroke configuration, make sure files
+DED.CNF (created by the other configuration process) and
+DCONFIG.COM are on your default drive. Enter
+
+	dconfig
+
+The program will read in a copy of Ded from DED.CNF and present
+you with a menu of 4 choices. Choice 1) allows you to examine the
+current set of keystroke assignments in file DED.CNF. Choice 2)
+allows you to define your own keystoke assignment. You will have
+to enter your first escape characters, any 'second escape
+characters' and your keystroke choices for the various Ded
+commands. When entering keystroke choices, the program will
+display the current value. You can keep this value by pressing
+RETURN, or replace it by typing the chosen keys. The program will
+not allow any duplicate sequences or invalid keystrokes. The keys
+you type will not be echoed in any way, so it is a good idea to
+examine the assignments (using choice 1) when you are done.
+
+     Choice 3) writes the current settings out to a new file
+called DED.COM, along with all of the code for Ded. The only
+difference between DED.CNF and DED.COM is the selected keystroke
+sequences, thus you can rename an existing DED.COM as DED.CNF and
+configure from it. Choice 4) returns you to CP/M. Ded should now
+be ready to run.
+

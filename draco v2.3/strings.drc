@@ -1,0 +1,68 @@
+#util.g
+
+int
+    DEFAULTMINLENGTH = 4,
+    MAXLENGTH = 255;
+
+proc nonrec main()void:
+    channel input binary chin;
+    file() fyle;
+    *char par;
+    byte b;
+    ushort minLength, length, i;
+    bool inString;
+    [MAXLENGTH] char buffer;
+
+    par := GetPar();
+    if par = nil then
+	writeln("Use is: strings [-n] file1.typ ... filen.typ\r\n");
+	exit(1);
+    fi;
+    minLength := DEFAULTMINLENGTH;
+    if par* = '-' and (par + 1)* >= '0' and (par + 1)* <= '9' then
+	minLength := (par + 1)* - '0';
+	par := GetPar();
+    fi;
+    if par = nil then
+	writeln("Use is: strings [-n] file1.typ ... filen.typ\r\n");
+	exit(1);
+    fi;
+    while par ~= nil do
+	if not open(chin, fyle, par) then
+	    writeln(par, ": does not exist.\r\n");
+	else
+	    inString := false;
+	    while read(chin; b) do
+		if b >= 0x20 and b <= 0x7e then
+		    if not inString then
+			inString := true;
+			length := 0;
+		    fi;
+		    if length = MAXLENGTH - 1 then
+			for i from 0 upto MAXLENGTH - 20 do
+			    write(buffer[i]);
+			od;
+			for i from MAXLENGTH - 19 upto MAXLENGTH - 2 do
+			    buffer[i - (MAXLENGTH - 19)] := buffer[i];
+			od;
+			length := 18;
+		    fi;
+		    buffer[length] := b + '\e';
+		    length := length + 1;
+		else
+		    if inString then
+			if length >= minLength then
+			    for i from 0 upto length - 1 do
+				write(buffer[i]);
+			    od;
+			    writeln();
+			fi;
+			inString := false;
+		    fi;
+		fi;
+	    od;
+	fi;
+	par := GetPar();
+    od;
+corp;
+

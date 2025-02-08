@@ -1,0 +1,203 @@
+\util.g
+
+/*
+    prove you can't win at tic-tac-toe if the opponent is competent.
+    should visit 6493 board positions per iteration.
+*/
+
+word
+    SCOREWIN = 6,
+    SCORETIE = 5,
+    SCORELOSE = 4,
+    SCOREMAX = 9,
+    SCOREMIN = 2,
+    SCOREINVALID = 0,
+    PIECEBLANK = 0,
+    PIECEX = 1,
+    PIECEO = 2,
+    ITERATIONS = 10;
+
+[9] byte board;
+word evaluated;
+
+proc nonrec winner2( byte move ) byte:
+    byte x;
+
+    case move
+        incase 0:
+            x := board[ 0 ];
+            if not ( ( ( x = board[1] ) and ( x = board[2] ) ) or
+                     ( ( x = board[3] ) and ( x = board[6] ) ) or
+                     ( ( x = board[4] ) and ( x = board[8] ) ) )
+                then x := PIECEBLANK;
+            fi;
+        incase 1:
+            x := board[ 1 ];
+            if not ( ( ( x = board[0] ) and ( x = board[2] ) ) or
+                     ( ( x = board[4] ) and ( x = board[7] ) ) )
+                then x := PIECEBLANK;
+            fi;
+        incase 2:
+            x := board[ 2 ];
+            if not ( ( ( x = board[0] ) and ( x = board[1] ) ) or
+                     ( ( x = board[5] ) and ( x = board[8] ) ) or
+                     ( ( x = board[4] ) and ( x = board[6] ) ) )
+                then x := PIECEBLANK;
+            fi;
+        incase 3:
+            x := board[ 3 ];
+            if not ( ( ( x = board[4] ) and ( x = board[5] ) ) or
+                     ( ( x = board[0] ) and ( x = board[6] ) ) )
+                then x := PIECEBLANK;
+            fi;
+        incase 4:
+            x := board[ 4 ];
+            if not ( ( ( x = board[0] ) and ( x = board[8] ) ) or
+                     ( ( x = board[2] ) and ( x = board[6] ) ) or
+                     ( ( x = board[1] ) and ( x = board[7] ) ) or
+                     ( ( x = board[3] ) and ( x = board[5] ) ) )
+                then x := PIECEBLANK;
+            fi;
+        incase 5:
+            x := board[ 5 ];
+            if not ( ( ( x = board[3] ) and ( x = board[4] ) ) or
+                     ( ( x = board[2] ) and ( x = board[8] ) ) )
+                then x := PIECEBLANK;
+            fi;
+        incase 6:
+            x := board[ 6 ];
+            if not ( ( ( x = board[7] ) and ( x = board[8] ) ) or
+                     ( ( x = board[0] ) and ( x = board[3] ) ) or
+                     ( ( x = board[4] ) and ( x = board[2] ) ) )
+                then x := PIECEBLANK;
+            fi;
+        incase 7:
+            x := board[ 7 ];
+            if not ( ( ( x = board[6] ) and ( x = board[8] ) ) or
+                     ( ( x = board[1] ) and ( x = board[4] ) ) )
+                then x := PIECEBLANK;
+            fi;
+        incase 8:
+            x := board[ 8 ];
+            if not ( ( ( x = board[6] ) and ( x = board[7] ) ) or
+                     ( ( x = board[2] ) and ( x = board[5] ) ) or
+                     ( ( x = board[0] ) and ( x = board[4] ) ) )
+                then x := PIECEBLANK;
+            fi;
+    esac;
+
+    x
+corp;
+
+proc minmax( byte alpha; byte beta; byte depth; byte move ) byte:
+    byte p, value, pieceMove, score, i;
+
+/*
+    writeln( "minmax evaluated alpha beta depth move: ", evaluated, " ", alpha, " ", beta, " ", depth, " ", move );
+    for i from 0 upto 8 do
+        write( board[ i ], " " );
+    od;
+    writeln( "" );
+*/
+
+    evaluated := evaluated + 1;
+    value := SCOREINVALID;
+    if depth >= 4 then
+        p := winner2( move );
+        if p = PIECEX then
+            value := SCOREWIN;
+        elif p = PIECEO then
+            value := SCORELOSE;
+        elif depth = 8 then
+            value := SCORETIE;
+        fi;
+    fi;
+
+    if value = SCOREINVALID then
+        if ( ( depth & 1 ) = 1 ) then
+            value := SCOREMIN;
+            pieceMove := PIECEX;
+        else
+            value := SCOREMAX;
+            pieceMove := PIECEO;
+        fi;
+
+        p := 0;
+        while p < 9 do
+            if board[ p ] = PIECEBLANK then
+                board[ p ] := pieceMove;
+                score := minmax( alpha, beta, depth + 1, p );
+                board[ p ] := PIECEBLANK;
+
+                if pieceMove = PIECEX then
+                    if score > value then
+                        value := score;
+                        if value = SCOREWIN or value >= beta then
+                            p := 10;
+                        elif value > alpha then
+                            alpha := value;
+                        fi;
+                    fi;
+                else
+                    if score < value then
+                        value := score;
+                        if value = SCORELOSE or value <= alpha then
+                            p := 10;
+                        elif value < beta then
+                            beta := value;
+                        fi;
+                    fi;
+                fi;
+            fi;
+
+            p := p + 1;
+        od;
+    fi;
+
+    value
+corp;
+
+proc nonrec runit( byte move ) void:
+    byte score;
+
+    board[ move ] := PIECEX;
+    score := minmax( SCOREMIN, SCOREMAX, 0, move );
+    board[ move ] := PIECEBLANK;
+corp;
+
+proc nonrec toword( * char p ) word:
+    word n;
+    n := 0;
+
+    while p* >= '0' and p* <= '9' do
+        n := n * 10 + ( p* - '0' );
+        p := p + 1;
+    od;
+
+    n
+corp;
+
+proc nonrec main() void:
+    word i, iters;
+    * char p;
+
+    p := GetPar();
+    if p = nil then
+        iters := ITERATIONS;
+    else
+        iters := toword( p );
+    fi;
+
+    for i from 0 upto 8 do
+        board[ i ] := PIECEBLANK;
+    od;
+
+    for i from 0 upto iters - 1 do
+        evaluated := 0;
+        runit( 0 );           /* check the 3 unique first moves */
+        runit( 1 );
+        runit( 4 );
+    od;
+
+    writeln( iters, " iterations. moves evaluated: ", evaluated ); /* 6493 if it's working */
+corp;

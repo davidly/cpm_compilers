@@ -1,0 +1,647 @@
+			The Game of SWITCH
+
+Introduction
+
+    SWITCH is a semi-graphical game which can be played on any CP/M computer
+system on which the terminal has an addressable cursor. It does not require
+any graphical output hardware. As it's name suggests, SWITCH simulates a
+railroad switching contest, in which contestants attempt to complete a set of
+switching tasks using a minimum number of operations. The generality of the
+program allows it to be used for other applications, however. One such is
+that of testing out proposed railroad layouts before they are actually built.
+
+    In it's normal mode of operation (when the user just enters 'switch' as
+a CP/M command), SWITCH presents the user with a menu of the layouts
+available on the diskette in drive A:. The list can be quite long, so is
+paginated when necessary. The layout names are read from the files
+themselves, so a fair amount of disk I/O will occur. Methods of reducing
+this will be given later. The user enters the number of the layout he/she
+wishes to run, and the layout description will be read from disk and the
+layout (or a portion of a large one) will be displayed on the screen.
+
+
+The Layout Display
+
+    Without using graphics, the display is not at all realistic, but it is
+completely understandable after a little practice. The bottom line of the
+screen is reserved for displaying prompts, informational messages, and the
+current score, which is the number of operations performed so far. As an
+example, consider the following display, which is similar to that of the
+layout called "Basic Switching Layout":
+
+                        Basic Switching Layout
+
+
+                                   b/
+				   /
+				  /
+				 /
+			       2/----+
+			      0/      \
+                   *          /04      \        a
+		   *--abcd------------------------
+			    01   \      03
+			     c    \
+			  ---------\0
+				    \5
+				     \d
+				      \
+				       \
+
+The lines drawn with '/', '-', '\' and '+' are track in the layout. Other
+layouts will also include '|'s. All layouts have a single '.', which is the
+origin or starting point of the layout. In this layout, it is under the lower
+'*', which is the engine. The 'abcd' on top of the '-'s are the four cars
+which must be switched. They must each be positioned directly under the
+corresponding letter which appears somewhere on the layout, but just above
+the track. E.g. the 'a' must be placed on the right-most piece of track,
+just under the other 'a'. When a car is in the correct place, the position-
+indicator letter will be capitalized. To complete the layout, the engine
+must also be returned to just under it's '*'.
+
+    The numbers on the display indicate turnouts, where two sections of 
+track merge into one. For example, '01' indicates turnout number 1, which in 
+this layout is a left-hand turnout, with the branch heading upwards. The 
+turnout numbers are always two digits (01 - 99) and should be read from 
+left-to-right, or if the straight side of the turnout is vertical, from 
+top-to-bottom. All turnouts are initially positioned going straight, thus if 
+the engine (the upper '*') is moved to the right, it will push the four cars 
+straight through turnouts 01, 04 and 03, to the rightmost piece of track. 
+When a turnout is switched to the turn position, the character in the middle 
+of it will change to indicate the new position. 
+
+
+Basic Operation
+
+    The basic operations in SWITCH are those of moving an engine, turning
+turnouts and uncoupling cars. All cars and engines which are initially
+adjacent are initially coupled. As in model trains, cars and engines couple
+automatically when they are pushed together. Moving an engine is best done
+using the keys of a numeric keypad, but the required keys are duplicated
+on the main keyboard. The 9 movement keys all move the engine in the
+direction corresponding to the direction of the key from the '5', 'j', 'J'
+key. The set of motions is as follows:
+
+		7, y, Y        8, u, U        9, i, I
+	        up-left           up          up-right
+	    
+	        4, h, H        5, j, J        6, k, K
+	          left           wait          right
+	    
+	        1, b, B        2, n, N        3, m, M
+	       down-left         down        down-right
+
+    Thus, in the "Basic Switching Layout" shown above, typing the 'k' or '6' 
+key will move the engine (the lower '*') to the right one position. After 
+the second move, it will be coupled to the 'a' car. If 'h' or '4' is then 
+typed, the entire train will move left one position. The program is flexible 
+about which keys are used; e.g. on a piece of horizontal track, any movement 
+key except 'up' or 'down' will move the engine. Thus, on most small layouts, 
+which do not have any loops or vertical sections, the 'left' and 'right' 
+keys are the only movement keys needed. Note that the movement keys always 
+apply to the engine, not to an 'end' of the train. Thus, if a layout has a 
+loop on it, it is possible that typing 'left' ('4' or 'h') will actually 
+move one end of the train up, down or even to the right. 
+
+    Turnouts are operated by 'toggling' them, that is by flipping them from
+their current position to their other position. This is done by typing a
+'t', and, following the prompt, the two-digit number of the turnout to
+be toggled. Turnouts cannot be toggled when there is a car or engine on top
+of the portion which changes. As mentioned before, cars and engines couple
+automatically when pushed together. They are uncoupled by typing a 'c', and,
+following the prompt, typing the letters (or symbol for an engine) of the
+two cars that are to be uncoupled.
+
+    As an example, the 'd' car in the above layout could be put into it's
+final position (underneath the 'd' on the lower section of track) by the
+following sequence of moves:
+
+		    6,6,6,6,6,6,6,6    - move engine and cars right until
+		          or             they are just to the left of
+		    k,k,k,k,k,k,k,k      turnout 04
+		    t04		       - toggle turnout 04, so that it now
+		    			 turns downward
+		    6,6,6,6,6,6,6      - move train until the 'd' is
+		        or		 correctly positioned
+		    k,k,k,k,k,k,k
+		    ccd	or cdc         - uncouple car 'd' from car 'c'
+		    4,4,4,4,4,4        - move the remainder of the train
+		        or		 back up to the main track
+		    h,h,h,h,h,h
+
+The sequence looks confusing when viewed this way, but it is quite natural
+after a few minutes of practice.
+
+    A 'run' of a layout continues until the user gives up by typing a 'Q', or
+until all cars and engines have been positioned at their destinations. At
+this point, SWITCH will attempt to log the score of a successful run. To do
+this, it needs to know the user's name for the log entry. Users are
+encouraged to use their normal names for logging, and to use the same name
+at all times, so that redundant log entries are not created. Some of the
+supplied layouts do not have log files, so SWITCH will not log scores for
+those layouts. If logging is desired, it can be enabled by simply creating
+an empty file whose name is the base name of the layout file, with a file
+extension of '.LOG'. Files can be created by any text editor, such as the
+standard CP/M editor, 'ED.COM'.
+
+
+Getting Started
+
+    SWITCH is supplied in the form of a CP/M file called 'SWITCH.SET'. This
+is a program file which must be configured to operate on the user's terminal
+before it can be used. This configuration is done using the CONFIG program,
+which is supplied on the diskette, and for which there is an accompanying
+writeup. After this is done, it is suggested that the user start by simply
+displaying the layouts, to see what they look like. Then try to solve the
+"Basic Switching Layout". Most people who don't have experience with
+operating trains (whether real or model) have trouble getting car 'c' into
+it's proper place. If you have this trouble, just keep trying, and think
+about what the situation would look like in real life.
+
+    The "Basic Switching Layout" can be done using 160 operations.
+"Operations" are those listed above under "Basic Operation". Other operations
+exist, but they do not count towards the final score. Do not be disappointed
+if you cannot get down to 160 - most people get over 200 on their first
+try, even if they are being careful. Nothing has been proved, but it is
+thought that 160 is the minimum possible for this layout. The next layout
+you should consider is "Tricky Little Layout". This layout isn't much more
+complicated, but it is a tight squeeze in a couple of places. The minimum
+obtained on this layout is 100 moves, and it is thought that this is the
+lower limit, but if you find a better solution, please let us know.
+
+    The remaining layouts are all considerably more complicated. "Messy
+Medium" is one of the most challenging, because it is fairly small and has
+lots of possibilities. I have in the past completed it in 172 moves, but I
+cannot at the moment remember how. This may be a minimum, but improvements
+are quite possible. Six of the supplied layouts are intended to roughly
+model a typical town. "Small Arrivals" and "Main-line Yard Arrivals" have
+a group of cars sitting on a delivery track (left there by a passing freight
+train) which must be positioned on the appropriate sidings. In the
+"departures" layouts, cars must be picked up from the sidings and collected
+into a group for pickup by the freight train. The two "mixed" layouts
+combine both sets of cars. "Small Mixed" in particular is challenging
+because there should be some fairly low-scored solutions to it.
+
+    "Saw-by" is an example of a problem faced by the crews on real trains
+(although fairly rarely). Two trains meet head-on and must pass by each
+other. Unfortunately, neither train will fit on the siding, thus some
+"fiddling" will be required. The standard solution to this problem is called
+a "saw-by", hence the name of the layout. "Saw-by" has two engines in it,
+the '*' and the '@'. The user is initially controlling the '*', but can
+switch to another engine by typing an 'e' and the symbol of the engine to
+be controlled. This operation does not count towards the final score. The
+symbol of the engine currently in use is displayed on the bottom line of the
+screen, just to the left of the word "Score:".
+
+
+More Advanced Features
+
+    When SWITCH is displaying the menu of available layouts, there is a lot
+of disk I/O. This is because the name of the layout is contained in the
+layout description file, hence all of the layout description files must be
+opened and partially read in order to extract the name. If, when this
+menu is being produced, the user types a key on the keyboard, SWITCH will
+switch to using a faster, but less informative menu in which the name of
+the layout file is displayed instead of the name of the layout. All other
+operation is the same. When SWITCH is initially run, it can be told to go
+initially to this faster mode by entering "switch -" instead of just
+"switch" following the "A>" prompt. Also, instead of the '-', a list of
+layout file names can be given, in which case SWITCH will go directly to
+running those layouts, one at a time. In these faster modes, the user is
+not asked if he/she wants to see the instructions, but the command summary
+can still be obtained by typing a '?' when playing the game.
+
+    Switch has the ability to 'window' around in the layouts, that is, to
+change the point at which the layout is being viewed. When running a layout,
+the user can enter any of the following:
+
+		    < or , - window left 5 columns
+		    > or . - window right 5 columns
+		    ^      - window up 5 lines
+		    v or V - window down 5 lines
+		    w or W - general windowing
+		    o or O - window to the origin
+
+The only supplied layout which requires any windowing on a 24 x 80 screen
+is "Old EMRA Layout". The viewpoint can also be rotated in 90 degree
+chunks by using any of the bracket keys (use )]} to rotate clockwise, ([{ to
+rotate counter-clockwise). While the layout is being drawn, any of the
+simple windowing or rotation commands can be entered, and SWITCH will abort
+the display. This allows several such commands to be given quickly, without
+having to wait for the entire display (which can take a few seconds for
+large layouts). When windowing around, it is easy to get lost, i.e. to window
+to a position where none of the layout is visible, and you don't know which
+way to go to find it. The 'o' command comes to the rescue - it will window
+in such a way as to put the layout origin (the period) in the center of the
+screen.
+
+    When working with large layouts, it is a nuisance to have to continually
+re-enter a sequence of commands which has been worked out. SWITCH lessens
+this problem by allowing such sequences (the basic operating commands only)
+to be recorded in a file, then "played back" at a later date. The
+distribution diskette includes two such "recordings", one for the "Saw-by"
+layout, and one for the EMRA layout. A recording is played back when running
+a layout by typing a 'p', followed by the name of the file to be played back.
+The two files are called 'SAWBY.REC' and 'EMRA.REC'. Thus, the pre-recorded
+solution to the "Saw-by" can be watched by entering the "Saw-by" layout,
+then typing a 'p' followed by "SAWBY" and a carriage return. The actual
+playing back can be done one step at a time by using the RETURN or LINEFEED
+keys once for each step, or it can be played back continuously by typing
+a space. When a playback is running continuously (with an effect similar to
+simple animation on a fast terminal), it can be stopped by typing any key.
+
+    Recordings can be made when running a layout by typing an 'r' and then
+the name of a file to record into. Be sure to avoid overwriting a file which
+contains a recording that is needed. The recording can be stopped at any
+time by typing another 'r'. Similarly, a playback can be terminated by
+typing another 'p'. Both recording and playback can be going on at the same
+time, thus allowing a recording to be "edited". Do not attempt to record into
+a file which is currently being played back. This editing is aided by the
+'s' command, which skips the next operation in the file being played back.
+Similarly, the 'z' command allows a number of wait operations to be inserted
+into the file being recorded. When playing back, new commands can be entered
+directly from the keyboard; they are inserted into the recording file at
+the current position. When playing back a file, SWITCH processes the commands
+at full speed, i.e. with no delay. This is too fast to see any details when
+the terminal is running at 9600 baud or higher. The playback can be slowed
+down by using the 'd' command, which allows a playback delay to be entered.
+When trying to minimize the operations taken to solve a given layout,
+recording and then playing back the session can be quite useful, as it often
+points out where improvements can be made.
+
+
+The EMRA Layout and the SWMERGE Program
+
+    Layout "Old EMRA Layout" in file 'EMRA.SWT' is a fairly complete model
+of an HO gauge model railroad built by the Edmonton Model Railroad
+Association. The layout no longer exists (the building was torn down), but it
+serves as a good example of how SWITCH can be used to model large layouts.
+The physical arrangement of the various towns, etc. is represented fairly
+accurately (probably not as accurately as possible). The only real problems
+encountered are related to the restricted way in which SWITCH displays the
+layout. In the actual model, the long sections of track between Lumby and
+Kalamalka, and between Lumby and Fire Valley were actually inside tunnels
+and thus were not visible. They are visible in SWITCH's representation, and
+can cause some confusion, especially where the Lumby-Fire Valley tunnel
+seems to overlap much of Armstrong. The second problem involves the use of
+the text descriptions. In some orientations (e.g. when viewing Vernon
+upside-down, i.e. inverted from it's original orientation) the text overlaps
+car and engine destination indicators. This has been minimized in the EMRA
+layout, but the user should be aware that some things can be hidden behind
+the text, and that rotation of the viewpoint may bring them into view.
+
+    A "solution" to the EMRA layout has been included, in file 'EMRA.REC'.
+This is not intended to be an optimal solution. Rather, it is intended as an
+example of how the layout was actually used by the Edmonton Club. The first
+train to leave Vernon is a fast passenger train, heading north. The Vernon
+crew then makes up a southbound freight, which leaves with a road engine as
+soon as it is ready. Cars arriving at or departing from Thornton or Armstrong
+are left or picked up in Armstrong, and are switched by a local freight
+which operates only in those two towns. Actual operation by the club would
+have included a north-bound freight train, and a southbound passenger train,
+all running simultaneously. It is quite a lot of work to set up such a
+solution, so no more details were added.
+
+    When setting up a run on a large layout such as the EMRA layout, it is
+best to break the task up into smaller pieces. It is very laborious to get
+two trains running at the same time by continually alternating between the
+two. SWMERGE presents a better method. It takes two or more .REC record
+files and merges them so that they operate in parallel. It is assumed that
+all but one of them will begin by identifying an engine besides '*' as the
+current engine. The movements of the several engines are intermixed in the
+resulting output .REC file. Up to seven input files can be merged into one
+output file. Waits, generated by the 'z' command, or by the '5', 'j' key,
+are not copied into the output file, but do serve as placeholders in the
+input files, allowing actions to be synchronized.
+
+    As an example, consider setting up a combined .REC file for the EMRA
+layout. As a first step, all of the turnouts should be set to allow trains
+to pass unhindered around the layout. In particular, turnout 38 to the
+Edgewood Mine should be toggled. This initial .REC file would contain very
+few commands. Next, the passenger train, which must not be delayed by any
+of the freight operations, can be run around the layout, producing, say, a
+record file called 'PASS.REC'. Then the first part of the southbound freight
+can be recorded into file 'FREIGHT.REC'. To run the two in parallel, to see
+how they synchronize, it is necessary to use both SWMERGE and PIP (supplied
+with CP/M) to produce a combined .REC file. First, the command
+
+	swmerge test1 pass freight
+
+will produce a file 'TEST1.REC' which runs the two trains in parallel. Then,
+the command
+
+	pip test2.rec=setup.rec,test1.rec
+
+will produce a file called 'TEST2.REC' which contains the initialization
+commands recorded into 'SETUP.REC', followed by the merged run in file
+'TEST1.REC'. The entire result can then be played back using SWITCH, to see
+how well it works. It is very difficult to edit a merged .REC file, since
+it continually switches engines, but the individual train records can be
+edited (operations deleted via 's', waits added via 'z', and operations
+inserted by entering them from the keyboard) and then re-merged. In this way,
+more realistic runs can be produced. It is not very useful to actually do
+this with the EMRA layout, since the user has no control over initial and
+final car positions, but doing it for layouts the user has created is an
+excellent way to see how they would work in real life.
+
+
+Using SWCREATE to Build New Layouts
+
+    The few layouts supplied with SWITCH by no means exhaust the
+possibilities of the game. Thus, it is useful for users to be able to create
+their own layouts. Also, if SWITCH is to be used to model real layouts, it
+must be possible to specify those layouts. The program 'SWCREATE.COM'
+supplied on the distribution diskette is a layout 'compiler' which translates
+a text file describing a layout into a binary description of the layout.
+Describing a layout textually is not the easiest way of doing so, but the
+alternative of having a graphical layout editor would have entailed far more
+programming than SWITCH itself did.
+
+    Like most compilers, most of the work done by SWCREATE involves not
+translating the text form to the internal form, but checking the validity
+of the layout specification. SWCREATE checks to make sure that the layout
+is connected up correctly, that the various pieces meet where they are
+supposed to, that cars aren't put on top of other cars, etc. In use, SWCREATE
+is run from CP/M as follows:
+
+	swcreate layout1 layout2 ... layoutn
+
+where the various 'layoutx' files are the base names of files containing
+the textual description of layouts. Normally, only one layout is compiled
+at a time, but SWCREATE can do several with one run. Each layout input file
+is expected to exist with file extension .SWS (SWitch Source), and a
+corresponding layout file with file extension .SWT is produced. Thus, the
+command
+
+	swcreate newone
+
+would expect a file called 'NEWONE.SWS' to exist on the disk, and would
+create a corresponding file called 'NEWONE.SWT'. When a new layout is
+successfully created, it will automatically be available for use with
+SWITCH. (SWITCH scans the disk for files with extension .SWT.) Score logging
+for a new layout is enabled by simply creating a log file for it, which is an
+empty file with the same base name, but with extension .LOG. Log files are
+just ASCII files, and can be edited to remove unwanted scores.
+
+    Each layout consists of several pieces of track, which can be straight
+track, turnouts (left or right-hand), corners, or the special home track.
+Each piece of track is named, so that tracks which connect to it can mention
+it by name. Other components of layouts are the cars and engines on the
+track, and textual names, etc. displayed along with the track. Each layout
+can have upto 99 turnouts, 255 pieces of track, 7 engines, 26 cars and
+50 textual items. Input lines to SWCREATE consist of several 'words',
+separated by spaces. Track specifications consist of the name of the track,
+an equals sign, and the description of the track. Here is a short sample
+layout description:
+
+    NAME Sample Layout
+    VIEWPOINT 5 10
+    ORIENTATION DOWN
+    ; Now we specify the track:
+    home = HOME vertical-track 0 0
+    vertical-track = STRAIGHT 10 home turnout-track
+    turnout-track = LEFT vertical-track left-bottom-track right-bottom-track
+    left-bottom-track = STRAIGHT 10 turnout-track NIL
+    right-bottom-track = STRAIGHT 5 turnout-track NIL
+    ; And now the engine and cars:
+    ENGINE home 0 home 0
+    CAR vertical-track 5 left-bottom-track 3
+    CAR vertical-track 6 right-bottom-track 2
+    ; And finally some descriptive text:
+    TEXT 30 -5 HORIZONTAL This is some text at the
+    TEXT 31 -5 HORIZONTAL bottom of the layout.
+
+In the sample description, the keywords known to SWCREATE have been entered
+in all capital letters, but this is not necessary. SWCREATE knows all of
+it's keywords in either all capitals, or all lower-case letters. The keywords
+are not reserved words, they can also be used as track names.
+
+    The first line in the above sample provides the name of the layout. It is
+this name which will appear in the layout menu of SWITCH. The order of the
+lines given is not important, but it is suggested that NAME, VIEWPOINT and
+ORIENTATION be the first three lines of any description. Any lines in the
+description which start with semicolons are ignored - they are comments only.
+The second line specifies the initial viewpoint into the layout, i.e. which
+portion of the layout will be displayed when it is initially drawn by SWITCH.
+For most layouts, this is selected so that the entire layout is centered
+on a 24 x 80 display screen. The numbers given (5, 10) specify that the
+initial viewpoint is centered on the fifth line below the origin, and at the
+10th column to the right of the origin. Negative numbers specify locations
+above and to the left of the origin. The third line specifies the ORIENTATION
+of the the home track, i.e. which direction to move to draw the track it
+connects to ("vertical-track" in this case). Here, the orientation is DOWN,
+meaning that the track called "vertical-track" will start just below the
+home track, and will head downwards.
+
+    The five track sections in this layout are defined next. "home" is the
+single required home track. It is located at the origin (this is common
+practice, as it makes the origin easy to locate, since each layout has one
+and only one period as part of its track). The one track connected to "home"
+is "vertical-track". "Vertical-track" is a piece of straight track, 10 units
+long, which connects "home" to "turnout-track". "turnout-track" is a
+left-hand turnout on the lower end of "vertical-track". One branch from it,
+the one that continues straight through, is "left-bottom-track", a straight
+track of length 10, which goes nowhere else (connects to 'NIL'). The turning
+branch from "turnout-track" heads down and to the right, and connects to
+"right-bottom-track", a straight track of length 5 which goes nowhere else.
+
+    The layout's single engine starts on the home track, and also must end
+up there. The two cars start together on "vertical-track", 5 and 6 units
+down from it's top, and must end up on the left and right bottom tracks,
+3 and 2 units down from their tops, respectively. The final portion of the
+description specifies some text that is to be displayed with the layout. The
+second is just under the first, which is located 30 lines below the origin,
+and 5 columns to the right of it. Both text items will be displayed
+horizontally in the initial view.
+
+    In more detail, the various specification lines are as follows:
+
+NAME <text>
+
+    This line must appear exactly once, and gives the name of the layout
+    as it will appear in SWITCH's layout menu.
+
+VIEWPOINT <line> <column>
+
+    This line must appear exactly once, and gives the coordinates of the
+    initial window into the layout, i.e. gives the layout coordinates of
+    the center of the screen for the first display of the layout.
+
+ORIENTATION {LEFT | RIGHT | UP | DOWN}
+
+    This line must appear exactly once, and gives the direction relative to
+    the home track in which the track it connects to heads.
+
+<track-name> = <track-description>
+
+    This is the general form used to describe track. The specific forms of
+    <track-description> are:
+
+    HOME <track-name> <line> <column>
+
+	There must be exactly one HOME track in each layout. Given with it
+	are the name of the track it connects to, and the line and column
+	relative to the layout origin, where the HOME track is located. The
+	home track must be the first track defined for the layout.
+
+    STRAIGHT <length> <end-1-track-name> <end-2-track-name>
+
+	A straight track of length <length> (whether horizontal, vertical
+	or diagonal) is built, connecting from <end-1-track-name> to
+	<end-2-track-name>. When cars or engines are being positioned on
+	a straight track, the position is measured relative to the first
+	segment at the <end-1-track-name> end. The numbering starts with
+	0, thus in the example above, the valid positions on the straight
+	track called "vertical-track" range from 0 at the top to 9 at the
+	bottom.
+
+    CORNER {LEFT | RIGHT} <end-1-track-name> <end-2-track-name>
+
+	Corner tracks are represented on the layout display by '+'s. They
+	represent a 45 degree corner. The direction of the corner (left or
+	right) is the turn direction when looking at the corner from the
+	track connected as <end-1-track-name>.
+
+    {LEFT | RIGHT} <point-track-name> <straight-track-name> <frog-track-name>
+
+	Turnout tracks use naming taken from railroading practice. The part
+	of a real turnout which moves, and is a piece of rail which tapers
+	to a point which sits beside another piece of rail, is called a
+	'point'. The place in a turnout where the rails of the opposite sides
+	of the two diverging tracks cross, is called the 'frog'. The points
+	are towards the single track end of the turnout, so SWITCH calls this
+	end the 'point' end. Similarly, the track which branches off from the
+	straight portion is called the 'frog' connection, and the track which
+	simply goes straight through the turnout is called the 'straight'
+	connection. In SWCREATE, the three connecting tracks are named in the
+	order given above. The direction of a turnout (left or right) is as
+	viewed from the point end of the turnout. The numbering of turnouts
+	starts at 01, and is simply the order in which the turnouts appear in
+	the layout description. The only real limitation on the number of
+	turnouts in a layout is the requirement that their numbers be two
+	digits, thus the current version of SWITCH supports 99 turnouts. When
+	displayed, the turnout will be three units long along its axis (from
+	'point' end to 'straight' end), and 2 units wide (the 'frog' end will
+	extend just as far as the 'straight' end.) The number will be beside
+	the flat side of the turnout.
+
+ENGINE <start-track-name> <start-position> <end-track-name> <end-position>
+CAR <start-track-name> <start-position> <end-track-name> <end-position>
+
+    The ENGINE 'statement' adds an engine to the layout. There can be up to 
+    7 engines in a layout. The engines are indicated on the layout by the 
+    characters '*', '@', '#', '$', '%', '&', and '?'. Similarly, the CAR 
+    'statement' adds a car to the layout. Cars are represented by letters, 
+    starting with 'a' and ending with 'z'. Cars and engines can have their 
+    start and end positions only on straight tracks and the home track (the 
+    display can get too messy otherwise). The start position is where the 
+    car or engine will initially appear, and the end position is where it 
+    must be placed to successfully complete the layout in SWITCH. 
+
+TEXT <line> <column> {HORIZONTAL | VERTICAL} <text>
+
+    The TEXT statement allows descriptive information to be added to the
+    layout. <line> and <column> give the coordinates of the start of the
+    text relative to the layout origin. The orientation is relative to the
+    initial viewing orientation. Spaces, etc. in the text will be preserved
+    as is. Text is displayed last when a layout is displayed, so it will
+    overlay any track display at the same position. This includes any blanks
+    in the text string.
+
+    There are a variety of error messages that can be produced by SWCREATE.
+Some of the more common, and what they mean are:
+
+Name buffer overflow.
+    SWCREATE allocates 5000 characters for storing track-names. This limit
+    has been exceeded - shorten some of your track names.
+
+Missing XXX track name.
+    A variety of names can appear for XXX. This is a syntax error - the input
+    line is not correctly formed.
+
+Missing YYY.
+    A numeric value, described by YYY, is missing. Again, a syntax error.
+
+Text buffer overflow.
+    SWCREATE and SWITCH allocate 1000 characters for textual messages on the
+    layout display. This limit has been exceeded.
+
+Car/engine is on top of another.
+Car/engine's home is on top of another's.
+
+    Each car or engine must have it's own unique starting and destination
+    position. A duplicate position was found.
+
+Track 'X' doesn't meet track 'Y'. (l1,c1) v.s. (l2,c2)
+
+    SWCREATE attempts to 'display' the layout internally. When doing so, two
+    pieces of track which the description says are to be joined, did not
+    physically meet. For each such occurrence, there will be two messages.
+    The difference in the line and column numbers gives the amount by which
+    the two pieces did not join. If the problem is hard to find, disconnect
+    the offending tracks (substitute NIL for the name of the other track in
+    both places), recompile the layout, and display it using SWITCH. It will
+    then be possible to see where the two tracks don't meet, and to decide
+    what to change to make them meet. It is a good idea to build large
+    layouts in portions, using SWITCH to check the construction along the
+    way.
+
+Track name already in use.
+    Each track must have a unique name - the indicated name has already been
+    used and now is being used again.
+
+Track 'X' has no backlink to track 'Y'.
+    Track 'Y' has referenced track 'X', but track 'X' has not referenced
+    track 'Y'. This is likely to be a spelling mistake in one of the
+    references.
+
+Track 'X' has been used but not defined.
+    Some track, car or engine has referenced a track named 'X', but the
+    layout description doesn't have a definition for such a track. Again,
+    this is likely to be a spelling mistake, but could actually be a
+    forgotten piece of track.
+
+Track 'X' has duplicate ends.
+Track 'X' has duplicate branches.
+    Both of the ends of a straight or corner track, or two of the branches
+    of a turnout, reference the same other piece of track. This doesn't make
+    sense.
+
+First track is not the home track.
+    The home track must be the first track defined.
+
+
+Files Included on the Distribution Diskette
+
+    The following files are included on the distribution diskette:
+
+SWITCH.SET - configurable version of the main SWITCH program. It must be run
+    through CONFIG.COM, creating file SWITCH.COM, before it can be used.
+SWCREATE.COM - layout 'compiler', used for creating new layouts.
+SWMERGE.COM - program to merge .REC files for parallel train running.
+CONFIG.COM - general-purpose configuration program, which is used to set up
+    SWITCH (and other games from Northware) to run on specific terminals.
+CONFIG.DAT - database of terminal definitions used by CONFIG.COM.
+BASIC.SWT - layout file for 'Basic Switching Layout'.
+BASIC.LOG - score log file for 'Basic Switching Layout'.
+TRICKY.SWT - layout file for 'Tricky Little Layout'.
+TRICKY.LOG - score log file for 'Tricky Little Layout'.
+MESSY.SWT - layout file for 'Messy Medium' layout.
+MESSY.LOG - score log file for 'Messy Medium' layout.
+SMALLA.SWT - layout file for 'Small Arrivals' layout.
+SMALLA.LOG - score log file for 'Small Arrivals' layout.
+SMALLD.SWT - layout file for 'Small Departures' layout.
+SMALLD.LOG - score log file for 'Small Departures' layout.
+SMALLM.SWT - layout file for 'Small Mixed' layout.
+SMALLM.LOG - score log file for 'Small Mixed' layout.
+MAINA.SWT - layout file for 'Main-Line Yard Arrivals' layout.
+MAIND.SWT - layout file for 'Main-Line Yard Departures' layout.
+MAINM.SWT - layout file for 'Main-Line Yard Mixed' layout.
+SAWBY.SWT - layout file for '"Saw-by"' layout.
+SAWBY.REC - playback file to solve '"Saw-by"' layout.
+EMRA.SWT - layout file for 'Old EMRA Layout'.
+EMRA.REC - playback file for a run of 'Old EMRA Layout'.
+
+    SWITCH, SWCREATE, SWMERGE, CONFIG and the CRT I/O routines were all
+written entirely in the Draco systems programming language.
+
