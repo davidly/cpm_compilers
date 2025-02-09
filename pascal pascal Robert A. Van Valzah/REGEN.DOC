@@ -1,0 +1,55 @@
+
+Notes on regenerating the compiler
+==================================
+
+
+When reassembling the runtime package, do not use LOAD to create RTP.COM.
+Instead, you must use a debugger and do the following:
+
+1) Assemble RTP.ASM to produce RTP.HEX.  Make note of the final code
+   address printed by the assembler.  RTP.COM should go up to this
+   address minus 1.
+
+2) Fire up your favorite debugger (DDT will do).
+
+3) Fill memory with 0's.  100h - 1000h should do.
+
+4) Now you can read in RTP.HEX, starting at 100h.
+
+5) Boot back to the CCP.
+
+6) Save memory up to one byte below the final code address printed by
+   the assembler.  F'rinstance if 0600 was last address, type
+   "SAVE 5 RTP.COM".
+
+This procedure must be followed so that PIP can be used to concatenate
+the runtime package and the object code produced by the compiler.
+It will also make your life a lot easier when using COMPARE.COM to
+compare parents and childern (should you ever try and extend the compiler).
+
+
+If you make changes to ppc.pas or pfet.pas, you'll want to be sure
+that the new compiler is capable of compiling itself.  In genetics,
+this would be like making sure that your children are not sterile.
+The file validate.sub should help make sure you don't have sterile
+children.  It uses a "know fertile" compiler (ppc.com, pfet.com) to
+compile the new ppc.pas and pfet.pas.  The resulting compiler is then
+used to compile ppc.pas and pfet.pas again.  The results of this
+second compilaton are compared to the results of the first.  If they
+match, it is safe to erase the "known fertile" compiler because you
+now know that you have a compiler which can reproduce itself.  If
+they miscompare, you'd better find out why and fix it before erasing
+the parents.  You should also note that this test only guarantees
+that you'll be able to continue to use the compiler to compile itself.
+It does N-O-T guarantee that you've got a fully functional compiler,
+because the compiling the compiler does not exercise all functions
+of the compiler.
+
+After making any changes to the compiler, you'll probably want to
+make sure that you can still compile and execute tester.pas.  This
+test doesn't test all functions of the compiler either, but passing
+tester is good sign that you haven't broken anything major.  By the
+way, it is normal to get a few type missmatch errors while compiling
+tester.  A new version of the compiler which is smarter about type
+checking would prevent these messages.
+

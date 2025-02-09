@@ -1,0 +1,152 @@
+
+        PASCAL ERROR CODES AND MEANINGS
+        -------------------------------
+
+
+CODE NO              MEANING
+
+   1:     error in simple type
+   2:     identifier expected
+   3:     'program' expected
+   4:     ')' expected
+   5:     ':' expected
+   6:     illegal symbol
+   7:     error in parameter list
+   8:     'of' expected
+   9:     '(' expected
+  10:     error in type
+  11:     '[' expected
+  12:     ']' expected
+  13:     'end' expected
+  14:     ';' expected
+  15:     integer expected
+  16:     '=' expected
+  17:     'begin' expected
+  18:     error in declaration prt
+  19:     error in field list
+  20:     ',' expected
+  21:     '*' expected
+
+  50:     error in constant
+  51:     ':=' expected
+  52:     'then' expected
+  53:     'until' expected
+  54:     'do' expected
+  55:     'to' or 'downto' expected
+  56:     'if' expected
+  57:     'file' expected
+  58:     error in factor
+  59:     error in variable
+
+  99:     '#' expected
+
+ 101:     identifier declared twice
+ 102:     low bound exceeds high bound
+ 103:     identifier is not of appropiate class
+ 104:     identifier not declared
+ 105:     sign not allowed
+ 107:     incompatible subrange types
+ 108:     file not allowed here
+ 109:     type must not be real
+ 110:     tagfield type must be scalar or subrange
+ 111:     incompatible with tagfield type
+ 112:     index type must not be real
+ 113:     index type must be scalar or subrange
+ 114:     base type must not be real
+ 115:     base type must be scalar or subrange
+ 116:     error in type of standard procedure parameter
+ 117:     unsatisfied forward reference
+ 118:     forward refernce type identifier in variable declaration
+ 119:     forward declared; repetition of parameter list not allowed
+ 120:     function result type must be scalar, subrange or pointer
+ 121:     file value parameter not allowed
+ 122:     forward declared function; repetition of result type not allowed
+ 123:     missing result types in function declaration
+ 124:     F-format for real only
+ 125:     error in type of standard function parameter
+ 126:     number of parameters does not agree with declaration
+ 127:     illegal parameter substitution
+ 128:     reslt type of parameter function does not agree with declaration
+ 129:     type conflict of operands
+ 130:     expression is not of set type
+ 131:     tests on equality allowed only
+ 132:     strict inclusion not allowed
+ 133:     file comparisons not allowed
+ 134:     illegal type of operand(s)
+ 135:     type of operand must be boolean
+ 136:     set element type must be scalar or subrange
+ 137:     set element types not compatible
+ 138:     type of variable is not array
+ 139:     index type is not compatible with declaration
+ 140:     type of variable is not record
+ 141:     type of variable must be file or pointer
+ 142:     illegal parameter substitution
+ 143:     illegal type of loop control variable
+ 144:     illegal type of expression
+ 145:     type conflict
+ 146:     assignment of files not allowed
+ 147:     label type incompatible with selecting expression
+ 148:     subrange bounds must be scalar
+ 149:     index type must not be integer
+ 150:     assignment to standard function is not allowed
+ 151:     assignment to formal function is not allowed
+ 152:     no such field in this record
+ 153:     type error in read
+ 154:     actual parameter must be variable
+ 155:     control variable must not be declared on intermediate level
+ 156:     multidefined case label
+ 157:     too many cases in case statement
+ 158:     missing corressponding variant declaration
+ 159:     real or string tagfields not allowed
+ 160:     previous declaration was not forward
+ 161:     again forward declared
+ 162:     parameter size must be constant
+ 163:     missing variant in declaration
+ 164:     substitution of standard procedure and/or function not allowed
+ 165:     multidefined label
+ 166:     multideclared label
+ 167:     undeclared label
+ 168:     undefined label
+ 169:     error in base set
+ 170:     value parameter expected
+ 171:     standard file was redeclared
+ 172:     undeclared external file
+ 173:     Fortran procedure or function expected
+ 174:     Pascal procedure or function expected
+ 175:     missing file 'input' in program heading
+ 176:     missing file 'output' in program heading
+ 177:     assignment to function identifier not allowed here
+ 178:     multidefined record variant
+ 179:     X-opt of actual procedure or function does not match formal
+          declaration
+ 180:     control variable must not be formal
+ 181:     constant part of address out of range
+
+ 201:     error in real constant: digit expected
+ 202:     string constant must not exceed source line
+ 203:     integer constant exceeds range
+ 204:     8 or 9 in octal number
+ 205:     zero string not allowed
+ 206:     integer part of real constant exceeds range
+
+ 250:     too many nested scopes of identifiers
+ 251:     too many nested procedures and/or functions
+ 252:     too many forward references of procedure enteries
+ 253:     procedure too long
+ 254:     too many long constants in thins source line
+ 255:     too many errors on this sorce line
+ 256:     too many external references
+ 257:     too many externals
+ 258:     too many local files
+ 259:     expression too complicated
+ 260:     too many exit labels
+
+ 300:     division by zero
+ 301:     no case provided for this value
+ 302:     index exbpession out of bounds
+ 303:     value to be assigned is out of range
+ 304:     element expression out of range
+
+ 398:     implementation restriction
+ 399:     variable dimension arrays not implemented
+

@@ -1,0 +1,64 @@
+
+This file descibes the function of each of the p-op codes, as best I
+can remember them while looking at my notes and code of over a year
+ago.  (Sorry, it's the best I can offer you.)
+
+Entered 02/20/81, from notes dated 09/01/79
+
+The compiler does not generate all of the p-codes given here.  Some
+were for planed enhancements that never were finished.  Similarlay,
+the translator (pfet) will translate many p-codes that the compiler
+presently does not generate.  There may be some p-codes it does
+generate that are not listed here, but this is the bulk of the
+usefull ones and will give you the general idea.
+
+
+
+lit	0,c	push word constant c into stack
+
+opr	n,m	perform operation m on top of stack
+		element(s) of type n, where n=0 is word, n=1 is alfa
+
+lod	l,a	push word at l+a into stack
+
+sto	l,a	po stack into l+a
+
+cal	l,a	call routine at p label a, level l away
+
+int	0,n	add n to stack pointer
+
+jump	0,a	jump to p label a
+
+jpc	c,a	jump to p label a after popping stack
+		c=0 jump if (top)=false, c=1 jump if (top)=true
+
+csp	0,n	call standard procedure n
+
+lodx	l,a	push word at l+a+(top) into stack
+
+stox	l,a	pop stack into l+a+(top-1)
+
+alit	0,0	push alfa which follows (next 2 p-ops or 8 bytes)
+		into stack, msbyte follows first (may have changed)
+
+alod	l,a	push alfa at l+a into stack
+
+asto	l,a	pop alfa from stack into l+a
+
+alodx	l,a	push alfa at l+a+(top) to stack
+
+astox	l,a	pop alfa from stack into l+a+(top-5)
+
+pshf	0,0	push true or false into stack based on result
+		of last conditional executed
+
+laa	l,a	load absolute machine address of l,a into stack
+		used for var parameters
+
+lodi	0,0	load word pointed to by top of stack into stack
+		pops address first
+
+stoi	0,0	store word on top of stack at address on (top-1)
+
+lab	0,n	defines the p label n
+

@@ -1,0 +1,7 @@
+
+PASCAL1 $1.PAS $1.PCO
+PASCAL2 $1.PCO $1.OCO
+ERA $1.PCO
+PIP $1.COM=PASCAL3.COM,$1.OCO[OV]
+ERA $1.OCO
+

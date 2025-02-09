@@ -1,0 +1,50 @@
+
+
+The runtime stack is kept on the 8080 machine stack.
+
+In all diagrams below, the highest memory address is at the T-O-P
+of the diagram.
+
+		char		word		alfa (01234567)
+		====		====		===============
+						7
+						6
+						5
+						4
+						3
+						2
+				H		1
+pointer to ->	x		L		0
+
+
+	    ____________________
+	 -5 | return address   |
+	 -4 |__________________|
+	 -3 | dynamic link     |
+	 -2 |__________________|
+	 -1 | static link      |
+BR ->	  0 |__________________|
+	  1 | local variable 1 |
+	  2 |                  |
+	  . |                  |
+	  . |                  |
+	  . | local variable n |
+	  n |__________________|
+	    | function value   |    function return value
+	-10 |__________________|
+	 -9 | parameter 1      |
+	 -8 |__________________|
+	 -7 | parameter 2      |
+	 -6 |__________________|
+	 -5 | return address   |
+	 -4 |__________________|
+	 -3 | dynamic link     |
+	 -2 |__________________|
+	 -1 | static link      |
+BR ->	  0 |__________________|
+	  1 | local variable 1 |
+	  2 |__________________|
+		
+	^^^ offsets from BR (base register)
+
+
