@@ -2,7 +2,7 @@ byte
     DIGITS_TO_FIND = 200;
 
 proc nonrec main() void:
-    word x, n, high;
+    word x, n, high, d;
     [DIGITS_TO_FIND] byte a;
 
     high := DIGITS_TO_FIND;
@@ -22,8 +22,9 @@ proc nonrec main() void:
         n := high;
 
         while n ~= 0 do
-            a[ n ] := x % n;
-            x := 10 * a[ n - 1 ] + x / n;
+            d := x / n;
+            a[ n ] := x - ( d * n );
+            x := 10 * a[ n - 1 ] + d;
             n := n - 1;
         od;
 
