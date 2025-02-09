@@ -3,7 +3,7 @@ byte
 
 proc nonrec main() void:
     word x, n, high, d;
-    [DIGITS_TO_FIND] byte a;
+    [DIGITS_TO_FIND] word a;
 
     high := DIGITS_TO_FIND;
     x := 0;
