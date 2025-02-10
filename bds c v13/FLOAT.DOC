@@ -1,0 +1,196 @@
+.mb5
+.po12
+
+
+                The Incredible Superpowerful 
+            Floating Point Package for BDS C v1.3
+            *************************************
+              software written by: Bob Mathias
+             this documentation by: Leor Zolman
+
+
+
+
+Files making up the floating point package:
+
+          1©   FLOAT.DOCº Thió documentation
+          2©   FPFUNCS.Cº Supporô functions¬ writteî iî C
+          3©   FLOAT.CRLº Thå workhorså function
+               (FLOATT.CRÌ oî versionó 1.3T)
+
+
+Thió floatinç poinô packagå ió aó closå aó BDÓ Ã versioî 1.ø ió eveò 
+gonná comå tï manipulatinç floatinç poinô numbers® Anä iô ain'ô toï 
+bad¬ actually...Boâ diä á nicå neaô job® Here'ó ho÷ iô worksº foò 
+everù floatinç poinô numbeò yoõ wisè tï worë with¬ yoõ musô declarå á 
+fivå (5© elemenô characteò array® Then¬ pasó á pointeò tï thå arraù 
+wheneveò yoõ neeä tï specifù iô iî á functioî call® Eacè oæ Bob'ó 
+functionó expectó itó argumentó tï bå pointeró tï sucè  characteò 
+arrays® Thå fouò basiã arithmetiã functionó areº fpadd¬ fpsub¬ fpmuì 
+anä fpdiv® Theù eacè takå threå argumentsº á pointeò tï á fivå 
+characteò arraù wherå thå resulô wilì go¬ anä thå twï operandó (eacè á 
+pointeò tï á fivå characteò arraù representinç á floatinç poinô 
+operand.© Tï facilitatå thå initializatioî oæ thå floatinç poinô 
+characteò arrayó witè thå valueó yoõ desirå anä printinç ouô thå 
+valueó iî á human-readablå form¬ thå followinç functionó arå included:
+
+     ftoaº convertó á floatinç poinô numbeò tï aî ASCIÉ strinç (whicè 
+           yoõ caî theî prinô ouô witè "puts")
+     atofº convertó aî ASCIÉ strinç (nulì terminated© tï á floatinç 
+           poinô number
+     itofº convertó integeò tï floatinç point.
+
+
+Here are Bob's descriptions of the functions:
+
+Thå followinç functionó allo÷ BDÓ Ã compileò useró tï accesó anä 
+manipulatå reaì numbers® Eacè reaì numbeò musô bå allocateä á fivå (5© 
+bytå characteò arraù (chaò fpno[5])®  Thå firsô fouò byteó contaiî thå 
+mantissá witè thå firsô bytå beinç thå leasô significanô byte®  Thå 
+fiftè bytå ió thå exponent. 
+
+fpcomp(op1,op2)
+chaò op1[5],op2[5];
+          
+          Returnsº       aî integeò ± iæ op± ¾ op2
+                         aî integeò -± iæ op± ¼ op2
+                         zerï iæ op± ½ op2
+          Aó witè mosô floatinç poinô packages¬ iô ió noô á gooä 
+          practicå tï comparå foò equalitù wheî	dealinç witè floatinç 
+          poinô numbers.Šchaò *fpadd(result,op1,op2)
+chaò result[5]¬ op1[5]¬ op2[5];
+
+          Storeó thå resulô oæ op± « op² iî result® op±	anä op² musô           
+          bå floatinç poinô numbers® Returnó á pointeò tï thå 
+          beginninç oæ result.
+
+
+chaò *fpsub(result,op1,op2)
+chaò result[5],op1[5],op2[5];
+
+          Storeó thå resulô oæ op± - op² iî result®  op± anä op² musô 
+          bå floatinç poinô numbers® Returnó á pointeò tï thå 
+          beginninç oæ result.
+
+
+chaò *fpmult(result,op1,op2)
+chaò result[5],op1[5],op2[5];
+
+          Storeó thå resulô oæ op± ª op² iî result®  op± anä op² musô 
+          bå floatinç poinô numbers® Returnó á pointeò tï thå 
+          beginninç oæ result.
+
+
+chaò *fpdiv(result,op1,op2)
+chaò result[5],op1[5],op2[5];
+
+          Storeó thå resulô oæ op± ¯ op² iî result®  op± anä op² musô 
+          bå floatinç poinô numbers® Á dividå bù zerï wilì returî zerï 
+          aó result® Returnó á pointeò tï thå beginninç oæ result.
+
+
+chaò *atof(op1,s1)
+chaò op1[5],*s;
+
+          Convertó thå ASCIÉ strinç s± intï á floatinç poinô numbeò 
+          anä storeó thå resulô iî op1® Thå functioî wilì ignorå 
+          leadinç whitå spacå buô NÏ whitå spacå ió alloweä tï bå 
+          embeddeä withinç thå number® Thå followinç arå legaì 
+          examples:
+                         "2"¬ "22022222222383.333"¬ "2.71828e-9",
+                         "334.3333E32".
+                         "3443.3³ E10¢ woulä bå ILLEGAÌ because
+          
+          iô containó aî embeddeä space® Thå valuå oæ thå exponenô 
+          musô bå withiî the range: 
+
+                    -3¸ <½ exponenô <½ 38.
+
+          Á pointeò tï thå resulô ió returned.
+
+.Cp8Šchaò *ftoa(s1,op1)
+char *s1,op1[5];
+
+          Convertó thå floatinç poinô numbeò op± tï aî ASCIÉ string®  
+          Iô wilì bå formatteä iî scientifiã notatioî witè seveî (7© 
+          digitó oæ precision® Thå strinç wilì bå terminateä bù á 
+          null® Returnó á pointeò tï thå beginninç oæ s1.
+
+
+char *itof(op1, n)
+char op1[5];
+int n;
+          Setó thå floatinç pt® numbeò op± tï thå valuå oæ integeò n® 
+          î ió assumeä tï bå á SIGNEÄ integer.
+
+
+
+Generaì observations:
+
+Becauså floatinç poinô operationó musô bå thoughô oæ iî termó oæ 
+FUNCTIOÎ CALLÓ ratheò thaî simplå in-linå expressions¬ speciaì carå 
+musô bå takeî noô tï confuså thå abilitieó oæ thå compileò witè thå 
+abilitieó oæ thå floatinç poinô package® Tï givå á floatinç poinô 
+numbeò aî initaiì value¬ foò instance¬ yoõ cannoô say:
+
+          chaò fpno[5];
+          fpnï ½ "2.236";
+
+Tï achievå thå desireä result¬ you'ä havå tï sayº	
+
+          chaò fpno[5];
+          atof(fpno,"2.236");
+
+Moreover¬ let'ó saù yoõ wanô tï seô á floatinç poinô numbeò tï thå 
+valuå oæ aî integeò variablå calleä "ival"® Saying:
+
+          chaò fpno[5];
+          inô ival;
+          ...
+          fpnï ½ ival;
+
+wilì noô work» yoõ havå tï changå thaô lasô linå to:
+
+          itof(fpno,ival);
+
+
+Somå morå examples:
+
+Thå followinç wilì adä 100.² ¦ -7.9¹ anä storå thå resulô aô thå fivå 
+characteò arraù locatioî 'a':
+
+          fpadd(a,atof(b,"100.2")¬ atof(c,"-7.99"));
+          (notå thaô "b¢ anä "c¢ musô alsï bå fivå characteò arrays)
+
+Thå followinç woulä NOÔ adä ± tï 'a§ aó botè op± anä op² musô bå 
+floatinç poinô numberó (actuallù pointeró tï characters...):
+
+          fpadd(a,a,1)»  /ª baä uså oæ "fpadd¢ */Š
+Thus¬ iô caî geô á biô hairù wheî alì floatinç poinô numberó arå 
+reallù characteò arrays» buô still¬ it'ó betteò thaî nothing.
+
+Alì oæ thå abovå functionó arå writteî iî C¬ buô mosô oæ theí calì á 
+singlå workhorså functioî calleä "fp¢ tï dï alì thå reallù hairù work® 
+Thió functioî haó beeî placeä intï á CRÌ filå alì bù itó lonesome¬ 
+calleä "FLOAT.CRL.¢ Whaô yoõ shoulä promtlù dï ió compilå thå Ã 
+functionó bù saying:
+
+          cc± fpfuncs.c
+
+anä theî usinç thå librariaî tï transfeò thå onå functioî ouô oæ 
+"FLOAT.CRL¢ anä intï "FPFUNCS.CRL"® Then¬ wheneveò yoõ neeä tï uså thå 
+floatinç poinô functions¬ you'lì onlù neeä tï givå "FPFUNCS¢ tï thå 
+CLINË commanä linå (insteaä oæ botè FPFUNCÓ anä FLOAT.)
+
+É would'vå likeä tï precompilå alì thå Ã stufæ foò you¬ buô there'ó 
+onlù sï mucè spacå oî á floppù disk® Aó I'í surå yoõ kno÷ alì toï 
+well!
+
+Questionó oî thå internaló oæ thió packagå shoulä bå addresseä to:
+
+
+               Boâ Mathias
+               2314· Loó Alisoó apt® 268
+               Missioî Viejo¬ Ca® 92691
+
+

@@ -1,0 +1,44 @@
+
+
+
+            ******************************************************************
+            *                                                                *
+            *         BD Software C Compiler                                 *
+            *         On_Line Hanbook                                        *
+            *         written by          Leor Zolman,                       *
+            *                             BD Software                        *
+            *                             9/15/79, 12/17/79                  *
+            *                                                                *
+            ******************************************************************
+
+
+            Welcomå tï thå worlä oæ Structureä High-Leveì Microcomputeò 
+            Programming!¡ Thió documenô ió intendeä aó á quicë guidå tï usinç thå 
+            BDÓ Ã Compileò package® 
+
+                    ====================================================
+                    Notå tï TRS-8° owneró anä otheò useró havinç an
+                    upper-caså onlù consolå I/Ï deviceº Twï programs
+                    havå recentlù beeî addeä tï thå package¬ CONVERT.C
+                    anä CC0T.C¬ tï allo÷ yoõ tï represenô thoså characters
+                    noô normallù availablå oî youò keyboards® Seå the
+                    lasô parô oæ thió filå foò details.
+                    ====================================================
+
+            Thå maiî componentó oæ thå BDÓ Ã packagå areº fouò executablå COÍ 
+            files¬ á standarä librarù filå anä á skeletaì run-timå subroutinå 
+            module.
+
+            A descriptioî oæ eacè follows:
+
+            CC1:    Becauså Ã loadó thå entirå sourcå filå intï memorù iî onå 
+                    shot¬ thå compilatioî ió brokeî uğ intï twï phaseó (noô 
+                    "passes"¬ strictly» Thå twï phaseó enä uğ takinç abouô ¸ 
+                    "passes¢ tï actuallù implement)¬ maximizinç thå amounô oæ 
+                    memorù availablå foò thå sourcå file® CC1¬ thå firsô phaså oæ 
+                    thå compiler¬ acceptó á Ã sourcå filå witè anù filenamå anä 
+                    extensioî (say¬ "foo.c"© anä produceó á temporarù filå 
+                    containinç á symboì tablå anä aî encodeä forí oæ thå sourcå 
+                    code® Bù default¬ versioî 1.³ wilì leavå thå temporarù  filå 
+                    iî RAÍ anä attempô tï loaä iî thå nexô phaså oæ thå compileò 
+                    (CC2

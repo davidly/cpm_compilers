@@ -1,0 +1,358 @@
+.mb5
+.po12
+
+                       BDÓ Ã Versioî 1.³  Notes
+                       ========================
+                       Leoò Zolman¬ BÄ Software
+                         (Novembeò 17¬ 1979)
+
+
+     ************************************************************
+     **    Summary of the neat new features of version 1.3:    **
+     **                                                        **
+     **    1) New functions:  exec, execl, rename, srand1,     **
+     **                       putch, sprintf, fprintf,         **    
+     **                       sscanf, fscanf, fgets, fputs,    **
+     **                       and new versions of printf and   **
+     **                       scanf.                           **
+     **    2) New CC1 options: p, v, w, x, y, z                **
+     **    3) #include preprocessor command implemented        **
+     **    4) Auto-chaining from CC1 to CC2		       **
+     **    5) Floating point function package included         **
+     **    6) New, super-powerful TELNET.C		       **
+     **    7) And the bug count plummets...                    **
+     ************************************************************
+
+
+
+Speciaì thankó tï Boâ Mathiaó foò hió floatinç poinô package¬ tï Earì 
+T® Coheî foò thå .COM-to-.CRÌ filå conversioî prograí (anä Jacë	Wierdá 
+foò modificationó tï thå program)¬ tï Leï Keneî foò immenså amountó oæ 
+assistancå developinç thå ne÷ TELNEÔ anä I/Ï functions¬ anä tï Laureî 
+Weinsteiî anä Jerrù Pournellå foò lotó oæ moraì	support!
+
+Sooî É hopå somå kinä oæ softwarå exchangå caî geô seô up» 
+unfortunately¬ É don'ô havå thå timå oò thå equipmenô tï handlå sucè 
+aî enterprise® Herå arå somå nameó anä numberó oæ aviä BDÓ Ã useró whï 
+woulä lovå tï talë about/worë oî Ã softwarå exchangå ideas:
+
+		Laureî Weinstein.....(213© 397-6213
+		Phiì Apleù or
+		Scotô Layson.........(617© 494-8320
+		Warä Christensen.....(312© 849-6279
+
+
+
+Herå ió á lisô oæ buç fixes/enhancementó iî 1.3:
+
+  0.    Thió versioî (1.3© ió thå firsô onå iî whicè thå sourcå filå 
+        goinç iî tï CC1.COÍ caî bå biggeò thaî 16Ë iî length® Thió waó 
+        á seriouó buç thaô manageä tï noô sho÷ uğ foò á lonç timå 
+        becauså nï onå haä trieä tï compilå á sourcå filå biggeò thaî 
+        16K!!¡ Therå werå alsï variouó anä sundrù bugó iî CC± thaô 
+        causeä iô tï bomâ undeò certaiî conditions® Eacè timå thió 
+        happenó É fiø thå responsiblå bug...buô there'ó á loô oæ codå 
+        there® Iæ yoõ managå tï bomâ CC1¬ CC2¬ oò CLINK¬ pleaså leô må 
+        kno÷ anä I'lì trù tï geô yoõ á fix.
+.cp8Š  0.5   Wheî writinç datá froí memorù tï disë undeò controì oæ á Ã 
+        program¬ thå datá iî memorù maù geô wipeä ouô followinç thå 
+        calì tï "write¢ thaô actuallù performó thå disë I/O® Thió 
+        applieó tï prioò versionó oæ BDÓ Ã (1.² anä earlier© runninç 
+        undeò anù versioî oæ CP/Í prioò tï 2.0® Thå reasoî foò thió 
+        buç waó thaô É wasn'ô awarå oæ CP/M'ó habiô oæ usinç thå 
+        currenô DMÁ addresó foò temporarù scratcè spacå durinç 
+        directorù operations» thus¬ wheneveò thå lasô sectoò  oæ aî 
+        extenô waó writteî tï disk¬ iô woulä geô wipeä ouô bù CP/Í 
+        withiî memorù (althougè iô woulä writå tï disë OK.© Thå 
+        probleí waó solveä bù makinç surå thaô BDÓ Ã performó alì disë 
+        writinç functionó froí tbufæ (bù copyinç thå requireä datá tï 
+        RAM+80è beforå eacè disë write¬ insteaä oæ dynmaicallù 
+        changinç thå DMÁ addresó tï poinô tï thå onlù copù oæ thå datá 
+        tï bå written.)
+
+
+  1.    Thå expressioî evaluatoò haó beeî completelù torî aparô anä 
+        rewritten¬ sï thaô somå obscurå expressionó thaô didn'ô worë 
+        witè previouó versionó wilì no÷ work® Thió coveró expressionó 
+        sucè aó 	
+                    (expression)[subscript]
+
+        anä pointeò arithmetiã oî pointers-to-pointersº 
+        Witè 1.2¬ let'ó saù yoõ declareä argö as
+
+                    chaò **argv;
+
+        anä theî assigneä iô thå valuå 100° with
+
+                    argö ½ 1000;
+
+        Now¬ iæ yoõ wrotå aî expressioî sucè as
+
+                    (argö « 1)
+
+        thå valuå oæ thå expressioî woulä havå beeî 100± insteaä oæ 
+        thå CORRECÔ valuå 1002¬ accordinç tï thå ruleó oæ pointeò 
+        arithmetic¬ whicè statå thaô matè oî á pointeò ió alwayó 
+        scaleä bù thå lengtè oæ thå objecô pointeä tï bù thå pointer® 
+        Thus¬ sincå argö pointó tï á pointer-to-characters¬ anä 
+        pointers-to-characteró arå twï byteó long¬ (argv+1© oò 
+        (argv++© SHOULÄ incremenô argö bù á valuå oæ 2» onlù thå 
+        latteò workeä correctly¬ though¬ iî 1.2® Thió kinä oæ stufæ 
+        seemó tï worë correctlù iî v1.3...
+
+        Otheò resultó oæ thå ne÷ expressioî evaluatorº iô doesn'ô 
+        matteò anymorå whetheò yoõ writå foo++;
+        or
+                    ++foo;
+
+        sincå thå evaluatoò wilì automaticallù converô thå formeò tï 
+        thå latteò iæ thå valuå isn'ô useä aó parô oæ á morå compleø 
+        expression® Thå reasoî foò thió ió thaô iô takeó lesó codå tï 
+        perforí á pre-incremenô oò pre-decremenô thaî iô doeó tï dï á 
+        post-incremenô oò post-decrement¬ becauså thå olä valuå oæ the
+        variablå doesn'ô havå tï bå saved.
+Š  2.    Labeló arå no÷ processeä intelligently® Eacè functioî ió 
+        treateä separately¬ sï labeì referenceó acrosó functioî 
+        boundarieó arå nï longeò ignored® Thå waù É diä labeì 
+        processinç beforå waó stupid» eveî thougè theù needn'ô bå useä 
+        verù often¬ aô leasô no÷ labeló wilì acô thå waù onå mighô 
+        expecô theí to.
+
+
+  3.    Bù populaò demanä (mainlù froí Warä Christensen)¬ eacè oæ CC1¬ 
+        CC² anä CLINË no÷ printó ouô á memorù usagå diagnostiã afteò 
+        completinç itó chore® Thå numbeò displayeä ió thå amounô oæ 
+        memorù lefô unuseä bù thå command¬ roundeä dowî tï thå nearesô 
+        K® Wheî thió valuå approacheó 0K¬ it'ó timå tï geô morå 
+        memory» iæ yoõ alreadù havå 64K¬ you'vå jusô outgrowî BDÓ C.
+        Gï geô aî 11/70.
+
+
+  4.    É finallù goô myselæ MAÃ anä SID¬ sï alì compileò messageó 
+        comå ouô iî nicå upper/loweò caså aó theù SHOULÄ havå alì 
+        along® Oè well» ASÍ haä itó bugs¬ buô aô leasô iô waó cosô 
+        effective.
+
+
+  5.    Structureó anä unionó whicè starô ofæ witè thå sametypeó oæ 
+        elementó maù no÷ uså thå samå membeò names¬ provideä thaô thå 
+        offsetó anä typeó arå exactlù thå samå foò eacè occurrencå oæ 
+        á membeò namå withiî á structurå oò unioî definition® Notå 
+        thaô thå compileò maù noô alwayó detecô á mismatcè iî TYPÅ 
+        wheî thió optioî ió used¬ duå tï internaì kludgery¬ buô aô 
+        leasô consistencù iî thå offsetó wilì alwayó bå checkeä for® 
+        Bù thå way¬ yoõ stilì can'ô havå á regulaò (non-member© 
+        variablå witè thå samå namå aó á structurå element® Oè well® 
+        Tï illustrate¬ thå followinç sequencå oæ declarationó ió legaì 
+        iî 1.³ buô woulä havå drawî á "redeclaration¢ erroò iî 
+        previouó versions:
+
+        	strucô foï {
+        		inô a;
+        		chaò b»	
+        		unsigneä c;
+        	};
+
+        	strucô baò {
+        		inô a;
+        		chaò b;
+        		inô d;
+        	};
+
+        Thå variableó "a¢ anä "b¢ havå thå samå characteristicó iî 
+        botè structurå definitions¬ sï theù arå alloweä tï appeaò 
+        twice® Notå thaô iæ thå declaratioî oæ membeò "d¢ werå changeä 
+        tï "inô c;¢ theî aî erroò woulä occur¬ sincå "c¢ cannoô bå 
+        redeclareä aó á differenô typå oæ member.
+
+.cp8Š  6.    CLINË wilì no÷ accepô disë disignationó foò CRÌ filå nameó 
+        entereä iî thå interactivå mode® Also¬ thå interactivå modå 
+        waó buggù foò thå TRS-80¬ Heath¬ etc® (4200è origin© versions» 
+        Iæ yoõ kno÷ anyonå whï haó á 1.xÔ versioî oldeò thaî 1.3¬ urgå 
+        theí tï geô aî update® Iî aî unrelateä triviality¬ thå CLIÂ 
+        prograí diä bizarrå thingó wheî tolä tï RENAMÅ á functioî 
+        wherethå ne÷ namå waó longeò thaî thå olä name» thió haó beeî 
+        fixeä iî 1.3.
+
+
+  7.    Thå olä "exec¢ function¬ writteî iî Ã anä includeä witè thå 
+        versioî 1.² package¬ haó beeî scrapped® Á ne÷ "exec¢ haó beeî 
+        writteî iî assembleò anä includeä foò compatibility® Buô 
+        betteò yetº Á ne÷ function¬ "execl"¬ haó no÷ beeî provideä tï 
+        handlå chaininç froí onå C-generateä COÍ filå tï another¬ WITÈ 
+        PARAMETEÒ PASSING¬ sï thaô thå neô effecô oæ execì ió thå samå 
+        aó iæ thå chaineä COÍ filå werå invokeä directlù froí CP/M® 
+        Execl¬ iî additioî tï allowinç parameteò passing¬ ió alsï mucè 
+        fasteò thaî thå olä "exec¢ waó sincå thå COÍ filå needeä ió 
+        loadeä directlù intï RAÍ insteaä oæ operatinç througè á 
+        hacked-uğ "SUBMIT¢ file.
+
+        Thå formaô oæ aî execì calì is:
+
+        		execl(fname,arg1,arg2,...,0);
+        		chaò *fname¬ *arg1¬ *arg2¬ ...
+
+        wherå fnamå pointó tï thå namå oæ thå COÍ filå tï bå chaineä 
+        to¬ anä arg1¬ arg2¬ etc.¬ arå pointeró tï characteò strinç 
+        arguements® Á nulì argumenô MUSÔ follo÷ thå lasô arg¬ oò 
+        follo÷ fnamå iæ therå arå nï arguments® Execì setó uğ á 
+        commanä linå buffeò aô locatioî RAM+80è (jusô aó thå CCĞ does© 
+        containinç thå lisô oæ specifieä stringó ¨ *ª NÏ *ª lower-to-
+        uppeò caså mappinç ió performed¬  sï bå carefuì wheî usinç 
+        programó whicè expecô theiò  "main¢ argumentó tï bå uppeò caså 
+        only!)¬ loadó iî thå prograí fname.COÍ aô ram+100h¬ anä 
+        executeó it® Notå thaô thå CLINË optioî "-c¢ neeä nï longeò bå 
+        giveî wheî yoõ linë á prograí thaô ió tï bå chaineä tï bù 
+        execl® Iî fact¬ "-c¢ shouldn'ô bå useä foò anythinç aô all» iô 
+        waó onlù therå tï prevenô argã ¦ argö processinç iî aî exec-eä 
+        prograí wheî usinç thå olä "exec"® Thå "-e¢ option¬ though¬ 
+        musô stilì bå giveî iæ externaì datá ió tï bå shareä betweeî 
+        thå execl-inç anä execl-eä programs® Finaì noteº execì setó uğ 
+        thå commanä linå buffeò jusô likå thå CCP¬ buô iô doeó NOÔ seô 
+        uğ thå defaulô fcâ (aô locatioî RAM+5ch)® Thus¬ execì shoulä 
+        noô bå useä witè noî C-generateä COÍ fileó thaô expecô theiò 
+        argument(s© pre-installeä iî thå defaulô fcb® 
+
+        Examplesº        execl("stone",0);
+                    (or© exec("stone");
+
+        loadó anä executeó thå commanä "STONE.COM";
+
+                         execl("pressup","-D","4","-B",0);
+
+        actó aó iæ yoõ haä typed¬ tï CP/M,
+
+                         A>pressuğ -ä ´ -bŠ        	
+  8.    Aó suggesteä bù Laureî Weinstein¬ á ne÷ forí oæ thå "srand¢ 
+        functioî haó beeî includeä tï allo÷ "hiding¢ thå randoí seeä 
+        initialization.
+        Thå ne÷ functioî haó thå form:
+
+                         srand1(s)
+                         chaò *s;
+
+        Iô workó bù printinç ouô thå giveî string¬ theî loopinç 
+        internallù (jusô likå "srand(0)"© untiì á characteò ió typed¬ 
+        aô whicè poinô iô useó thå internaì counteò valuå aó seeä anä 
+        returnó withouô samplinç thå inpuô character® Thå typicaì uså 
+        oæ srand± mighô bå somethinç like:
+
+               srand1("Dï yoõ neeä instructionó (y/n)¿ ");
+               iæ (toupper(getchar()© =½ 'Y'© ..® 
+
+        Thanø tï Laureî foò suggestinç thió (anä manù otheò finå 
+        improvements¬ sucè aó "execl".)
+
+
+  9.    Tï makå lifå easieò foò texô editoò writers¬ anä becauså iô ió 
+        difficulô tï dï witè BDOÓ calls¬ á "rename¢ functioî haó beeî 
+        addeä tï allo÷ thå renaminç oæ CP/Í files® Thå formaô is:
+
+                         rename(old,new)
+                         chaò *old¬ *new;
+
+        wherå thå argumentó arå self-explanatory® Thå filå extensions¬ 
+        iæ needed¬ musô bå presenô explicitlù (i.e.¬ extensionó wilì 
+        noô bå tackeä oî automaticallù iî thå samå waù aó "exec¢ anä 
+        "execl¢ appenä ".COM¢ tï theiò firsô argumenô strings.© 
+        "rename¢ ió supposeä tï returî ° iæ nï error¬ oò -± oî error¬ 
+        but..® BECAUSÅ OÆ Á BUÇ IÎ CP/M¬ THÅ RENAMÅ FUNCTIOÎ  MAÙ 
+        ALWAYÓ RETURÎ Á VALUÅ OÆ -± OÎ YOUÒ SYSTEM.
+
+
+ 10.    Alì thoså hairù formatteä I/Ï functionó describeä iî Kernighaî 
+        ¦ Ritchiå havå beeî writteî (afteò á fashion© anä includeä iî 
+        thå sourcå filå STDLIB2.C® Notå thaô noô alì havå beeî 
+        compileä anä puô intï DEFF.CRL¬ duå tï lacë oæ directorù spacå 
+        iî DEFF.CRL® Ratheò thaî creatå anotheò CRÌ filå (aó iæ therå 
+        weren'ô enougè iî thå packagå already)¬ É invitå yoõ tï 
+        compilå STDLIB2.Ã yourselæ iæ yoõ neeä anù oæ thoså obscurå 
+        functions® Also¬ reaä STDLIB2.Ã carefullù foò somå 
+        implementatioî differenceó betweeî mù versionó anä thå oneó iî 
+        thå book® Bù thå way¬ thå printæ functioî no÷ acceptó thå %ï 
+        (octal© conversioî character® Oè boy. 
+
+
+ 11.    Iæ you'vå madå iô thió far¬ youò patiencå shalì bå rewardedº 
+        Afteò CC± finisheó processinç oæ thå firsô pasó oæ 
+        compilation¬ iô wilì no÷ attempô tï bypasó thå writinç oæ thå 
+        CCÉ filå tï disë bù loadinç iî CC² immediatelù anä continuinç 
+        witè pasó 2® Á ne÷ seô oæ optionó haó beeî addeä tï CC± foò 
+        thå purposå oæ controllinç thió ne÷ feature» iæ nonå oæ theí 
+        arå specified¬ thå defaulô actioî oæ CC± wilì bå tï attempô tï Š        loaä iî CC² froí thå currentlù logged-iî disë (iæ therå werå 
+        nï erroró durinç CC1.© 
+        Otheò optionó are:
+
+               Vº	Alwayó writå thå .CCÉ filå tï disk
+               Wº	auto-loadó CC² froí disë Á always
+               Xº	auto-loadó CC² froí disë B
+               Yº	auto-loadó CC² froí disë C
+               Zº	auto-loadó CC² froí disë D
+
+        Notå thaô alì optionó tï CC± musô bå specifieä (followinç á 
+        dash© bù á singlå strinç (nï spaces.© Foò example¬ á simplå 
+        compile-with-auto-load-of-CC2-from-the-currently-logged-disë 
+        oæ LIFE.Ã woulä be:
+
+                 A>cc± life.c
+
+        Tï seô thå symboì tablå sizå tï 5Ë byteó anä writå thå .CCÉ 
+        filå tï disk¬ you'ä say:
+
+                         A>cc± life.ã -v5
+                    (or© A>cc± life.ã -5ö	etc® etc.
+
+        Iæ CC² isn'ô founä wherå yoõ telì CC± tï geô iô from¬ theî thå 
+        CCÉ filå wilì bå writteî tï disk.
+
+
+ 11.5   Anotheò ne÷ optioî tï CC² ió thå "p¢ option¬ aó suggesteä bù 
+        Mikå Bentley® Thió causeó á printout¬ oî thå CP/Í console¬ oæ 
+        thå resulô oæ thå preprocessoò phaså oæ CC1® Thaô is¬ thå waù 
+        thå texô lookó afteò alì #definå anä #includå statementó havå 
+        beeî processed® Thå linå numberó foò "#included¢ fileó wilì 
+        appeaò indenteä ² spaceó tï thå right¬ buô multiply-nesteä 
+        #includå fileó wilì noô yielä multiple-indentations® (Seå 
+        belo÷ foò detailó oî thå #includå preprocessoò  command.)
+
+
+ 12.    Á ne÷ versioî oæ "putchar¢ haó beeî addeä tï thå package® 
+        Calleä "putch"¬ thió routinå alsï outputó itó characteò 
+        argumenô tï thå CP/Í consolå outpuô device¬ buô iô doeó NOÔ 
+        checë thå CP/Í consolå INPUÔ foò control-C.
+        "putch¢ ió intendeä foò applicationó sucè aó thå TELNET.Ã 
+        program¬ iî whicè thå prograí musô explicitlù checë foò 
+        keyboarä input¬ anä woulä noô toleratå havinç "putchar¢ reaä 
+        anä cleaò thå consolå statuó aô randoí times® Normally¬ thió 
+        ió nï biç deal¬ anä iî facô "putchar¢ ió nicå iî thaô wheneveò 
+        yoõ geô stucë iî somå kinä oæ outpuô loop¬ yoõ caî alwayó 
+        aborô bù typinç control-C® Buô useró oæ thå "TELNET.C¢ prograí 
+        froí BDÓ Ã versioî 1.² oò earlieò mighô noticå thaô everù oncå 
+        iî á while¬ á characteò theù typå ió noô seeî bù thå TELNEÔ 
+        program¬ eveî thougè iô ió echoeä tï thå screen¡ Thió ió thå 
+        kinä oæ  probleí "putch¢ ió meanô tï fix.
+
+.cp8Š 13.    Á ne÷ pre-processoò commanä haó beeî workeä intï CC1º 
+
+                    #includå "filename"
+               (or© #includå <filename>
+
+        wilì no÷ causå thå nameä filå tï bå substituteä foò thå 
+        "#include¢ linå aô compilå time® Iæ thå filå cannoô bå found¬ 
+        compilatioî wilì abort® Erroò messageó foò statementó whicè 
+        camå froí withiî aî includeä filå wilì havå thå form:
+        Includå À nnnnnº xxxxxº erroò wherå nnnnî ió thå linå aô whicè 
+        thå #includå tatemenô waó encountered¬ anä xxxxø ió thå linå 
+        numbeò relativå tï thå starô oæ thå FIRSÔ nesteä includå file® 
+        Notå thaô wheneveò aî #includå filå ió encountered¬ normaì 
+        linå numberinç ió suspendeä ("pushed"© untiì ALÌ oæ thå 
+        includå filå haó beeî reaä in...iæ thå includeä filå itselæ 
+        containó #includå statements¬ though¬ thå linå numberó remaiî 
+        contiguous® Thió "pushing¢ onlù workó foò thå highesô level® 
+        Thus¬ althougè #includå nestinç wilì worë foò manù levels¬ iô 
+        ió noô recommendeä thaô morå thaî onå leveì bå used.
+
+
+
+                               *** The End ***
+
