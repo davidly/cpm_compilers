@@ -1,0 +1,18 @@
+	    New Features For BDS C v1.44	April 29, 1981
+	    ----------------------------	--------------
+
+1. CC1, CC2  and CLINK may now be interrupted during execution by typing
+   control-C.
+
+2. CLINK: prefixing a CRL filename by "-f " forces all functions in that file
+   to be loaded, whether they have been previously referenced or not. If any
+   functions in that file have already been loaded, though, then a message to
+   that effect is printed and the redundant version is not reloaded. For ex-
+   ample,
+		A>clink test -f xlib more <cr>
+
+   causes ALL functions from XLIB.CRL, whether referenced or not,  to be
+   linked into TEST.COM. After that, MORE.CRL (and DEFF.CRL and DEFF2.CRL)
+   are scanned for needed functions, but only the ones explicitly referenced
+   are picked off.
+

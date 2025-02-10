@@ -1,0 +1,299 @@
+;;
+;; 	CMAC.LIB	by Robert T. Schumaker and David A. Nichols
+;;	(v1.4x)		February 25th 1980
+;;
+;;			Modified by Leo Kenen to accept multiple functions
+;;			per source file -- July 10th 1980
+;;
+;;			"EXDWREL" and some documentation added by Leor Zolman
+;;			
+;;			Exrel bug fixed so the form:
+;;				exrel  <lxi h,>,function
+;;			will work. 2/3/81 L. Kenen
+;;
+;;	This macro package, for use with Digital Research's MAC macro
+;;	assembler, does a real nifty job of automating the transformation
+;;	of customized assembly language functions into the CRL function
+;;	format. Just begin your assembly file with the statments
+;;
+;;		maclib bds		;get system info and run-time constants
+;;		maclib cmac		;include this macro library
+;;
+;;	and stick in the required pseudo-ops for creating the CRL directory
+;;	and handling function identification and relocation. The file
+;;	DEFF2.ASM, included with the BDS C package, contains ALL the library
+;;	functions which are coded in assembly language. It is now painless
+;; 	to customize the library routines and/or add your own. Note that the
+;;	libraries have been once more reorganized; all the C functions in
+;;	STDLIB1.C and STDLIB2.C are now compiled into DEFF.CRL, and all the
+;;	assembly functions are assembled into DEFF2.CRL (from DEFF2.ASM).
+;;	The general procedure for making an .ASM file into a .CRL file
+;;	(assuming the .ASM file uses the macro commands defined here) is:
+;;
+;;		1) assemble the file, with: A>mac name.asm $whatever...
+;;		2) load the file, with:	    A>load name
+;;		3) rename the file, with:   A>ren name.crl=name.com
+;;
+;;	and that's all there is to it. Be careful when using the pseudo-ops,
+;;	though; the error detection is not too fabulous. Some possible hassles
+;;	to watch out for:
+;;
+;;		0) remember to use the "maclib" statement to read in the
+;;		   macro definitions in this file and the global equates
+;;		   in BDS.LIB
+;;
+;;		1) DO NOT have "end" statements anywhere except at the end of
+;;		   the entire source file
+;;
+;;		2) Don't use labels with identical names in separate functions.
+;;
+;;		3) Remember to use the "reloc" pseudo-op for all local address
+;;		   references (i.e., `jmp's to other labels within a function),
+;;		   and the "exrel" pesudo-op ONLY to call a function defined
+;;		   as a "needed function" by way of being placed in the arg
+;;		   list to "prelude". For dw ops, use "dwrel" for local
+;;		   labels and "exdwrel" for needed-function addresses
+;;
+;;		4) Make sure that the order in which the functions appear is
+;;		   EXACTLY the same as the order in which their "define"
+;;		   ops appear in the directory section.
+;;
+;;	The Macros:
+;;
+;;		DIRECT		;Indicates start of directory.
+;;				;  Put this right after the
+;;				;  "maclib" statments.
+;;
+;;		DEFINE	function_name
+;;				;Creates directory entry for function.
+;;				;  Have one of these for each function you
+;;				;  include later, and keep the order the same. 
+;;
+;;		ENDDIR
+;;				;Indicates end of directory.
+;;				;  After this pseudo-op, place
+;;				;  each of your functions--
+;;				;  IN THE SAME ORDER BY WHICH
+;;				;  YOU ENTERED THEM IN THE
+;;				;  DIRECTORY SECTION.
+;;
+;;		PRELUDE	function_name,needed_func_name
+;;	or	PRELUDE	function,<needed_func1,needed_func2,...>
+;;				;Indicates start of code for a given function
+;;				;This macro also creates a table of all the
+;;				;needed functions which are external to
+;;				;this function. Any refrences to these needed
+;;				;functions must be relocated using the
+;;				;EXREL macro. Note that if you need to specify
+;;				;more than one needed function, then the list
+;;				;must be enclosed in angle brackets.
+;;
+;;		POSTLUDE function_name
+;;				;Indicates end of code for a given function
+;;				; Note that the name MUST be specified.
+;;
+;;		RELOC OP,ADDR
+;;				;Relocates given operation for the LOCAL
+;;				;address given (i.e., "ADDR" is a location
+;;				;within the function body, but use "exrel" for
+;;				;references to the "needed" functions).
+;;				; For operations which have more than one
+;;				;operand (i.e., spaces embedded
+;;				;in the opcode of the instruction),it is
+;;				;necessary to specify the macro
+;;				;call in a very kludgy way. E.g.,
+;;				;
+;;				;		LXI    H,BAZ
+;;				;becomes
+;;				;		RELOC  <LXI H,>,BAZ
+;;				;
+;;				;if BAZ is a symbol local to the function.
+;;				;  The general rule of thumb here is that
+;;				;both "exrel" and "reloc" take two arguments,
+;;				;and the assembler normally assumes that spaces
+;;				;separate the two arguments; thus, op codes 
+;;				;that include spaces must be entirely enclosed
+;;				;in angle brackets. RELOC CANNOT BE USED ON
+;;				;"DW" ops...FOR THAT, USE "DWREL"
+;;
+;;		EXREL	OP,LABEL
+;;				;Like RELOC, but used to relocate
+;;				;references to the functions
+;;				;which were specified in the
+;;				;PRELUDE to the function. These
+;;				;are functions external to the
+;;				;routine which is currently
+;;				;being defined. Angle brackets must again
+;;				;be used for OPs containing embedded spaces.
+;;
+;;		DWREL ADDR	;Used as a relocatable "dw" pseudo-op, since
+;;				;using a "reloc" only works with an op code
+;;				;type instruction. For local addresses only,
+;;				;otherwise use EXDWREL
+;;
+;;		EXDWREL ADDR	;DWREL's counterpart for needed function
+;;				;references
+;;
+;;	Grateful Note:
+;;		This package may have saved my sanity. Thank you,
+;;		Tennessee Tech Microcomputer Association, for
+;;		hacking it up. And thanks, Leo, for making it
+;;		even better.	     (-leor)
+;;
+;;
+;	BDS C Macro Library (CMAC.LIB) v1.4
+;	by Robert T. Schumaker and David A. Nichols
+;				Modified by Leo Kenen
+;
+;
+;; 
+@functs	set	0		;; number of functions processed
+@c	set	0		;; initialize count
+@there	set	0305h		;; after two pages and 5 reserved bytes
+;
+@genpos	macro	@addr		;; force the address to be offset from zero
+@where	set	@addr-@there-@offset	;; instead of where MAC thinks it is
+	endm
+;
+@genlab	macro	@num,@foo	;; generate a label for the relocation table
+	@genpos	$+1		;; to point to the byte following the @op
+@r&@foo&@f&@num:	equ	@where
+	endm
+;
+@gendw	macro	@num,@foo	;; generate a relocation table entry
+	dw	@r&@foo&@f&@num
+	endm
+;
+@gendb	macro	@name
+@last	set	0		;; this macro generates a table entry for
+	irpc	c,<&@name>	;; @name, and sets bit 7 on the last character
+@last	set	@last+1
+	endm
+@count	set	0
+	irpc	c,<&@name>
+@count	set	@count+1
+@temp1	set	@count eq @last
+@temp2	set	not @temp1
+	if	@temp1
+	db	'&C' or 80h
+	endif
+	if	@temp2
+	db	'&C'
+	endif
+	endm
+	endm
+;
+@genjmp	macro	@label,@num	;; set up the jump table at the beginning of
+@l&@label&@x&@num:	jmp	0000h		;; the program
+	endm
+;
+@dwlab	macro	@num,@foo	;; this is needed to generate a relocation
+	@genpos	$		;; label for the 'dwrel' macro
+@r&@foo&@f&@num:	equ	@where
+	endm
+;
+dwrel	macro	@addr		;; need to be able to relocate dw
+@c	set	@c+1		;; and get correct relocation
+	@dwlab	%@c,%@functs	;; parameters
+	@genpos	@addr
+	dw	@where
+	endm
+;
+reloc	macro	@op,@addr	;; relocate the opcodes parameter
+;
+@c	set	@c+1		;; count this location so that we can
+	@genlab	%@c,%@functs	;; generate a label at address for the postlude
+	@genpos	@addr		;; macro and put it in the relocation table
+	&@op	@where		;; force to be orged at 'start' of program
+	endm
+;;
+;; Relocate function involving an external needed function:
+exrel	macro	@op,@addr
+	@exrel	<@op>,@addr,%@functs
+	endm
+;;
+@exrel	macro	@op,@addr,@num
+	reloc	<@op>,@l&@addr&@x&@num
+	endm
+
+
+;;
+;; Relocate a "dw" involving an external needed function:
+;
+exdwrel macro	@addr
+	@exdwrel @addr,%@functs
+	endm
+;
+@exdwrel macro @addr,@num
+	dwrel @l&@addr&@x&@num
+	endm
+
+;
+;
+direct	macro	
+@functs	set	0
+	org	0100H
+	endm
+enddir	macro
+	db	80H
+	dw	@final-0100H
+	org	0305H		;; This should be generalized
+	endm
+;
+define	macro	@name
+;				;; to be able to use LOAD
+	@gendb @name		;; point to module
+	dw	@name&@beg	;; start of block
+	endm
+;
+
+prelude	macro	@name,arglist	;; set up a list of needed routines 
+@there	set	$
+@name&@beg	equ	$-0100h	;; jump table so that we can get
+@functs	set	@functs+1	;; We are processing another function
+	 irp	pp,<arglist>
+	  if	nul &PP
+	  exitm
+	  endif
+	 @gendb	pp
+	 endm
+	db	00
+	dw	@name&@end-$-2	;; this is how long the routine is. the
+;				;; -2 is to get rid of the dw itself.
+;				;; 
+@offset	set	$-0100h-@name&@beg	;; the routine proper starts here at
+;				;; the beginning of the jump table
+;				;; all the different offsets are needed
+	irp	pp,<arglist>	;; to fool both MAC and the C linker.
+	 if	not nul &PP
+	  reloc	jmp,@name&@strt
+	  exitm
+	 endif
+	endm
+	 irp	pp,<arglist>
+	   if	nul &PP
+	   exitm
+	   endif
+	  @genjmp pp,%@functs
+	 endm
+@name&@strt:	equ	$	;; end of the jump table
+	endm
+;
+postlude macro @name		;; this macro is set up so that the human
+				;; doesn't have to do anything special
+	@postlude @name,%@c	;; since we supply the parameter pass
+	endm
+;
+@postlude macro	@name,@num	;; sets up a table of relocation point
+@name&@end:	equ	$	;; using the labels generated by reloc
+	dw	@num		;; tell how many
+@b	set	0
+	rept	@c
+@b	set	@b+1		;; bump @counters
+@c	set	@c-1
+	@gendw	%@b,%@functs
+	endm
+@final	set	$		;; next free byte in file
+	endm
+;
+
