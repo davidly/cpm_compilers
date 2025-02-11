@@ -1,0 +1,30 @@
+DECLARE
+        LIT     LITERALLY      'LITERALLY',
+        TRUE            LIT    '1',
+        FALSE           LIT    '0',
+        FOREVER         LIT    'WHILE TRUE',
+        INDEXSIZE       LIT    'ADDRESS',
+        STATESIZE       LIT    'ADDRESS',
+        LF              LIT    '0AH',
+        QUESTIONMARK    LIT    '3FH',
+        POUNDSIGN       LIT    '23H',
+        UPARROW         LIT    '5EH',
+        TAB             LIT    '09H',
+        COLIN           LIT    '3AH',
+        ASTRICK         LIT    '2AH',
+        PERCENT         LIT    '25H',
+        IDENTSIZE       LIT    '32',  /* MAX IDENTIFIER SIZE + 1 */
+        VARCSIZE        LIT   '100',  /* SIZE OF VARC STACK */
+        PSTACKSIZE      LIT    '32',  /* SIZE OF PARSE STACKS */
+        EOLCHAR         LIT   '0DH',  /* END OF SOURCE LINE INDICATOR */
+        EOFFILLER       LIT   '1AH', /* PAD CHAR FOR LAST REC ON FILE */
+        SOURCERECSIZE   LIT   '128',  /* SIZE OF SOURCE FILE REC */
+                     /* NOTE: THIS IS MAX SIZE OF SOURCE FILE RECORDS
+                              IF SOURCE FILE CONSISTS OF VAR LNG REC */
+        INTRECSIZE      LIT   '128',  /* INTERMEDIATE FILE REC SIZE */
+        CONBUFFSIZE     LIT    '82',  /* SIZE OF CONSOLE BUFFER */
+        HASHTBLSIZE     LIT    '64',  /* SIZE OF HASHTABLE */
+        HASHMASK        LIT    '63',  /* HASHTBLSIZE - 1 */
+        STRINGDELIM     LIT   '22H',  /* CHAR USED TO DELIM STRINGS */
+        CONTCHAR        LIT   '5CH',  /* CONTINUATION CHARACTER */
+        MAXONCOUNT      LIT    '15';  /* MAX NUMBER ON STATEMENTS */

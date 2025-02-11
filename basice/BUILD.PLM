@@ -1,0 +1,426 @@
+BASBUILD:
+DO; /* ORIGINALLY ORG'ED AT 2D00H ABOVE INTERP */
+   /*
+         ********************************************************
+         *                                                      *
+         *               BASIC-E BUILD PROGRAM                  *
+         *                                                      *
+         *          U. S. NAVY POSTGRADUATE SCHOOL              *
+         *               MONTEREY, CALIFORNIA                   *
+         *                                                      *
+         *          WRITTEN BY GORDON EUBANKS, JR.              *
+         *                                                      *
+         *                 CPM VERSION 1.3                      *
+         *                                                      *
+         *                  DECEMBER 1976                       *
+         *                                                      *
+         ********************************************************
+    */
+    /*
+         ********************************************************
+         *                                                      *
+         *      THE BUILD PROGRAM GAINS CONTROL WHEN THE        *
+         *      RUN TIME MONITOR IS EXECUTED.  THE INT FILE     *
+         *      FOR THE PROGRAM TO BE EXECUTED IS OPENED        *
+         *      AND THE BASIC-E MACHINE IS BUILT.               *
+         *                                                      *
+         *      BUILD PERFORMS THE FOLLOWING FUNCTIONS:         *
+         *                                                      *
+         *      (1) THE NUMERIC CONSTANTS ARE READ FROM         *
+         *      THE INT FILE, CONVERTED TO INTERNAL REP-        *
+         *      RESENTATION, AND STORED IN THE FSA.             *
+         *                                                      *
+         *      (2) THE SIZE OF THE CODE AREA, DATA AREA        *
+         *      AND NUMBER OF PRT ENTRIES ARE READ FROM         *
+         *      THE INT FILE. BUILD THEN DETERMINES THE         *
+         *      ABSOLUTE ADDRESS OF EACH SECTION OF THE         *
+         *      BASIC-E MACHINE. THESE ADDRESSES ARE            *
+         *      PASSED TO THE INTERP PROGRAM VIA FIXED          *
+         *      ADDRESSES IN THE FLOATING POINT SCRATCH         *
+         *      PAD.                                            *
+         *                                                      *
+         *      (3) FINALLY INSTRUCTIONS ARE READ FROM          *
+         *      THE FILE AND PLACED IN EITHER THE DATA          *
+         *      AREA OR THE CODE AREA. IN THE CASE OF BRS       *
+         *      BRC, PRO, CON, AND DEF OPERATORS THE            *
+         *      ADDRESS FOLLOWING THE INSTRUCTION IS RE-        *
+         *      LOCATED TO REFLECT ACTUAL MACHINE ADDRESSES     *
+         *      (MINUS 1 BECAUSE PROGRAM COUNTER GETS           *
+         *      INCREMENTED PRIOR TO USE (EXCEPT FOR CON)!!)    *
+         *      AFTER (REPEAT AFTER) THE MACHINE HAS BEEN       *
+         *      REPOSITIONED BY INTERP. THE END OF THE INT      *
+         *      FILE IS INDICATED BY A MACHINE INSTRUCTION      *
+         *      7FH.                                            *
+         *      REPOSITIONED BY INTERP.                         *
+         *                                                      *
+         ********************************************************
+    */
+    /*
+         ********************************************************
+         *                                                      *
+         *                    GLOBAL LITERALS                   *
+         *                                                      *
+         ********************************************************
+    */
+DECLARE
+        LIT       LITERALLY    'LITERALLY',
+        TRUE      LIT                  '1',
+        FALSE     LIT                  '0',
+        CR        LIT                '0DH',
+        LF        LIT                '0AH';
+    /*
+         ********************************************************
+         *                                                      *
+         *            SYSTEM PARAMETERS WHICH MAY               *
+         *            REQUIRE MODIFICATION BY USERS             *
+         *                                                      *
+         ********************************************************
+    */
+DECLARE
+        /* OP CODES FOR BASIC-E MACHINE INSTRUCTIONS */
+        DAT         LIT      '51',
+        ILS         LIT      '28',
+        DEF         LIT      '94',
+        BRS         LIT      '54',
+        BRC         LIT      '55',
+        PRO         LIT      '30',
+        CON         LIT      '46';
+    /*
+         ********************************************************
+         *                                                      *
+         *               EXTERNAL ENTRY POINTS                  *
+         *    THESE ENTRY POINTS ALLOW INTERFACEING WITH CP/M   *
+         *                                                      *
+         ********************************************************
+    */
+DECLARE
+        BDOSBEGIN    ADDRESS INITIAL(06H), /* PTR TO BOTTOM CP/M */
+        MAX          BASED   BDOSBEGIN   ADDRESS,
+        
+        /* OFFSET IS THE SIZE OF THIS MODULE */
+        OFFSET       ADDRESS EXTERNAL, /* INITIALIZED BELOW */
+        /* START IS THE ADDRESS TO START INTERPRETATION */
+        START      LABEL EXTERNAL,
+        /* BEGIN HOLDS THE VALUE OF .MEMORY FOR INTERP */
+        BEGIN     ADDRESS EXTERNAL,
+        /* PARAMETER PASSING LOCATIONS */
+
+        PARAM1       ADDRESS EXTERNAL ,
+        PARAM2       ADDRESS EXTERNAL ,
+        PARAM3       ADDRESS EXTERNAL ,
+        PARAM4       ADDRESS EXTERNAL ;
+         /*
+         ********************************************************
+         *                                                      *
+         *                GLOBAL VARIABLES                      *
+         *                                                      *
+         ********************************************************
+        */
+DECLARE
+        MCD       LIT       'PARAM1',
+        MDA       LIT       'PARAM2',
+        MPR       LIT       'PARAM3',
+        SB        LIT       'PARAM4',
+        MBASE     ADDRESS, /* PTR TO NEXT POSTION IN DATA AREA */
+        MF        BASED     MBASE      BYTE,
+        BASE      ADDRESS, /* PTR TO NEXT POSITION IN CODE AREA */
+        CURCHAR   BYTE, /* HOLDS CHAR BEING ANALYZED */
+        B         BASED     BASE BYTE,
+        BV        BASED     BASE(1) BYTE,  /* VECTOR VERSION OF B */
+        A         BASED     BASE ADDRESS,
+        AP        BYTE, /* ACCUMULATOR INDEX */
+        ACCUM(16) BYTE, /* HOLDS CONSTANTS PRIOR TO CONV */
+        TEMP      ADDRESS,
+        T         BASED     TEMP BYTE;
+    /*
+         ********************************************************
+         *                                                      *
+         *         FLOATING POINT INTERFACE ROUTINES            *
+         *                                                      *
+         ********************************************************
+    */
+FLTOP: PROCEDURE(FUNCTION,LOCATION) EXTERNAL;
+    DECLARE FUNCTION BYTE, LOCATION ADDRESS;
+    END FLTOP;
+
+DECLARE FPN LITERALLY 'FLTOP';
+
+FLTRET: PROCEDURE(FUNCTION,LOCATION) EXTERNAL;
+    DECLARE FUNCTION BYTE, LOCATION ADDRESS;
+    END FLTRET;
+
+DECLARE FP LITERALLY 'FLTRET';
+
+FLTINP: PROCEDURE(COUNT,LOCATION) EXTERNAL;
+    DECLARE COUNT BYTE, LOCATION ADDRESS;
+    END FLTINP;
+
+DECLARE FPINP LITERALLY 'FLTINP';
+
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *                CP/M INTERFACE ROUTINES               *
+         *                                                      *
+         ********************************************************
+    */
+DECLARE
+        DISKBUFFLOC LIT     '80H',
+        FCBLOC      LIT     '5CH',
+        DISKBUFFEND LIT    '100H',
+      /* IF OPERATING SYSTEM READS VARIABLE LENGTH RECORDS
+         THIS MUST BE ADDRESS OF ACTUAL END OF RECORD */
+        BUFF      ADDRESS   INITIAL(DISKBUFFEND), /* INPUT BUFFER */
+        CHAR      BASED     BUFF       BYTE,     /* INPUTBUFF POINTER */
+        FILENAME  ADDRESS   INITIAL   (FCBLOC),
+        FNP       BASED     FILENAME(33)  BYTE; /* FILE CONTROL BLK */
+
+
+MON1:PROCEDURE(FUNCTION,PARAMETER) EXTERNAL;
+    DECLARE
+            FUNCTION  BYTE,
+            PARAMETER   ADDRESS;
+END MON1;
+
+MON2: PROCEDURE(FUNCTION,PARAMETER) BYTE EXTERNAL;
+    DECLARE
+            FUNCTION    BYTE,
+            PARAMETER   ADDRESS;
+END MON2;
+
+
+MON3: PROCEDURE EXTERNAL;
+END MON3;
+
+
+PRINTCHAR: PROCEDURE(CHAR) EXTERNAL;
+    DECLARE CHAR BYTE;
+END PRINTCHAR;
+
+
+PRINT: PROCEDURE(BUFFER) EXTERNAL;
+     /*
+         PRINT A LINE ON CONSOLE FOLLOWED BY A
+         CARRIAGE RETURN AND LINEFEED
+     */
+    DECLARE
+            BUFFER ADDRESS;
+END PRINT;
+
+PRINTF: PROCEDURE(BUFFER);
+    DECLARE BUFFER ADDRESS;
+    CALL PRINT(BUFFER);
+    CALL PRINTCHAR(CR); CALL PRINTCHAR(LF);
+    END PRINTF;
+
+OPEN$INT$FILE: PROCEDURE;
+    FNP(9) = 'I';
+    FNP(10) = 'N';
+    FNP(11) = 'T';
+    IF MON2(15,FILENAME) = 255 THEN
+         DO;
+              CALL PRINTF(.('NI   $'));
+              CALL MON3;
+         END;
+END OPEN$INT$FILE;
+
+
+READ$INT$FILE: PROCEDURE BYTE;
+     /*
+        NEXT RECORD IS READ FROM INT FILE
+        DISKBUFFEND MUST REFLECT THE ADDRESS
+        OF THE END OF THE RECORD PLUS ONE
+        FOR FIXED SIZE RECORDS THIS IS A CONSTANT
+        RETURNS ZERO IF READ IS SAT, AND 1 IF EOF
+     */
+    RETURN MON2(20,FILENAME);
+END READ$INT$FILE;
+    /*
+         ********************************************************
+         *                                                      *
+         *                  GLOBAL PROCEDURES                   *
+         *                                                      *
+         ********************************************************
+    */
+
+
+INCBUF: PROCEDURE;
+    IF(BUFF := BUFF + 1) >= DISKBUFFEND THEN
+         DO;
+              BUFF = DISKBUFFLOC;
+              IF READ$INT$FILE <> 0 THEN
+                   CHAR = 7FH;
+         END;
+END INCBUF;
+
+
+STO$CHAR$INC: PROCEDURE;
+     /*
+        GET NEXT CHAR FROM INT FILE AND
+        PLACE IN CODE AREA. THEN INCREMENT
+        PTR INTO CODE AREA.
+     */
+    B=CHAR;
+    BASE=BASE+1;
+END STO$CHAR$INC;
+
+
+NEXT$CHAR: PROCEDURE BYTE;
+    CALL INCBUF;
+    RETURN CURCHAR := CHAR;
+END NEXT$CHAR;
+
+
+GET$TWO$BYTES: PROCEDURE;
+    /*
+      GET NEXT TWO BYTES FROM THE INT FILE
+      AND PLACE THEM IN THE CODE AREA IN REVERSE ORDER. 
+    */
+    BV(1) = NEXT$CHAR;
+    B = NEXT$CHAR;
+    RETURN;
+END GET$TWO$BYTES;
+
+
+INC$BASE$TWO: PROCEDURE;
+    BASE = BASE + 1 + 1;
+    RETURN;
+END INC$BASE$TWO;
+
+
+GETPARM: PROCEDURE ADDRESS;
+     /*
+        READ A 16 BIT PARAMETER FROM INT FILE
+        AND CONVERT IT TO AN 8080 ADDRESS QUANTITY
+     */
+    RETURN SHL(DOUBLE(NEXT$CHAR),8) + NEXT$CHAR;
+END GETPARM;
+
+    /*
+         ********************************************************
+         *                                                      *
+         *              EXECUTION BEGINS HERE                   *
+         *                                                      *
+         ********************************************************
+    */
+BUILD:
+CALL PRINTF(.('BASIC-E INTERPRETER - VER 2.2$'));
+CALL OPEN$INT$FILE;
+
+BASE = (.MEMORY + 100H) AND 0FF00H; /*  BEGINNING OF MACHINE AND FDA */
+OFFSET = BASE - BEGIN; /* SIZE OF THE BUILD MODULE */
+
+CALL FPN(0,0); /* INITIALIZE FLOATING POINT PACKAGE */
+      /*
+          PROCESS CONSTANTS
+          EACH CONSTANT IS SEPARATED BY A $
+          LAST CONSTANT FOLLOWED BY A *
+      */
+DO WHILE(ACCUM(0) := NEXT$CHAR) <> '*'; /* * INDICATES END OF CONST */
+    AP = 0;   /* COUNTER FOR LENGTH OF THIS CONSTANT */
+    DO WHILE(ACCUM(AP:=AP+1) := NEXT$CHAR) <> '$';
+          /* GET CONSTANT INTO THE ACCUM */
+         END;
+    CALL FPINP(AP,.ACCUM); /* CONVERT IT TO INTERNAL FORM */
+    CALL FP(9,BASE);  /* LOAD INTO FDA FROM F/P ACCUM */
+    BASE = BASE + 4; /* NEXT LOCATION */
+    END;    /* OF LOOKING FOR *  */
+
+      /*
+          SETUP MACHINE ADDRESS
+          BASE WILL NOW BE NEXT POSITION IN CODE AREA
+          MBASE WILL BE NEXT POSTION IN DATA AREA
+      
+          ACTUAL ADDRESSES OF CODE AREA, DATA AREA
+          PRT, AND STACK ARE PASSED TO INTERPRETER
+          USING FIXED LOCATIONS
+      */
+MBASE = GETPARM + BASE;
+
+MDA = MBASE - OFFSET; /* ACTUAL DATA AREA ADDR */
+MCD = BASE - OFFSET; /* ACTUAL CODE AREA ADDR */
+MPR = GETPARM + MDA;  /* ACTUAL BEGINNING OF PRT */
+IF MPR >= MAX THEN /* INSURE THERE IS ENOUGH MEMORY */
+    DO;
+         CALL PRINTF(.('NM  $'));
+         CALL MON3;
+    END;
+SB = SHL(GETPARM,2) + MPR; /* NUMBER OF ENTRIES IN PRT * 4=SIZE PRT */
+
+      /*
+          BUILD MACHINE - ATLAST 
+          AS OPCODES ARE READ THEY MAY BE:
+             (1) DAT - WHICH MEANS ALL CHARACTERS
+             FOLLOWING DAT GO INTO DATA AREA UNTIL
+             A BINARY ZERO IS INCOUNTERED
+
+             (2) GREATER THAN 127 - WHICH IS A LIT
+             OR A LIT. TREAT THIS AS 16 BIT OPCODE
+             AND PUT IN CODE AREA IN ORDER THEY ARE
+             ON INT FILE
+
+             (3) ILS - WHICH MEANS ALL CHARACTERS
+             FOLLOWING GO INTO CODE AREA UNTIL A 
+             BINARY ZERO IS INCOUNTERED - BUT FIRST
+             PUT A ILS IN CODE AREA AND THE NEXT 
+             BYTE IS SET TO ZERO AND INCREMENTED
+             FOR EACH CHARACTER IN THE STRING. IE
+             A STRING CONSTANT IS A ILS OPCODE,
+             A LENGTH AND THE STRING.
+     
+             (4) A NORMAL OP CODE - PUT IN CODE
+             AREA - BUT IF IT IS A BRS OR BRC OR
+             DEF OR PRO THEN THE NEXT TWO BYTES
+             ARE AN ADDRESS WHICH MUST BE RELOCATED
+             TO THE ACTUAL CODE AREA MINUS 1;
+             OR IT COULD BE A CON WHICH IS
+             RELOCATED TO THE FDA.
+        */
+
+DO WHILE NEXT$CHAR <> 7FH; /* BUILD MACHINE */
+    IF CURCHAR = DAT THEN /* PROCESS DATA STATEMENT */
+         DO WHILE(MF := NEXT$CHAR) <> 0; /* LOOK FOR END */
+              MBASE = MBASE + 1;
+              END;
+         ELSE
+              IF CURCHAR >= 128 THEN /* PROCESS LIT OR LID */
+                   DO;
+                        CALL STO$CHAR$INC;
+                        CALL INCBUF;
+                        CALL STO$CHAR$INC;
+                   END;
+              ELSE
+                   IF CURCHAR = ILS THEN /* PROCESS INLINE STRING */
+                        DO;
+                             CALL STO$CHAR$INC;
+                             TEMP = BASE;
+                             CHAR = 0; /* TO SET LENGTH TO 0 INITIAL */
+                             CALL STO$CHAR$INC;
+                             DO WHILE NEXT$CHAR <> 0;
+                                  CALL STO$CHAR$INC;
+                                  T = T + 1;
+                                  END;
+                         END;
+                    ELSE
+                         DO;
+                             CALL STO$CHAR$INC;
+                             IF (CURCHAR = BRS) OR (CURCHAR = BRC) OR
+                                (CURCHAR = DEF) OR (CURCHAR = PRO) THEN
+                                  DO;
+                                      CALL GET$TWO$BYTES;
+                                      A = A + MCD - 1;
+                                      CALL INC$BASE$TWO;
+                                  END;
+                             ELSE
+                                IF CURCHAR = CON THEN
+                                  DO;
+                                    CALL GET$TWO$BYTES;
+                                    A = SHL(A,2) + BEGIN;
+                                    CALL INC$BASE$TWO;
+                                  END;
+                        END;
+END;   /* LOOKING FOR 7FH */
+GO TO START; /* RETURNS TO BASE MODULE FOR FURTHER PROCESSING */
+END;

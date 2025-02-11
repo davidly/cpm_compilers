@@ -1,0 +1,1639 @@
+BASSYN:
+DO;
+ /* SYMBOL TABLE AND CODE SYNTHESIS MODULE */
+$INCLUDE (:F1:BASCOM.LIT)
+
+ /* EXTERNAL PROCEDURES (DEFINED IN BASIC.PLM) */
+MON3: PROCEDURE EXTERNAL;
+    END MON3;
+
+MOVE: PROCEDURE(S,D,C) EXTERNAL;
+    DECLARE (S,D) ADDRESS, C BYTE;
+    END MOVE;
+
+FILL: PROCEDURE(D,CH,CNT) EXTERNAL;
+    DECLARE D ADDRESS, (CH, CNT) BYTE;
+    END FILL;
+
+EMIT: PROCEDURE(C) EXTERNAL;
+    DECLARE C BYTE;
+    END EMIT;
+
+SETFLAGS: PROCEDURE EXTERNAL;
+    END SETFLAGS;
+
+SETUP$INT$FILE: PROCEDURE EXTERNAL;
+    END SETUP$INT$FILE;
+
+ERROR: PROCEDURE(ERR) EXTERNAL;
+    DECLARE ERR ADDRESS;
+    END ERROR;
+
+SCANNER: PROCEDURE EXTERNAL;
+    END SCANNER;
+
+PRINT: PROCEDURE(A) EXTERNAL;
+    DECLARE A ADDRESS;
+    END PRINT;
+
+PRINT$DEC: PROCEDURE(VAL) EXTERNAL;
+    DECLARE VAL ADDRESS;
+    END PRINT$DEC;
+
+CRLF: PROCEDURE EXTERNAL;
+    END CRLF;
+
+REWIND$SOURCE$FILE: PROCEDURE EXTERNAL;
+    END REWIND$SOURCE$FILE;
+
+GETCHAR: PROCEDURE BYTE EXTERNAL;
+    END GETCHAR;
+
+WRITE$INT$FILE: PROCEDURE EXTERNAL;
+    END WRITE$INT$FILE;
+
+CLOSE$INT$FILE: PROCEDURE EXTERNAL;
+    END CLOSE$INT$FILE;
+
+
+        /*
+         *********************************************************
+         *                                                       *
+         *    SYMBOL TABLE PROCEDURES                            *
+         *                                                       *
+         *    THE SYMBOL TABLE IS BUILT FROM .MEMORY TOWARD      *
+         *    THE LARGEST USABLE ADDRESS WHICH IS STORED IN MAX. *
+         *    INFORMATION REQUIRED DURING FOR STATEMENT CODE     *
+         *    GENERATION IS MAINTAINED STARTING AT MAX AND       *
+         *    WORKING DOWN TOWARD THE TOP OF THE SYMBOL TABLE    *
+         *    THE FOLLOWING ARE MAJOR GLOBAL VARIABLES USED      *
+         *    BY THE SYMBOL TABLE AND THEIR MEANING:             *
+         *         SBTBLTOP - CURRENT POSITION OF FOR/NEXT       *
+         *                    STACK.                             *
+         *         SBTBL - CURRENT "TOP" OF SYMBOL TABLE         *
+         *         BASE - ADDRESS OF BEGINNING OF ENTRY. THIS    *
+         *                MUST BE SET BEFORE AN ENTRY MAY BE     *
+         *                ACCESSED.                              *
+         *         PRINTNAME - ADDRESS OF PRINTNAME OF AN ENTRY  *
+         *                     TO BE USED IN REFERENCE TO THE    *
+         *                     SYMBOL TABLE.                     *
+         *         SYMHASH - HASH OF TOKEN REFERENCE BY          *
+         *                   PRINTNAME                           *
+         *                                                       *
+         *    THE FOLLOWING IS THE STRUCTURE OF A SYMBOL         *
+         *    TABLE ENTRY:                                       *
+         *           LENGTH OF PRINTNAME   - 1 BYTE              *
+         *           COLLISION FIELD  -  2 BYTES                 *
+         *           PRINTNAME    -  VARIABLE LENGTH             *
+         *           TYPE   -  1 BYTE                            *
+         *               LEFTMOST BIT OF THIS BYTE IS A FLAG     *
+         *               TO INDICATE IF THE ADDRESS HAS BEEN     *
+         *               SET.                                    *
+         *           LOCATION - 2 BYTES                          *
+         *           SUBTYPE - 1 BYTES                           *
+         *                                                       *
+         *      THE FOLLOWING GLOBAL ROUTINES ARE PROVIDED       *
+         *      FOR SYMBOL TABLE MANIPULATION:                   *
+         *         LOOKUP      ENTER     GETLEN     GETYPE       *
+         *         SETYPE      GETRES    GETADDR    SETADDR      *
+         *         SETSUBTYPE  GETSUBTYPE UNLINK    RELINK       *
+         *                                                       *
+         *********************************************************
+        */
+
+
+
+ /* GLOBAL VARIABLES (DEFINED IN BASIC.PLM) */
+DECLARE
+    BEXT LITERALLY 'BYTE EXTERNAL',
+    AEXT LITERALLY 'ADDRESS EXTERNAL',
+    /* LITERAL DECLARATIONS FOR PARSE TABLE ENTRIES */
+    FLOATPT LITERALLY '49',
+    STRING LITERALLY '50',
+
+    PASS1    BEXT,
+    PASS2    BEXT,
+    LISTPROD BEXT,
+    ERRORCOUNT AEXT,
+    DEBUGLN  BEXT,
+    COMPILING BEXT,
+    DATACT   AEXT,     /* COUNTS SIZE OF DATA AREA */
+    FORSTMT  BEXT,
+    RANDOMFILE  BEXT,
+    FILEIO      BEXT,
+    INPUTSTMT   BEXT,
+    GOSUBSTMT   BEXT,
+    NEXTCHAR    BEXT,
+    FUNCOP      BEXT,
+    ACCLEN      BEXT,
+    ACCUM(IDENTSIZE) BEXT,
+    CONT        BEXT,
+    LINENO      BEXT,
+    SEPARATOR   BEXT;
+
+DECLARE /* LOCAL VARIABLES */
+    MAX ADDRESS AT (6H),       /* DOS ADDRESS */
+    ULERRORFLAG BYTE INITIAL(FALSE),
+    CODESIZE    ADDRESS,  /* COUNTS SIZE OF CODE AREA */
+    PRTCT       ADDRESS,  /* COUNTS PRT ENTRIES */
+    FDACT       ADDRESS,  /* COUNTS FDA ENTRIES */
+    NEXTSTMTPTR ADDRESS,
+    NEXTADDRESS BASED NEXTSTMTPTR (4) ADDRESS,
+    NEXTBYTEV   BASED NEXTSTMTPTR(2) BYTE,
+    NEXTBYTE    BASED NEXTSTMTPTR BYTE, /* SIMPLE VERSION OF 'V' */
+    FORCOUNT    BYTE INITIAL(0),
+
+    BASE        ADDRESS,  /* BASE OF CURRENT ENTRY IN SYMBOL */
+    HASHTABLE(HASHTBLSIZE) ADDRESS,
+    SBTBLTOP    ADDRESS,  /* CURRENT TOP OF SYMBOL TABLE */
+    FORADDRESS  BASED SBTBLTOP (4) ADDRESS, /* FOR STMT INFO */
+    SBTBL       ADDRESS,
+    PTRV        BASED BASE (2) BYTE, /* FIRST BYTE OF ENTRY */
+    PTR         BASED BASE BYTE, /* SIMPLE PTRV */
+    APTRADDR    ADDRESS,  /* UTILITY VARIABLE TO ACCESS TABLE */
+    BYTEPTRV    BASED APTRADDR (2) BYTE,
+    BYTEPTR     BASED APTRADDR BYTE, /* SIMPLE BYTEPTRV */
+    ADDRPTR     BASED APTRADDR ADDRESS,
+    PRINTNAME   ADDRESS,  /* SET PRIOR TO LOOKUP OR ENTER */
+    SYMHASH     BYTE;     /* ALSO SET PRIOR TO LOOKUP OR ENTER */
+
+IN$SYMTBL: PROCEDURE PUBLIC;
+    /* FILL HASHTABLE WITH 0'S */
+    IF PASS1 THEN
+         DO;
+              CALL FILL(.HASHTABLE,0,SHL(HASHTBLSIZE,1));
+              SBTBL = .MEMORY;
+         END;
+    /* INITIALIZE POINTER TO TOP OF SYMBOL TABLE */
+    SBTBLTOP, NEXTSTMTPTR = MAX - 2;
+    NEXTBYTEV(1) =0;
+    RETURN;
+END IN$SYMTBL;
+
+SETADDRPTR: PROCEDURE(OFFSET);   /* SET PTR FOR ADDR REFERENCE */
+    DECLARE
+            OFFSET BYTE;
+    APTRADDR = BASE + PTR + OFFSET; /* POSITION FOR ADDR REFERENCE */
+    RETURN;
+END SETADDRPTR;
+
+
+GETHASH: PROCEDURE BYTE;
+    DECLARE HASH BYTE,
+            I    BYTE;
+    HASH = 0;
+    APTRADDR = BASE + 2;
+    DO I = 1 TO PTR;
+         HASH = (HASH + BYTEPTRV(I)) AND HASHMASK;
+         END;
+    RETURN HASH;
+END GETHASH;
+
+
+NEXTENTRY: PROCEDURE;
+    BASE = BASE + PTR + 7;
+    RETURN;
+END NEXTENTRY;
+
+
+SETLINK: PROCEDURE;
+    APTRADDR = BASE + 1;
+    RETURN;
+END SETLINK;
+
+
+HASHTBL$OF$SYMHASH: PROCEDURE ADDRESS;
+    RETURN HASHTABLE(SYMHASH);
+END HASHTBL$OF$SYMHASH;
+
+LIMITS: PROCEDURE(COUNT);
+        /*
+         CHECK TO SEE IF ADDITIONAL SBTBL WILL OVERFLOW LIMITS OF
+         MEMORY. IF SO THEN PUNT ELSE RETURN
+        */
+
+         DECLARE COUNT  BYTE;     /*SIZE BEING ADDED IS COUNT  */
+         IF SBTBLTOP <= (SBTBL + COUNT) THEN
+              DO;
+                   PASS2 = TRUE;  /* TO PRINT ERROR MSG */
+                   CALL ERROR('TO');
+                    CALL MON3;
+              END;
+    RETURN;
+END LIMITS;
+
+
+SETADDR: PROCEDURE(LOC);
+         /*SET THE ADDRESS FIELD AND RESOLVED BIT*/
+    DECLARE    LOC       ADDRESS;
+    CALL SETADDRPTR (4);
+    ADDRPTR=LOC;
+    APTRADDR = APTRADDR - 1;
+    BYTEPTR=BYTEPTR OR 80H;
+    RETURN;
+END SETADDR;
+
+
+LOOKUP: PROCEDURE BYTE;
+          /*
+           CHECK TO SEE IF P/N LOCATED AT ADDR IN PRINTNAME IS IN SBTBL
+                   RETURN TRUE IF IN SBTBL
+                   RETURN FALSE IF NOT IN SBTBL.
+                   BASE=ADDRESS IF IN SBTBL
+         */
+
+      DECLARE
+              LEN               BYTE,
+              N BASED PRINTNAME (2) BYTE; /* N IS LENGTH OF P/N */
+     BASE = HASHTBL$OF$SYMHASH;
+     DO WHILE BASE <> 0;
+          IF(LEN := PTR) = N(0) THEN
+          DO WHILE (PTRV(LEN + 2) = N(LEN));
+               IF (LEN := LEN - 1) = 0 THEN
+                    RETURN TRUE;
+               END;
+          CALL SETLINK;
+          BASE = ADDRPTR;
+     END;
+     RETURN FALSE;
+END LOOKUP;
+
+
+ENTER: PROCEDURE;
+          /*
+             ENTER TOKEN REFERENCE BY PRINTNAME AND SYMHASH
+             INTO NEXT AVAILABLE LOCATION IN THE SYMBOL TABLE.
+             SET BASE TO BEGINNING OF THIS ENTRY AND INCREMENT
+             SBTBL.  ALSO CHECK FOR SYMBOL TABLE FULL.
+          */
+    DECLARE
+             I                 BYTE,
+             N BASED PRINTNAME BYTE;
+    CALL LIMITS(I:=N+7);
+    BASE = SBTBL; /* BASE FOR NEW ENTRY */
+    CALL MOVE(PRINTNAME + 1,SBTBL + 3,(PTR := N));
+    CALL SETADDRPTR(3);/* SET RESOLVE BIT TO 0 */
+    BYTEPTR = 0;
+    CALL SETLINK;
+    ADDRPTR = HASHTBL$OF$SYMHASH;
+    HASHTABLE(SYMHASH) = BASE;
+    SBTBL = SBTBL + I;
+    RETURN;
+END ENTER;
+
+
+GETLEN: PROCEDURE       BYTE;     /*RETURN LENGTH OF THE P/N  */
+    RETURN PTR;
+END GETLEN;
+
+
+GETYPE: PROCEDURE       BYTE;          /*RETURNS TYPE OF VARIABLE  */
+   CALL SETADDRPTR (3);
+   RETURN (BYTEPTR AND 7FH);
+END GETYPE;
+
+
+SETYPE: PROCEDURE (TYPE);        /*SET TYPEFIELD = TYPE  */
+    DECLARE    TYPE      BYTE;
+    CALL SETADDRPTR (3);
+    BYTEPTR = BYTEPTR OR TYPE;
+              /*THIS SETS THE TYPE AND PRESERVES RESOLVED BIT */
+    RETURN;
+END SETYPE;
+
+
+GETRES: PROCEDURE  BYTE;
+         /*
+           RETURN TRUE IF RESOLVED BIT = 1,
+           RETURN FALSE IF RESOLVED BIT = 0
+        */
+    CALL SETADDRPTR(3);
+    RETURN ROL(BYTEPTR,1);
+END GETRES;
+
+
+GETADDR: PROCEDURE ADDRESS;
+         /*RETURN THE ADDRESS OF THE P/N LOCATION */
+    CALL SETADDRPTR(4);
+    RETURN ADDRPTR;
+END GETADDR;
+
+
+SETSUBTYPE: PROCEDURE(STYPE);       /*INSERT THE SUBTYPE IN SBTBL */
+    DECLARE    STYPE     BYTE;
+    CALL SETADDRPTR (6);
+    BYTEPTR=STYPE;
+    RETURN;
+END SETSUBTYPE;
+
+
+GETSUBTYPE: PROCEDURE BYTE;          /*RETURN THE SUB TYPE */
+    CALL SETADDRPTR (6);
+    RETURN BYTEPTR;
+END GETSUBTYPE;
+
+
+UNLINK: PROCEDURE;
+    DECLARE NEXTA   ADDRESS,
+            NUMPARM BYTE,
+            I       BYTE,
+            ENTRYPT BASED NEXTA ADDRESS;
+    NUMPARM = GETYPE;
+    DO I = 1 TO NUMPARM;
+         CALL NEXTENTRY;
+         NEXTA = SHL(GETHASH,1) + .HASHTABLE; /* ITS ON THIS CHAIN */
+         DO WHILE ENTRYPT <> BASE;
+              NEXTA = ENTRYPT + 1;
+              END;
+         CALL SETLINK;
+         ENTRYPT = ADDRPTR;
+    END;
+    RETURN;
+END UNLINK;
+
+
+RELINK: PROCEDURE;
+    DECLARE
+            TEMPA           ADDRESS,
+            I               BYTE,
+            NUMPARM         BYTE,
+            LOC BASED TEMPA ADDRESS;
+    NUMPARM = GETYPE;
+    DO I = 1 TO NUMPARM;
+         CALL NEXTENTRY;
+         TEMPA = BASE + 1;
+         LOC = HASHTABLE(GETHASH);
+         HASHTABLE(GETHASH) = BASE;
+         END;
+    RETURN;
+END RELINK;
+        /*
+         *********************************************************
+         *                                                       *
+         *   ****   PARSER AND CODE GENERATION  SECTION  ****    *
+         *                                                       *
+         *********************************************************
+        */
+         /*
+            MNEMMONICS FOR BASIC-E MACHINE
+         */
+DECLARE
+        FAD LIT '0', DUP LIT '18', WST LIT '36',
+        FMI LIT '1', XCH LIT '19', RDF LIT '37',
+        FMU LIT '2', STD LIT '20', RDB LIT '38',
+        FDI LIT '3', SLT LIT '21', ECR LIT '39',
+        EXP LIT '4', SGT LIT '22', WRB LIT '40',
+        LSS LIT '5', SEQ LIT '23', RDN LIT '41',
+        GTR LIT '6', SNE LIT '24', RDS LIT '42',
+        EQU LIT '7', SGE LIT '25', WRN LIT '43',
+        NEQ LIT '8', SLE LIT '26', WRS LIT '44',
+        GEQ LIT '9', STS LIT '27', OPN LIT '45',
+        LEQ LIT '10', ILS LIT '28', CON LIT '46',
+       NOTO LIT '11', CAT LIT '29', RST LIT '47',
+       ANDO LIT '12', PRO LIT '30', NEG LIT '48',
+        BOR LIT '13', RTN LIT '31', RES LIT '49',
+        LOD LIT '14', ROW LIT '32', NOP LIT '50',
+        STO LIT '15', SUBO LIT '33', DAT LIT '51',
+        XIT LIT '16', RDV LIT '34', DBF LIT '52',
+        DEL LIT '17', WRV LIT '35', NSP LIT '53',
+        BRS LIT '54', BRC LIT '55', BFC LIT '56',
+        BFN LIT '57', CVB LIT '58', RCN LIT '59',
+        DRS LIT '60', DRF LIT '61', EDR LIT '62',
+        EDW LIT '63', CLS LIT '64', RON LIT '91',
+        CKO LIT '92', EXR LIT '93', DEF LIT '94',
+        BOL LIT '95', ADJ LIT '96', POT LIT '40',
+        IRN LIT '77';
+DECLARE
+        STATE STATESIZE PUBLIC,
+         /*
+           THE FOLLOWING VECTORS ARE USED AS PARSE STACKS
+           SYNTHESIZE AND THE PARSER ACCESS THESE ARRAYS
+         */
+        STATESTACK(PSTACKSIZE) STATESIZE PUBLIC,
+        HASH(PSTACKSIZE) BYTE PUBLIC,
+        SYMLOC(PSTACKSIZE) ADDRESS PUBLIC,
+        SRLOC(PSTACKSIZE) ADDRESS PUBLIC,
+        VAR(PSTACKSIZE) BYTE PUBLIC,
+        TYPE(PSTACKSIZE) BYTE PUBLIC,
+        STYPE(PSTACKSIZE) BYTE PUBLIC,
+        VARC(VARCSIZE) BYTE PUBLIC,
+        ONSTACK(MAXONCOUNT) BYTE,
+        ONSP BYTE AT (.ONSTACK(0)),
+        VARINDEX BYTE PUBLIC,  /* INDEX INTO VAR */
+        SP        BYTE PUBLIC,
+        MP        BYTE PUBLIC,
+        MPP1      BYTE PUBLIC,
+        NOLOOK    BYTE PUBLIC,
+        IFLABLNG BYTE INITIAL(2),
+         /*
+           THE FOLLOWING VARABLES ARE USED TO GENERATE
+           COMPILER LABELS.
+         */
+        IFLAB2 BYTE INITIAL(23),
+        IFLABLE BYTE;
+
+EMITCON: PROCEDURE(CHAR);
+     /*
+       WRITES NUMERIC CONSTANTS DURING PASS1
+     */
+    DECLARE CHAR BYTE;
+    IF PASS1 THEN
+         CALL EMIT(CHAR);
+    RETURN;
+END EMITCON;
+
+IN$SYN: PROCEDURE PUBLIC;
+    DECLARE CONZERO(*) BYTE DATA(01H,30H);
+    DECLARE CONONE(*) BYTE DATA(01H,31H);
+    CODESIZE,DATACT,ONSP,IFLABLE = 0;
+    FDACT = 1;
+    PRTCT = 0FFFFH;
+    CALL SET$FLAGS;
+    IF PASS1 THEN
+         DO;
+              CALL SETUP$INT$FILE;
+              PRINTNAME = .CONONE(0);
+              SYMHASH = 31H;
+              CALL ENTER;
+              CALL EMITCON(31H);
+              CALL EMITCON('$');
+              CALL SETADDR(0);  /* CONSTANT 1 IS AT FDA POS 0 */
+              CALL SETYPE(4); /* TYPE CONST */
+              PRINTNAME = .CONZERO(0);
+              SYMHASH = 30H;
+              CALL ENTER;
+              CALL EMITCON(30H);
+              CALL EMITCON('$');
+              CALL SETADDR(1);
+              CALL SETYPE(4);
+         END;
+    RETURN;
+END IN$SYN;
+
+
+SYNTHESIZE: PROCEDURE(PRODUCTION) PUBLIC;
+    DECLARE
+            PRODUCTION BYTE;
+
+
+     DECLARE
+            /*
+              THESE LITERALS DEFINE DIFFERENT "TYPES" WHICH
+              MAY BE PLACED IN THE TYPE FIELD OF THE SYMBOL
+              TABLE BY ROUTINES IN SYNTHESIZE
+            */
+             SIMVAR LIT '00H',
+             SUBVAR LIT '02',
+             CONST LIT '04',
+             LABLE LIT '08',
+             UNFUNC LIT '0AH';
+
+     DECLARE
+              /*
+                THE FOLLOWING VARIABLES ARE USED TO HOLD THE
+                CONTENTS OF THE PARSE STACKS DURING EXECUTION
+                OF SYNTHESIZE. THE PROCEDURE COPY IS CALLED
+                TO UPDATE EACH OF THESE VARIABLES ON EACH CALL
+                TO SYNTHESIZE.  THIS REDUCES THE NUMBER OF
+                SUBSCRIPT REFERENCES REQUIRED
+              */
+             (TYPESP,TYPEMP,TYPEMP1) BYTE,
+             (STYPESP,STYPEMP,STYPEMP1) BYTE,
+             (HASHSP,HASHMP,HASHMP1) BYTE,
+             (SYMLOCSP,SYMLOCMP, SYMLOCMP1) ADDRESS,
+             (SRLOCSP,SRLOCMP) ADDRESS;
+
+        /*
+         *********************************************************
+         *                                                       *
+         *    THE FOLLOWING PROCEDURES ARE USED BY SYTHESIZE     *
+         *    TO GENERATE CODE REQUIRED BY THE PRODUCTIONS       *
+         *                                                       *
+         *     THE FIRST GROUP OF PROCEDURES CONSISTING OF       *
+         *     COPY AND THE SET-------- PROCEDURES ARE USED      *
+         *     TO PREVENT THE LARGE AMOUNT OF SUBSCRIPTING       *
+         *     THAT WOULD BE REQUIRED TO ACCESS THE PARSE        *
+         *     STACKS DURING CODE GENERATION.                    *
+         *                                                       *
+         *     THE REMAINING PROCEDURES DIRECTLY SUPPORT CODE    *
+         *     GENERATION AND ARE ARRANGED IN LOGICAL GROUPS     *
+         *     SUCH AS THOSE WHICH ASSIST IN ACCESSING THE       *
+         *     SYMBOL TABLE OR THOSE USED TO GENERATE INTERNAL   *
+         *     COMPILER LABLES.                                  *
+         *                                                       *
+         *********************************************************
+        */
+     COPY: PROCEDURE;
+          TYPESP = TYPE(SP);
+          TYPEMP1 = TYPE(MPP1);
+          TYPEMP = TYPE(MP);
+          STYPESP = STYPE(SP);
+          STYPEMP1 = STYPE(MPP1);
+          STYPEMP = STYPE(MP);
+          SYMLOCSP = SYMLOC(SP);
+          SYMLOCMP1 = SYMLOC(MPP1);
+          SYMLOCMP = SYMLOC(MP);
+          HASHMP = HASH(MP);
+          HASHMP1 = HASH(MPP1);
+          HASHSP = HASH(SP);
+          SRLOCSP = SRLOC(SP);
+          SRLOCMP = SRLOC(MP);
+          RETURN;
+     END COPY;
+
+
+    SETSYMLOCSP: PROCEDURE(A);
+         DECLARE A ADDRESS;
+         SYMLOC(SP) = A;
+         RETURN;
+    END SETSYMLOCSP;
+
+
+    SETSYMLOCMP: PROCEDURE(A);
+         DECLARE A ADDRESS;
+         SYMLOC(MP) = A;
+         RETURN;
+    END SETSYMLOCMP;
+
+
+    SETTYPESP: PROCEDURE(B);
+         DECLARE B BYTE;
+         TYPE(SP) = B;
+         RETURN;
+    END SETTYPESP;
+
+
+    SETSTYPESP: PROCEDURE(B);
+         DECLARE B BYTE;
+         STYPE(SP) = B;
+         RETURN;
+    END SETSTYPESP;
+
+
+    SETSTYPEMP: PROCEDURE(B);
+         DECLARE B BYTE;
+         STYPE(MP) = B;
+         RETURN;
+    END SETSTYPEMP;
+
+
+    SETTYPEMP: PROCEDURE(B);
+         DECLARE B BYTE;
+         TYPE(MP) = B;
+         RETURN;
+    END SETTYPEMP;
+
+
+    SETHASHMP: PROCEDURE(B);
+         DECLARE B BYTE;
+         HASH(MP) = B;
+         RETURN;
+    END SETHASHMP;
+
+
+    SETHASHSP: PROCEDURE(B);
+         DECLARE B BYTE;
+         HASH(SP) = B;
+         RETURN;
+    END SETHASHSP;
+
+
+    SETSRLOCSP: PROCEDURE(A);
+         DECLARE A ADDRESS;
+         SRLOC(SP) = A;
+         RETURN;
+    END SETSRLOCSP;
+
+GENERATE: PROCEDURE(OBJCODE);
+     /*
+        WRITES GENERATED CODE AND COUNTS SIZE
+        OF CODE AREA.
+     */
+    DECLARE OBJCODE BYTE;
+    CODESIZE = CODESIZE + 1;
+    IF NOT PASS1 THEN
+         CALL EMIT(OBJCODE);
+    RETURN;
+END GENERATE;
+
+    CALC$VARC: PROCEDURE(B) ADDRESS;
+         DECLARE B BYTE;
+         RETURN VAR(B) + .VARC;
+    END CALC$VARC;
+
+
+    SETLOOKUP: PROCEDURE(A);
+         DECLARE A BYTE;
+         PRINTNAME = CALC$VARC(A);
+         SYMHASH = HASH(A);
+         RETURN;
+    END SETLOOKUP;
+
+
+    LOOKUP$ONLY: PROCEDURE(A) BYTE;
+         DECLARE A BYTE;
+         CALL SETLOOKUP(A);
+         IF LOOKUP THEN
+              RETURN TRUE;
+         RETURN FALSE;
+    END LOOKUP$ONLY;
+
+
+    NORMAL$LOOKUP: PROCEDURE(A) BYTE;
+         DECLARE A BYTE;
+         IF LOOKUP$ONLY(A) THEN
+              RETURN TRUE;
+         CALL ENTER;
+         RETURN FALSE;
+     END NORMAL$LOOKUP;
+
+
+    COUNTPRT: PROCEDURE ADDRESS;
+    /* COUNTS THE SIZE OF THE PRT */
+         RETURN (PRTCT := PRTCT + 1);
+    END COUNTPRT;
+
+
+     GENTWO: PROCEDURE(A);
+        /* WRITES TWO BYTES OF OBJECT CODE ON DISK FOR LITERALS */
+         DECLARE A ADDRESS;
+         CALL GENERATE(HIGH(A));
+         CALL GENERATE(LOW(A));
+         RETURN;
+     END GENTWO;
+
+
+     LITERAL: PROCEDURE(A);
+         DECLARE A ADDRESS;
+         CALL GENTWO(A OR 8000H);
+         RETURN;
+     END LITERAL;
+
+
+     LITLOAD: PROCEDURE(A);
+         DECLARE A ADDRESS;
+         CALL GENTWO(A OR 0C000H);
+         RETURN;
+     END LITLOAD;
+
+
+    LINE$NUMBER: PROCEDURE;
+         IF DEBUGLN THEN
+              DO;
+                   CALL LITERAL(LINENO);
+                   CALL GENERATE(BOL);
+              END;
+         RETURN;
+    END LINE$NUMBER;
+
+
+    SETIFNAME: PROCEDURE;
+         PRINTNAME = .IFLABLNG;
+         SYMHASH = IFLABLE AND HASHMASK;
+         RETURN;
+    END SETIFNAME;
+
+
+    ENTER$COMPILER$LABEL: PROCEDURE(B);
+         DECLARE B BYTE;
+         IF PASS1 THEN
+               DO;
+                   CALL SETIFNAME;
+                   CALL ENTER;
+                   CALL SETADDR(CODESIZE + B);
+                END;
+         RETURN;
+    END ENTER$COMPILER$LABEL;
+
+
+    SET$COMPILER$LABEL: PROCEDURE;
+         DECLARE X BYTE;
+         IFLABLE = IFLABLE + 1;
+         CALL SETIFNAME;
+         X = LOOKUP;
+         RETURN;
+    END SET$COMPILER$LABEL;
+
+
+    COMPILER$LABEL: PROCEDURE;
+         CALL SET$COMPILER$LABEL;
+         CALL GEN$TWO(GETADDR);
+          RETURN;
+    END COMPILER$LABEL;
+
+
+    CHKTYP1: PROCEDURE BYTE; /* CHECK MP,SP BOTH FLOATING PT */
+          IF((STYPEMP <> FLOATPT) OR (STYPESP <> FLOATPT)) THEN
+               DO;
+                    CALL ERROR('MF');
+                    RETURN FALSE;
+               END;
+         RETURN TRUE;
+    END CHKTYP1;
+
+
+    CHKTYP2: PROCEDURE BYTE; /* CHECK MP,SP BOTH SAME TYPE */
+           IF STYPESP <> STYPEMP THEN
+               DO;
+                    CALL ERROR('MM');
+                    RETURN FALSE;
+               END;
+              RETURN TRUE;
+    END CHKTYP2;
+
+
+    CHKTYP3: PROCEDURE BYTE;
+         CALL SETSTYPEMP(STYPESP);
+         IF STYPESP = FLOATPT THEN
+              RETURN TRUE;
+         CALL ERROR('MF');
+         RETURN FALSE;
+    END CHKTYP3;
+
+    CHKTYP4: PROCEDURE;
+         IF STYPEMP1 = STRING THEN
+              CALL ERROR('MF');
+         CALL GENERATE(RON);
+    END CHKTYP4;
+
+    CHKTYP5: PROCEDURE;
+         CALL CHKTYP4;
+         CALL SETTYPEMP(TYPEMP := TYPEMP + 1);
+         END CHKTYP5;
+
+
+    SUBCALC: PROCEDURE;
+         CALL SETSUBTYPE(TYPESP);
+         CALL GENERATE(ROW);
+         CALL GENERATE(TYPESP);
+         CALL GENERATE(STD);
+         RETURN;
+    END SUBCALC;
+
+
+    GEN$STORE: PROCEDURE;
+         IF STYPEMP1 = FLOATPT THEN
+              CALL GENERATE(STD);
+         ELSE
+              CALL GENERATE(STS);
+         RETURN;
+    END GEN$STORE;
+
+
+    SETUP$INPUT: PROCEDURE;
+         CALL GENERATE(DBF);
+         INPUTSTMT = TRUE;
+         CALL GENERATE(RCN);
+    END SETUP$INPUT;
+
+
+    GET$FIELD: PROCEDURE;
+
+         GEN$READ: PROCEDURE(I,J);
+              DECLARE (I,J) BYTE;
+              IF STYPESP = STRING THEN
+                   DO;
+                        CALL GENERATE(I);
+                        CALL GENERATE(STS);
+                   END;
+              ELSE
+                   DO;
+                        CALL GENERATE(J);
+                        CALL GENERATE(STD);
+                   END;
+              RETURN;
+         END GEN$READ;
+
+         IF(TYPESP = SIMVAR) THEN
+              CALL LITERAL(SYMLOCSP);
+         IF INPUTSTMT THEN
+              CALL GEN$READ(RES,RDV);
+         ELSE
+              IF FILEIO THEN
+                   CALL GEN$READ(RDS,RDN);
+              ELSE
+                   CALL GEN$READ(DRS,DRF);
+         RETURN;
+    END GET$FIELD;
+
+
+    GEN$ON: PROCEDURE;
+         CALL GENERATE(RON);
+         CALL LITERAL(ONSTACK(ONSP := ONSP + 1));
+         CALL GENERATE(CKO);
+         CALL GENERATE(BFN);
+         RETURN;
+    END GEN$ON;
+
+
+    GEN$ON$2: PROCEDURE;
+         ONSTACK(ONSP) = TYPESP;
+         RETURN;
+    END GEN$ON$2;
+
+
+    GENNEXT: PROCEDURE;
+         IF(FORCOUNT := FORCOUNT - 1) = 255 THEN
+              DO;
+                   FORCOUNT = 0;
+                   CALL ERROR('NU');
+              END;
+         ELSE
+              DO;
+                   CALL GENERATE(BRS);
+                   CALL GEN$TWO(NEXTADDRESS(2));
+                   NEXTADDRESS(0) = CODESIZE OR 8000H;
+                   DO WHILE NEXTBYTEV(1) > 127;
+                        NEXTSTMTPTR = NEXTSTMTPTR + 8;
+                        END;
+              END;
+         RETURN;
+    END GENNEXT;
+
+
+    GEN$NEXT$WITH$IDENT: PROCEDURE;
+         IF LOOKUP$ONLY(MPP1) AND (BASE = NEXTADDRESS(3)) THEN
+              CALL GENNEXT;
+         ELSE
+              CALL ERROR('NI');
+         RETURN;
+    END GEN$NEXT$WITH$IDENT;
+
+
+    CHECK$UL$ERROR: PROCEDURE;
+         IF ULERRORFLAG THEN
+              CALL ERROR('UL');
+         ULERRORFLAG = FALSE;
+    END CHECK$UL$ERROR;
+
+
+    FINDLABEL: PROCEDURE;
+         IF NORMAL$LOOKUP(SP) THEN
+              DO;
+                   IF PASS2 AND (NOT GETRES) THEN
+                         ULERRORFLAG = TRUE;
+              END;
+         RETURN;
+    END FINDLABEL;
+
+
+     RESOLVE$LABEL: PROCEDURE;
+         CALL FINDLABEL;
+         IF GOSUBSTMT THEN
+              CALL GENERATE(PRO);
+         ELSE
+              CALL GENERATE(BRS);
+         CALL GEN$TWO(GETADDR);
+         RETURN;
+     END RESOLVE$LABEL;
+
+
+    PROCESS$SIMPLE$VARIABLE: PROCEDURE(LOC);
+         DECLARE LOC BYTE;
+         IF NORMALLOOKUP(LOC) THEN
+                   DO;
+                        IF GETYPE <> SIMVAR THEN
+                             CALL ERROR('IU');
+                  END;
+             ELSE
+                   DO;
+                        CALL SETADDR(COUNTPRT);
+                        CALL SETYPE(SIMVAR);
+                   END;
+              CALL SETSYMLOCSP(SYMLOCSP:=GETADDR);
+              CALL SETTYPESP(SIMVAR);
+              IF FORSTMT THEN
+                   DO;
+                        FORSTMT = FALSE;
+                        FORADDRESS(3) = BASE;
+                   END;
+    END PROCESS$SIMPLE$VARIABLE;
+
+
+    GEN$ILS: PROCEDURE(WHERE);
+          DECLARE STRPTR BYTE,
+                  WHERE ADDRESS,
+                  STRINGTOSPOOL BASED WHERE (2) BYTE;
+         CALL SETSTYPESP(STRING);
+         CALL GENERATE(ILS);
+         DO FOREVER;
+              DO STRPTR = 1 TO STRINGTOSPOOL(0);
+                   CALL GENERATE(STRINGTOSPOOL(STRPTR));
+                   END;
+               IF CONT THEN
+                   CALL SCANNER;
+               ELSE
+                   DO;
+                        CALL GENERATE(0);
+                        RETURN;
+                   END;
+         END; /* OF DO FOREVER */
+    END GEN$ILS;
+
+
+    GENCON: PROCEDURE;
+         DECLARE I BYTE;
+         CALL GENERATE(CON);
+         CALL SETTYPESP(CONST);
+         CALL SETSTYPESP(FLOATPT);
+         IF LOOKUP$ONLY(SP) AND (GETYPE = CONST) THEN
+              CALL GEN$TWO(GETADDR);
+         ELSE
+              DO;
+                   DO I = 1 TO ACCLEN;
+                        CALL EMITCON(ACCUM(I));
+                        END;
+                   CALL EMITCON('$');
+                   CALL GEN$TWO(FDACT := FDACT + 1);
+              END;
+         RETURN;
+    END GENCON;
+
+
+    PUT$FIELD: PROCEDURE;
+         IF FILEIO THEN
+              DO;
+                   IF STYPESP = FLOATPT THEN
+                        CALL GENERATE(WRN);
+                   ELSE
+                        CALL GENERATE(WRS);
+              END;
+         ELSE
+              IF STYPESP = FLOATPT THEN
+                    DO;
+                         IF TYPESP <> 74 THEN /* IS IT A TAB */
+                              CALL GENERATE(WRV);
+                    END;
+              ELSE
+                   CALL GENERATE(WST);
+         RETURN;
+     END PUT$FIELD;
+
+
+    GEN$PARM: PROCEDURE;
+         IF TYPEMP = UNFUNC THEN
+              DO;
+                   BASE = SYMLOCMP;
+                   CALL NEXTENTRY;
+                   CALL SETSYMLOCMP(BASE);
+                   CALL SETHASHMP(HASHMP := HASHMP - 1);
+                   CALL LITERAL(GETADDR);
+              END;
+         RETURN;
+    END GEN$PARM;
+
+
+    CHECKPARM: PROCEDURE;
+         IF TYPEMP = UNFUNC THEN
+              DO;
+                   BASE = SYMLOCMP;
+                   IF(GETSUBTYPE <> STYPEMP1) THEN
+                        CALL ERROR('FP');
+                   CALL GEN$STORE;
+                   RETURN;
+              END;
+         IF(HASHMP XOR (STYPEMP1 <> FLOATPT)) THEN
+              CALL ERROR('FP');
+         CALL SETHASHMP(SHR(HASHMP,1));
+         CALL SETSTYPEMP(STYPEMP := STYPEMP -1);
+         RETURN;
+    END CHECKPARM;
+
+
+    FUNCGEN: PROCEDURE;
+         IF TYPEMP = UNFUNC THEN
+              DO;
+                   IF HASHMP <> 0 THEN
+                        CALL ERROR('FN');
+                   CALL GENERATE(PRO);
+                   BASE = SRLOCSP;
+                   CALL GEN$TWO(GETADDR);
+                   RETURN;
+              END;
+         IF((STYPEMP AND 03H) <>0) THEN
+              CALL ERROR('FN');
+         CALL GENERATE(TYPEMP);
+         IF ROL(STYPEMP,2) THEN
+              CALL SETSTYPEMP(STRING);
+         ELSE
+              CALL SETSTYPEMP(FLOATPT);
+         RETURN;
+    END FUNCGEN;
+
+
+    ENTER$PARM: PROCEDURE;
+         IF PASS1 THEN
+              DO;
+                   CALL SETLOOKUP(MPP1);
+                   CALL ENTER;
+                   CALL SETADDR(COUNTPRT);
+                   CALL SETSUBTYPE(STYPEMP1);
+                   CALL SETYPE(SIMVAR);
+                   CALL SETTYPEMP(TYPEMP + 1);
+              END;
+         RETURN;
+    END ENTER$PARM;
+
+        /*
+         **********************************************************
+         *                                                        *
+         *    EXECUTION OF SYNTHESIS BEGINS HERE.....             *
+         *                                                        *
+         **********************************************************
+        */
+
+    IF LISTPROD AND PASS2 THEN
+         DO;  /*  IF LISTPROD SET PRINT OUT PRODUCTIONS */
+              CALL PRINT(.('PROD $'));
+              CALL PRINTDEC(PRODUCTION);
+              CALL CRLF;
+        END;
+    CALL COPY;  /*  SETUP FOR ACCESSING PARSE TABLES */
+    DO CASE PRODUCTION;  /* CALL TO SYNTHESIS HANDLES ONE PROD */
+    /* CASE 0 NOT USED */ ;
+ /*      1   <PROGRAM> ::= <LINE NUMBER> <STATEMENT> _|_              */
+         ;
+ /*      2   <LINE NUMBER> ::= <NUMBER>                               */
+         DO;
+              IF LOOKUP$ONLY(SP) THEN
+                  DO;
+                       IF GETRES THEN
+                             DO;
+                                  IF CODESIZE <> GETADDR THEN
+                                       CALL ERROR('DL');
+                             END;
+                       ELSE
+                             DO;
+                                  CALL SETADDR(CODESIZE);
+                                  CALL SETYPE(LABLE);
+                             END;
+                  END;
+              ELSE
+                   SEPARATOR = ASTRICK;
+             CALL LINE$NUMBER;
+        END;
+ /*      3                   |                                        */
+         CALL LINE$NUMBER;
+ /*      4   <STATEMENT> ::= <STATEMENT LIST>                         */
+          CALL CHECK$UL$ERROR;
+ /*      5                 | <IF STATEMENT>                           */
+          ;
+ /*      6                 | <END STATEMENT>                          */
+          ;
+ /*      7                 | <DIMENSION STATEMENT>                    */
+          ;
+ /*      8                 | <DEFINE STATEMENT>                       */
+          ;
+ /*      9   <STATEMENT LIST> ::= <SIMPLE STATEMENT>                  */
+         ;
+ /*     10                      | <STATEMENT LIST> :                  */
+ /*     10                        <SIMPLE STATEMENT>                  */
+           ;
+ /*     11   <SIMPLE STATEMENT> ::= <LET STATEMENT>                   */
+            ;
+ /*     12                        | <ASSIGNMENT>                      */
+            ;
+ /*     13                        | <FOR STATEMENT>                   */
+           ;
+ /*     14                        | <NEXT STATEMENT>                  */
+            ;
+ /*     15                        | <FILE STATEMENT>                  */
+            ;
+ /*     16                        | <CLOSE STATEMENT>                 */
+            ;
+ /*     18                        | <PRINT STATEMENT>                 */
+ /*     17                        | <READ STATEMENT>                  */
+            ;
+            ;
+ /*     19                        | <GOTO STATEMENT>                  */
+            ;
+ /*     20                        | <GOSUB STATEMENT>                 */
+            ;
+ /*     21                        | <INPUT STATEMENT>                 */
+            ;
+ /*     22                        | <STOP STATEMENT>                  */
+            ;
+ /*     23                        | <RETURN STATEMENT>                */
+         ;
+ /*     24                        | <ON STATEMENT>                    */
+         ;
+ /*     25                        | <RESTORE STATEMENT>               */
+            ;
+ /*     26                        | <RANDOMIZE STATEMENT>             */
+         ;
+ /*     27                        | <OUT STATEMENT>                   */
+         ;
+ /*     28                        |                                   */
+            ;
+ /*     29   <LET STATEMENT> ::= LET <ASSIGNMENT>                     */
+         ;
+ /*     30   <ASSIGNMENT> ::= <ASSIGN HEAD> <EXPRESSION>              */
+         IF CHKTYP2 THEN
+              CALL GEN$STORE;
+ /*     31   <ASSIGN HEAD> ::= <VARIABLE> =                           */
+         IF TYPEMP = SIMVAR THEN
+              CALL LITERAL(SYMLOCMP);
+ /*     32   <EXPRESSION> ::= <LOGICAL FACTOR>                        */
+            ;
+ /*     33                  | <EXPRESSION> <OR> <LOGICAL FACTOR>      */
+          IF CHKTYP1 THEN
+               CALL GENERATE(TYPEMP1);
+ /*     34   <OR> ::= OR                                              */
+          CALL SETTYPESP(BOR);
+ /*     35          | XOR                                             */
+          CALL SETTYPESP(EXR);
+ /*     36   <LOGICAL FACTOR> ::= <LOGICAL SECONDARY>                 */
+            ;
+ /*     37                      | <LOGICAL FACTOR> AND                */
+ /*     37                        <LOGICAL SECONDARY>                 */
+         IF CHKTYP1 THEN
+             CALL GENERATE(ANDO);
+ /*     38   <LOGICAL SECONDARY> ::= <LOGICAL PRIMARY>                */
+            ;
+ /*     39                         | NOT <LOGICAL PRIMARY>            */
+         IF CHKTYP3 THEN
+              CALL GENERATE(NOTO);
+ /*     40   <LOGICAL PRIMARY> ::= <ARITHMETIC EXPRESSION>            */
+            ;
+ /*     41                       | <ARITHMETIC EXPRESSION>            */
+ /*     41                         <RELATION>                         */
+ /*     41                         <ARITHMETIC EXPRESSION>            */
+         IF CHKTYP2 THEN
+              DO;
+                   IF STYPESP = FLOATPT THEN
+                        CALL GENERATE(TYPEMP1);
+                   ELSE
+                        DO;
+                             CALL GENERATE(TYPEMP1 + 16);
+                             CALL SETSTYPEMP(FLOATPT);
+                        END;
+              END;
+ /*     42   <ARITHMETIC EXPRESSION> ::= <TERM>                       */
+            ;
+ /*     43                             | <ARITHMETIC EXPRESSION> +    */
+ /*     43                               <TERM>                       */
+         IF CHKTYP2 THEN
+              DO;
+                   IF STYPESP = FLOATPT THEN
+                        CALL GENERATE(FAD);
+                   ELSE
+                        CALL GENERATE(CAT);
+             END;
+ /*     44                             | <ARITHMETIC EXPRESSION> -    */
+ /*     44                               <TERM>                       */
+         IF CHKTYP1 THEN
+              CALL GENERATE(FMI);
+ /*     45                             | + <TERM>                     */
+         IF CHKTYP3 THEN   ; /* NO ACTION REQUIRED */
+ /*     46                             | - <TERM>                     */
+         IF CHKTYP3 THEN
+              CALL GENERATE(NEG);
+ /*     47   <TERM> ::= <PRIMARY>                                     */
+         ;
+ /*     48            | <TERM> * <PRIMARY>                            */
+         IF CHKTYP1 THEN
+              CALL GENERATE(FMU);
+ /*     49            | <TERM> / <PRIMARY>                            */
+         IF CHKTYP1 THEN
+              CALL GENERATE(FDI);
+ /*     50   <PRIMARY> ::= <ELEMENT>                                  */
+            ;
+ /*     51               | <PRIMARY> ** <ELEMENT>                     */
+         IF CHKTYP1 THEN
+              CALL GENERATE(EXP);
+ /*     52   <ELEMENT> ::= <VARIABLE>                                 */
+         IF TYPESP = SIMVAR THEN
+              CALL LITLOAD(SYMLOCSP);
+         ELSE
+              CALL GENERATE(LOD);
+ /*     53               | <CONSTANT>                                 */
+            ;
+ /*     54               | <FUNCTION CALL>                            */
+         ;
+ /*     55               | ( <EXPRESSION> )                           */
+         CALL SETSTYPEMP(STYPEMP1);
+ /*     56   <VARIABLE> ::= <IDENTIFIER>                              */
+         CALL PROCESS$SIMPLE$VARIABLE(SP);
+ /*     57                | <SUBSCRIPT HEAD> <EXPRESSION> )           */
+         DO;
+              IF FORSTMT THEN
+                   CALL ERROR('FI');
+              CALL CHKTYP5;
+              BASE = SYMLOCMP;
+              IF GETSUBTYPE <> TYPEMP THEN
+                   CALL ERROR('SN');
+              CALL LITLOAD(GETADDR);
+              CALL GENERATE(SUBO);
+              CALL SETTYPEMP(SUBVAR);
+         END;
+ /*     58   <SUBSCRIPT HEAD> ::= <IDENTIFIER> (                      */
+         DO;
+              IF((NOT LOOKUP$ONLY(MP)) OR (GETYPE <> SUBVAR)) THEN
+                   CALL ERROR('IS');
+         CALL SETTYPEMP(0);
+         CALL SETSYMLOCMP(BASE);
+         END;
+ /*     59                      | <SUBSCRIPT HEAD> <EXPRESSION> ,     */
+         CALL CHKTYP5;
+ /*     60   <FUNCTION CALL> ::= <FUNCTION HEADING> <EXPRESSION> )    */
+         DO;
+              CALL CHECKPARM;
+              SRLOCSP = SRLOCMP;
+              CALL FUNCGEN;
+         END;
+ /*     61                     | <FUNCTION NAME>                      */
+         CALL FUNCGEN;
+ /*     62   <FUNCTION HEADING> ::= <FUNCTION NAME> (                 */
+         CALL GEN$PARM;
+ /*     63                        | <FUNCTION HEADING> <EXPRESSION>   */
+ /*     63                          ,                                 */
+         DO;
+              CALL CHECK$PARM;
+              CALL GEN$PARM;
+         END;
+ /*     64   <FUNCTION NAME> ::= <USERDEFINED NAME>                   */
+         IF LOOKUP$ONLY(SP) THEN
+              DO;
+                   CALL SETSRLOCSP(BASE);
+                   CALL SETSYMLOCSP(BASE);
+                   CALL SETTYPESP(UNFUNC);
+                   CALL SETHASHSP(GETYPE);
+              END;
+         ELSE
+              CALL ERROR('FU');
+ /*     65                     | <PREDEFINED NAME>                    */
+         DO;
+              CALL SETTYPESP(FUNCOP);
+              CALL SETHASHSP(SHR(STYPESP,2) AND 07H);
+          END;
+ /*     66   <CONSTANT> ::= <NUMBER>                                  */
+         CALL GENCON;
+ /*     67                | <STRING>                                  */
+         CALL GEN$ILS(.ACCUM);
+ /*     68   <RELATION> ::= =                                         */
+         CALL SETTYPESP(7);
+ /*     69                | > =                                       */
+         CALL SETTYPEMP(9);
+ /*     70                | GE                                        */
+         CALL SETTYPEMP(9);
+ /*     71                | < =                                       */
+         CALL SETTYPEMP(10);
+ /*     72                | LE                                        */
+         CALL SETTYPEMP(10);
+ /*     73                | >                                         */
+         CALL SETTYPESP(6);
+ /*     74                | <                                         */
+         CALL SETTYPESP(5);
+ /*     75                | < >                                       */
+         CALL SETTYPEMP(8);
+ /*     76                | NE                                        */
+         CALL SETTYPEMP(8);
+ /*     77   <FOR STATEMENT> ::= <FOR HEAD> TO <EXPRESSION>           */
+ /*     77                       <STEP CLAUSE>                        */
+         DO;
+              BASE = FORADDRESS(3);
+              IF TYPESP THEN
+                   CALL GENERATE(DUP);
+              CALL LITLOAD(GETADDR);
+              CALL GENERATE(FAD);
+               IF TYPESP THEN
+                    DO;
+                        CALL LITERAL(GETADDR);
+                        CALL GENERATE(XCH);
+                    END;
+              CALL GENERATE(STO);
+              IF TYPESP THEN
+                   DO;
+                        CALL GENERATE(XCH);
+                        CALL LITERAL(0);
+                        CALL GENERATE(LSS);
+                        CALL LITERAL(5);
+                        CALL GENERATE(BFC);
+                        CALL GENERATE(LEQ);
+                        CALL LITERAL(2);
+                        CALL GENERATE(BFN);
+                   END;
+              CALL GENERATE(GEQ);
+              CALL GENERATE(BRC);
+              CALL GEN$TWO(FORADDRESS(0));
+              FORADDRESS(1) = CODESIZE;
+         END;
+ /*     78   <FOR HEAD> ::= <FOR> <ASSIGNMENT>                        */
+         DO;
+              CALL GENERATE(BRS);
+              CALL GEN$TWO(FORADDRESS(1));
+              FORADDRESS(2) = CODESIZE;
+         END;
+ /*     79   <FOR> ::= FOR                                            */
+         DO;
+              FORSTMT = TRUE;
+              SBTBLTOP,NEXTSTMTPTR = SBTBLTOP - 8;
+              NEXTBYTEV(1) = NEXTBYTEV(1) AND 7FH;
+              CALL LIMITS(0);
+              FORCOUNT = FORCOUNT + 1;
+         END;
+ /*     80   <STEP CLAUSE> ::= STEP <EXPRESSION>                      */
+         CALL SETTYPEMP(TRUE);
+ /*     81                   |                                        */
+         DO;
+              BASE = FORADDRESS(3);
+              CALL LITERAL(GETADDR);
+              CALL SETTYPESP(FALSE);
+              CALL GENERATE(CON);
+              CALL GEN$TWO(0);
+         END;
+ /*     82   <IF STATEMENT> ::= <IF GROUP>                            */
+         CALL ENTER$COMPILER$LABEL(0);
+ /*     83                    | <IF ELSE GROUP> <STATEMENT LIST>      */
+         CALL ENTER$COMPILER$LABEL(0);
+ /*     84                    | IF END # <EXPRESSION> THEN <NUMBER>   */
+         DO;
+              CALL GENERATE(RON);
+              CALL GENERATE(DEF);
+              CALL FINDLABEL;
+              CALL GEN$TWO(GETADDR);
+         END;
+ /*     85   <IF GROUP> ::= <IF HEAD> <STATEMENT LIST>                */
+            ;
+ /*     86                | <IF HEAD> <NUMBER>                        */
+         CALL RESOLVE$LABEL;
+ /*     87   <IF ELSE GROUP> ::= <IF HEAD> <STATEMENT LIST> ELSE      */
+         DO;
+         CALL ENTER$COMPILER$LABEL(3);
+              CALL GENERATE(BRS);
+              CALL COMPILER$LABEL;
+         END;
+ /*     88   <IF HEAD> ::= IF <EXPRESSION> THEN                       */
+         DO;
+              IF STYPEMP1 = STRING THEN
+                   CALL ERROR('IE');
+              CALL GENERATE(BRC);
+              CALL COMPILER$LABEL;
+         END;
+ /*     89   <DEFINE STATEMENT> ::= <UD FUNCTION NAME>                */
+ /*     89                          <DUMMY ARG LIST> = <EXPRESSION>   */
+         IF CHKTYP2 THEN
+              DO;
+                   BASE = SYMLOCMP;
+                   CALL SETYPE(TYPEMP1);
+                   CALL UNLINK;
+                   CALL GENERATE(XCH);
+                   CALL GENERATE(RTN);
+                   CALL ENTER$COMPILER$LABEL(0);
+              END;
+ /*     90   <UD FUNCTION NAME> ::= DEF <USERDEFINED NAME>            */
+         DO;
+              DECLARE FLAG BYTE;
+              CALL GENERATE(BRS);
+              CALL COMPILER$LABEL;
+              FLAG = NORMAL$LOOKUP(SP);
+              CALL SETSTYPEMP(STYPESP);
+              CALL SETSYMLOCMP(BASE);
+              IF PASS1 THEN
+                   DO;
+                        IF FLAG THEN
+                             CALL ERROR('FD');
+                        CALL SETADDR(CODESIZE);
+                   END;
+              ELSE
+                   CALL RELINK;
+         END;
+ /*     91   <DUMMY ARG LIST> ::= <DUMMY ARG HEAD> <IDENTIFIER> )     */
+         CALL ENTER$PARM;
+ /*     92                      |                                     */
+         CALL SETTYPEMP(0);
+ /*     93   <DUMMY ARG HEAD> ::= (                                   */
+         CALL SETTYPEMP(0);
+ /*     94                      | <DUMMY ARG HEAD> <IDENTIFIER> ,     */
+         CALL ENTER$PARM;
+ /*     95   <FILE STATEMENT> ::= <FILE HEAD> <FILE DECLERATION>      */
+            ;
+ /*     96   <FILE HEAD> ::= FILE                                     */
+            ;
+ /*     97                 | <FILE HEAD> <FILE DECLERATION> ,         */
+            ;
+ /*     98   <FILE DECLERATION> ::= <IDENTIFIER> <FILE REC SIZE>      */
+         DO;
+              CALL PROCESS$SIMPLE$VARIABLE(MP);
+              IF STYPEMP = FLOATPT THEN
+                   CALL ERROR('IF');
+              CALL LITLOAD(SYMLOCSP);
+              CALL GENERATE(OPN);
+         END;
+ /*     99   <FILE REC SIZE> ::= ( <EXPRESSION> )                     */
+         CALL CHKTYP4;
+ /*    100                     |                                      */
+         CALL LITERAL(0);
+ /*    101   <DIMENSION STATEMENT> ::= DIM                            */
+ /*    101                             <DIMENSION VARIABLE LIST>      */
+         ;
+ /*    102   <DIMENSION VARIABLE LIST> ::= <DIMENSION VARIABLE>       */
+         CALL SUBCALC;
+ /*    103                               |                            */
+ /*    103                                <DIMENSION VARIABLE LIST>   */
+ /*    103                                 , <DIMENSION VARIABLE>     */
+         CALL SUBCALC;
+ /*    104   <DIMENSION VARIABLE> ::= <DIM VAR HEAD> <EXPRESSION> )   */
+         DO;
+              CALL CHKTYP5;
+              BASE = SYMLOCMP;
+         END;
+ /*    105   <DIM VAR HEAD> ::= <IDENTIFIER> (                        */
+              DO;
+                   IF NORMAL$LOOKUP(MP) AND PASS1 THEN
+                        CALL ERROR('DP');
+                   CALL SETYPE(SUBVAR);
+                   IF PASS1 THEN
+                        CALL SETADDR(COUNTPRT);
+                   CALL LITERAL(GETADDR);
+                   CALL SETTYPEMP(0);
+                   CALL SETSYMLOCMP(BASE);
+              END;
+ /*    106                    | <DIM VAR HEAD> <EXPRESSION> ,         */
+         CALL CHKTYP5;
+ /*    107   <CLOSE STATEMENT> ::= CLOSE <CLOSE LIST>                 */
+            ;
+ /*    108   <CLOSE LIST> ::= <EXPRESSION>                            */
+         DO;
+              IF STYPESP = STRING THEN
+                     CALL ERROR('MF');
+              CALL GENERATE(RON);
+              CALL GENERATE(CLS);
+         END;
+ /*    109                  | <CLOSE LIST> , <EXPRESSION>             */
+         DO;
+              IF STYPESP = STRING THEN
+                   CALL ERROR('MF');
+              CALL GENERATE(RON);
+              CALL GENERATE(CLS);
+         END;
+ /*    110   <READ STATEMENT> ::= READ <FILE OPTION> <READ LIST>      */
+         IF FILEIO THEN
+              DO;
+                   CALL GENERATE(EDR);
+                   FILEIO = FALSE;
+              END;
+ /*    111                      | READ <READ LIST>                    */
+         ;
+ /*    112   <INPUT STATEMENT> ::= INPUT <PROMPT OPTION>              */
+ /*    112                         <READ LIST>                        */
+         DO;
+              CALL GENERATE(ECR);
+              INPUTSTMT = FALSE;
+         END;
+ /*    113   <PROMPT OPTION> ::= <CONSTANT> ;                         */
+         DO;
+              CALL PUT$FIELD;
+              CALL SETUP$INPUT;
+         END;
+ /*    114                     |                                      */
+         CALL SETUP$INPUT;
+ /*    115   <READ LIST> ::= <VARIABLE>                               */
+         CALL GET$FIELD;
+ /*    116                 | <READ LIST> , <VARIABLE>                 */
+         CALL GET$FIELD;
+ /*    117                 |                                          */
+          FILEIO = FALSE;
+ /*    118   <PRINT STATEMENT> ::= PRINT <PRINT LIST> <PRINT END>     */
+         ;
+ /*    119                       | PRINT <FILE OPTION> <FILE LIST>    */
+         DO;
+              CALL GENERATE(EDW);
+              FILEIO = FALSE;
+         END;
+ /*    120   <PRINT LIST> ::= <EXPRESSION>                            */
+         CALL PUT$FIELD;
+ /*    121                  | <PRINT LIST> <PRINT DELIM>              */
+ /*    121                    <EXPRESSION>                            */
+         CALL PUT$FIELD;
+ /*    122                  |                                         */
+         ;
+ /*    123   <FILE LIST> ::= <EXPRESSION>                             */
+         CALL PUT$FIELD;
+ /*    124                 | <EXPRESSION> , <EXPRESSION>              */
+         CALL PUT$FIELD;
+ /*    125   <PRINT END> ::= <PRINT DELIM>                            */
+         ;
+ /*    126                 |                                          */
+              CALL GENERATE(DBF);
+ /*    127   <FILE OPTION> ::= # <EXPRESSION> ;                       */
+         DO;
+              FILEIO = TRUE;
+              CALL GENERATE(RON);
+              CALL GENERATE(RDB);
+         END;
+ /*    128                   | # <EXPRESSION> , <EXPRESSION> ;        */
+         DO;
+              FILEIO = TRUE;
+              CALL GENERATE(RON);
+              CALL GENERATE(XCH);
+              CALL GENERATE(RON);
+              CALL GENERATE(RDF);
+         END;
+ /*    129   <PRINT DELIM> ::= ;                                      */
+         ;
+ /*    130                   | ,                                      */
+         IF NOT FILEIO THEN
+              CALL GENERATE(NSP);
+ /*    131   <GOTO STATEMENT> ::= <GOTO> <NUMBER>                     */
+         CALL RESOLVE$LABEL;
+ /*    132   <ON STATEMENT> ::= <ON GOTO> <LABEL LIST>                */
+         CALL GEN$ON$2;
+ /*    133                    | <ON GOSUB> <LABEL LIST>               */
+         DO;
+              CALL GEN$ON$2;
+              CALL ENTER$COMPILER$LABEL(0);
+         END;
+ /*    134   <ON GOTO> ::= ON <EXPRESSION> <GOTO>                     */
+         CALL GEN$ON;
+ /*    135   <ON GOSUB> ::= ON <EXPRESSION> <GOSUB>                   */
+         DO;
+              CALL SET$COMPILER$LABEL;
+              CALL LITERAL(GETADDR);
+               CALL GENERATE(ADJ);
+               CALL GENERATE(XCH);
+              CALL GEN$ON;
+         END;
+ /*    136   <LABEL LIST> ::= <NUMBER>                                */
+         DO;
+              CALL RESOLVE$LABEL;
+              CALL SETTYPESP(1);
+         END;
+ /*    137                  | <LABEL LIST> , <NUMBER>                 */
+         DO;
+              CALL RESOLVE$LABEL;
+              CALL SETTYPEMP(TYPEMP + 1);
+         END;
+ /*    138   <GOSUB STATEMENT> ::= <GOSUB> <NUMBER>                   */
+         DO;
+              GOSUBSTMT = TRUE;
+              CALL RESOLVE$LABEL;
+              GOSUBSTMT = FALSE;
+         END;
+ /*    139   <GOTO> ::= GOTO                                          */
+         ;
+ /*    140            | GO TO                                         */
+         ;
+ /*    141   <GOSUB> ::= GOSUB                                        */
+         ;
+ /*    142             | GO SUB                                       */
+         ;
+ /*    143   <NEXT STATEMENT> ::= <NEXT HEAD> <IDENTIFIER>            */
+         CALL GEN$NEXT$WITH$IDENT;
+ /*    144                      | NEXT                                */
+         CALL GENNEXT;
+ /*    145   <NEXT HEAD> ::= NEXT                                     */
+         ;
+ /*    146                 | <NEXT HEAD> <IDENTIFIER> ,               */
+         CALL GEN$NEXT$WITH$IDENT;
+ /*    147   <OUT STATEMENT> ::= OUT <EXPRESSION> , <EXPRESSION>      */
+         IF STYPEMP1 <> FLOATPT OR STYPESP <> FLOATPT THEN
+              CALL ERROR('MF');
+         ELSE
+         DO;
+              CALL GENERATE(RON);
+              CALL GENERATE(XCH);
+              CALL GENERATE(RON);
+              CALL GENERATE(POT);
+         END;
+ /*    148   <RETURN STATEMENT> ::= RETURN                            */
+         CALL GENERATE(RTN);
+ /*    149   <STOP STATEMENT> ::= STOP                                */
+         CALL GENERATE(XIT);
+ /*    150   <END STATEMENT> ::= END                                  */
+         IF PASS1 THEN
+              DO;
+                   PASS1 = FALSE;
+                   CALL REWIND$SOURCE$FILE;
+                   IF FORCOUNT <> 0 THEN
+                        DO;
+                             CALL ERROR('FU');
+                             FORCOUNT = 0;
+                        END;
+                   CALL GENERATE('*');
+                   CALL GENTWO((CODESIZE + 3) AND 0FFFCH);
+                   CALL GENTWO(DATACT);
+                   CALL GENTWO(COUNTPRT);
+              END;
+         ELSE
+              DO;
+                   DO WHILE NEXTCHAR <> EOLCHAR;
+                        NEXTCHAR = GETCHAR;
+                        END;
+                   CALL GENERATE(XIT);
+                   CALL GENERATE(7FH);
+                   CALL WRITE$INT$FILE;
+                   CALL CLOSE$INT$FILE;
+                   CALL PRINTDEC(ERRORCOUNT);
+                   CALL PRINT(.(' ERRORS DETECTED$'));
+                   CALL CRLF;
+                   CALL MON3;
+              END;
+ /*    151   <RESTORE STATEMENT> ::= RESTORE                          */
+         CALL GENERATE(RST);
+ /*    152   <RANDOMIZE STATEMENT> ::= RANDOMIZE                      */
+         CALL GENERATE(IRN);
+    END /* OF CASES */;
+
+END SYNTHESIZE;
+END;

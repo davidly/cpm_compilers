@@ -1,0 +1,2292 @@
+BASINT:
+DO; /* ORIGINALLY ORG'ED AT 0C00H ABOVE FP PACKAGE */
+    /*
+         ********************************************************
+         *                                                      *
+         *                 BASIC-E INTERPRETER                  *
+         *                                                      *
+         *            U. S. NAVY POSTGRADUATE SCHOOL            *
+         *                 MONTEREY, CALIFORNIA                 *
+         *                                                      *
+         *            WRITTEN BY GORDON EUBANKS, JR.            *
+         *                                                      *
+         *                   CPM VERSION 2.0                    *
+         *                       MAY 1977                       *
+         *                                                      *
+         ********************************************************
+    */
+
+    /*
+         ********************************************************
+         *                                                      *
+         *     THE BASIC-E INTERPRETER IS PASSED CONTROL        *
+         *      FROM THE BUILD PROGRAM.  THE FDA, CODE AND      *
+         *      DATA AREA ARE MOVED DOWN TO RESIDE AT THE       *
+         *      .MEMORY FOR THIS PROGRAM, AND THEN THE STACK    *
+         *      PRT AND MACHINE REGISTERS ARE INITIALIZED       *
+         *      THE INTERPRETER THEN EXECUTES THE BASIC-E       *
+         *      MACHINE CODE.                                   *
+         *                                                      *
+         ********************************************************
+    */
+
+    /*
+         ********************************************************
+         *                                                      *
+         *                   GLOBAL LITERALS                    *
+         *                                                      *
+         ********************************************************
+    */
+DECLARE
+         LIT       LITERALLY 'LITERALLY',
+         FOREVER   LIT       'WHILE TRUE',
+         TRUE      LIT       '1',
+         FALSE     LIT       '0',
+         LF        LIT       '10',
+         CR        LIT       '13',
+         NULLCHAR  LIT       '0H',
+         CONTZ     LIT       '1AH',
+         QUOTE     LIT       '22H',
+         WHAT      LIT       '63';               /*QUESTION MARK*/
+
+    /*
+         ********************************************************
+         *                                                      *
+         *               EXTERNAL ENTRY POINTS                  *
+         *     THESE ENTRY POINTS ASSUME THE USE OF CP/M        *
+         *                                                      *
+         ********************************************************
+    */
+DECLARE
+         SYSBEGIN     ADDRESS  INITIAL(6H),
+         PARAM1       ADDRESS PUBLIC,     /* SET BY BUILD PROGRAM */
+         PARAM2       ADDRESS PUBLIC,
+         PARAM3       ADDRESS PUBLIC,
+         PARAM4       ADDRESS PUBLIC,
+         OFFSET       ADDRESS PUBLIC,     /* AMOUNT TO MOVE IMAGE DOWN */
+         SEED         ADDRESS  EXTERNAL,   /* SEED FOR RAND GENERATOR */
+         BEGIN        ADDRESS EXTERNAL,   /* START OF BUILD MODULE */
+         OVERFLOW     LITERALLY 'OVER',
+         OVER         ADDRESS  EXTERNAL;
+
+    /*
+         ********************************************************
+         *                                                      *
+         *            SYSTEM PARAMETERS WHICH MAY               *
+         *            REQUIRE MODIFICATION BY USERS             *
+         *                                                      *
+         ********************************************************
+    */
+DECLARE
+         EOLCHAR       LIT       '0DH',
+         EOFFILLER     LIT       '1AH',
+         INTRECSIZE    LIT       '128',
+         DISKRECSIZE   LIT       '128',
+         STRINGDELIM   LIT       '22H',
+         CONBUFFSIZE   LIT        '80',
+         NUMFILES      LIT         '20',  /* MAX NUMBER USER FILES */
+         NRSTACK       LIT        '96';  /* STACK SIZE TIMES 4 */
+
+    /*
+         ********************************************************
+         *                                                      *
+         *                   GLOBAL VARIABLES                   *
+         *                                                      *
+         ********************************************************
+    */
+
+DECLARE
+         RA        ADDRESS,  /* ADDRESS OF REG A */
+         RB        ADDRESS,  /* ADDRESS OF REG B */
+         RC        ADDRESS,  /* ADDRESS OF REGISTER C */
+         C         BASED     RC BYTE, /* BYTE OF CODE */
+         CV        BASED     RC(2) BYTE, /* VERSION OF C WITH SUBSCRIPT */
+         TWOBYTEOPRAND BASED RC ADDRESS,  /* TWO BYTES CODE */
+         SB        ADDRESS,  /* BOTTOM OF STACK */
+         ST        ADDRESS, /* TOP OF STACK */
+         BRA       BASED     RA(4)     BYTE,
+         BRAZ      BASED     RA        BYTE,
+         ARA       BASED     RA        ADDRESS,
+         ARB       BASED     RB        ADDRESS,
+         BRB       BASED     RB(4)     BYTE,
+         BRBZ      BASED     RB        BYTE,
+         MPR       ADDRESS,  /* BASE ADDRESS OF PRT */
+         MDA       ADDRESS,  /* BASE OF DATA AREA */
+         MCD       ADDRESS,  /* BASE OF CODE AREA */
+         LOCALSEED ADDRESS,  /* USED TO SET SEED */
+         CURRENTLINE ADDRESS INITIAL(0),  /* SOURCE LINE BEING EXEC */
+         DATAAREAPTR ADDRESS,  /* CURRENT LOCATION IN DATA AREA */
+         MBASE     ADDRESS;  /* BEGINNING OF FREE STORAGE AREA */
+
+DECLARE
+         INPUTBUFFER       BYTE INITIAL(CONBUFFSIZE), /* USED WITH SPACE */
+         SPACE(CONBUFFSIZE) BYTE,  /* INPUT BUFFER FOR CON AND DISK */
+         INPUTINDEX        BYTE,
+         CONBUFFPTR        ADDRESS,
+         INPUTPTR          ADDRESS,
+         PRINTBUFFLENGTH   LIT       '132',
+         PRINTBUFFERLOC    LIT      '80H',
+         TABPOS1           LIT      '142', /* ABSOLUTE ADDR REL TO */
+         TABPOS2           LIT      '156', /*   PRINTBUFFLOC  */
+         TABPOS3           LIT      '170',
+         TABPOS4           LIT      '184',
+         PRINTBUFFER       ADDRESS  INITIAL(PRINTBUFFERLOC),
+         PRINTPOS          BASED    PRINTBUFFER   BYTE,
+         PRINTBUFFEND      LIT      '0103H', /* ABSOLUTE ADDRESS */
+         PRINTWORKAREA(14) BYTE,  /* FOR CONV FROM FP TO ASCII */
+         REREADADDR        ADDRESS,  /* TO RECOVER FROM READ ERROR */
+         INPUTTYPE         BYTE;
+
+DECLARE
+         FILEADDR            ADDRESS, /*CURRENT FCB POINTER BASE */
+         FCB                 BASED     FILEADDR(33)  BYTE,
+         FCBADD              BASED     FILEADDR(33)  ADDRESS,
+         EOFADDR             ADDRESS,
+         FILES(NUMFILES)     ADDRESS,  /*POINTER ARRAY TO FCBS */
+         EOFBRANCH(NUMFILES) ADDRESS,
+         BUFFER$END          ADDRESS,
+         RECORD$POINTER      ADDRESS,
+         BUFFER              ADDRESS,
+         NEXTDISKCHAR        BASED     RECORD$POINTER BYTE,
+         BLOCKSIZE           ADDRESS,
+         BYTES$WRITTEN       ADDRESS,
+         FIRSTFIELD          BYTE,
+         EOFRA               ADDRESS,
+         EOFRB               ADDRESS;
+
+DECLARE
+         DECIMAL(4) ADDRESS DATA(1000,100,10,1),
+         ONEHALF(4) BYTE DATA(80H,0,0,0),
+         PLUSONE(4)  BYTE DATA(81H,0,0,0),
+         MINUSONE(4) BYTE DATA(81H,80H,0,0),
+         MAXNUM(4) BYTE DATA(0FFH,07FH,0FFH,0FFH),
+         MAXPOSNUM BYTE DATA (4),
+         POSITION(9) ADDRESS DATA(TABPOS1,TABPOS2,TABPOS3,TABPOS4,
+               PRINTBUFFEND),
+         SCALE(4) BYTE DATA(90H,7FH,0FFH,0);
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *       SYSTEM DEPENDENT ROUTINES AND VARIABLES        *
+         *           THE FOLLOWING ROUTINES ARE USED            *
+         *           BY THE INTERPRETER TO ACCESS DISK          *
+         *           FILES AND FOR CONSOLE I/O.                 *
+         *           THE ROUTINES ASSUME THE USE OF THE         *
+         *           CP/M OPERATING SYSTEM.                     *
+         *                                                      *
+         ********************************************************
+    */
+
+
+MON1: PROCEDURE(FUNC,PARM) EXTERNAL;
+    DECLARE FUNC BYTE,
+    PARM ADDRESS;
+END MON1;
+
+MON2: PROCEDURE(FUNC,PARM) BYTE EXTERNAL;
+    DECLARE FUNC BYTE,
+    PARM ADDRESS;
+END MON2;
+
+MON3: PROCEDURE EXTERNAL;
+    /* REBOOT SYSTEM */
+END MON3;
+
+MOVEA: PROCEDURE(A) EXTERNAL;
+    DECLARE A ADDRESS;
+    END MOVEA;
+
+MOVE4: PROCEDURE(S,D) EXTERNAL;
+    DECLARE (S,D) ADDRESS;
+    END MOVE4;
+
+PRINTCHAR: PROCEDURE(CHAR) PUBLIC;
+    DECLARE CHAR BYTE;
+    CALL MON1(2,CHAR);
+END PRINTCHAR;
+
+
+CRLF: PROCEDURE;
+    CALL PRINTCHAR(CR);
+    CALL PRINTCHAR(LF);
+END CRLF;
+
+
+
+
+READ: PROCEDURE(A);
+    DECLARE A ADDRESS;
+    /*
+       FIRST WAIT FOR FIRST CHAR AND SET LOCALSEED
+       SO IT CAN BE USED TO SEED RANDOM NUMBER GENERATOR
+    */
+    DO WHILE NOT MON2(11,0);
+         LOCALSEED = LOCALSEED + 1;
+         END;
+    /* READ INTO BUFFER AT A+2 */
+    CALL MON1(10,A);
+END READ;
+
+
+OPEN: PROCEDURE BYTE;
+    RETURN MON2(15,FILEADDR);
+END OPEN;
+
+
+CLOSE: PROCEDURE BYTE;
+    RETURN MON2(16,FILEADDR);
+END CLOSE;
+
+
+DISKREAD: PROCEDURE BYTE;
+    RETURN MON2(20,FILEADDR);
+END DISKREAD;
+
+
+DISKWRITE: PROCEDURE BYTE;
+    RETURN MON2(21,FILEADDR);
+END DISKWRITE;
+
+
+CREATE: PROCEDURE BYTE;
+      RETURN MON2(22,FILEADDR);
+END CREATE;
+
+MAKE: PROCEDURE BYTE;
+    CALL MON1(19,FILEADDR);
+    RETURN CREATE;
+END MAKE;
+
+
+SETDMA: PROCEDURE;  /* SET DMA ADDRESS FOR DISK I/O */
+    CALL MON1(26,BUFFER);
+END SETDMA;
+
+
+PRINT: PROCEDURE(LOCATION) PUBLIC;
+    DECLARE LOCATION ADDRESS;
+    /* PRINT THE STRING STARTING AT ADDRESS LOCATION UNTIL THE
+    NEXT DOLLAR SIGN IS ENCOUNTERED */
+    CALL MON1(9,LOCATION);
+END PRINT;
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *        GENERAL PURPOSE INTERPRETER ROUTINES          *
+         *                                                      *
+         ********************************************************
+    */
+TIMES4: PROCEDURE(N) ADDRESS;
+    DECLARE N ADDRESS;
+    RETURN SHL(N,2);
+END TIMES4;
+
+PRINT$DEC: PROCEDURE(VALUE);
+    DECLARE VALUE ADDRESS,
+            I BYTE,
+            COUNT BYTE;
+    DO I = 0 TO 3;
+         COUNT = 30H;
+         DO WHILE VALUE >= DECIMAL(I);
+              VALUE = VALUE - DECIMAL(I);
+              COUNT = COUNT + 1;
+              END;
+         CALL PRINTCHAR(COUNT);
+    END;
+END PRINT$DEC;
+
+
+MOVE: PROCEDURE(SOURCE,DEST,N);
+
+    /*MOVE N BYTES FROM SOURCE TO DEST */
+    DECLARE (SOURCE,DEST,N) ADDRESS;
+    CALL MOVEA(.SOURCE);
+END MOVE;
+
+FILL: PROCEDURE(DEST,CHAR,N);
+    /*FILL LOCATIONS STARTING AT DEST WITH CHAR FOR N BYTES */
+    DECLARE
+            DEST   ADDRESS,
+            N      ADDRESS,
+            D      BASED    DEST   BYTE,
+            CHAR   BYTE;
+    DO WHILE (N:=N-1) <> 0FFFFH;
+         D = CHAR;
+         DEST = DEST + 1;
+    END;
+END FILL;
+
+
+
+OUTPUT$MSG: PROCEDURE(MSG);
+    DECLARE MSG ADDRESS;
+    CALL PRINT$CHAR(HIGH(MSG));
+    CALL PRINT$CHAR(LOW(MSG));
+    IF CURRENTLINE > 0 THEN
+         DO;
+              CALL PRINT(.(' IN LINE $'));
+         CALL PRINT$DEC(CURRENTLINE);
+         END;
+    CALL CRLF;
+END OUTPUT$MSG;
+
+
+ERROR: PROCEDURE(E);
+    DECLARE E ADDRESS;
+    CALL CRLF;
+    CALL PRINT(.('ERROR $'));
+    CALL OUTPUTMSG(E);
+    CALL MON3;
+END ERROR;
+
+
+WARNING: PROCEDURE(W);
+    DECLARE W ADDRESS;
+    CALL CRLF;
+    CALL PRINT(.('WARNING $'));
+    CALL OUTPUTMSG(W);
+    RETURN;
+END WARNING;
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *            STACK MANIPULATION ROUTINES               *
+         *                                                      *
+         ********************************************************
+    */
+
+STEP$INS$CNT: PROCEDURE;
+    RC=RC+1;
+END STEP$INS$CNT;
+
+POP$STACK: PROCEDURE;
+    RA = RB;
+    IF(RB := RB - 4) < SB THEN
+         RB = ST - 4;
+END POP$STACK;
+
+PUSH$STACK: PROCEDURE;
+    RB = RA;
+    IF(RA := RA + 4) >= ST THEN
+         RA = SB;
+END PUSH$STACK;
+
+
+IN$FSA: PROCEDURE(LOCATION) BYTE;
+     /*
+          RETURNS TRUE IF LOCATION IS IN FSA
+     */
+    DECLARE LOCATION ADDRESS;
+    RETURN LOCATION > ST;
+END IN$FSA;
+
+
+SET$DATA$ADDR: PROCEDURE(PTR);
+    DECLARE PTR ADDRESS, A BASED PTR ADDRESS;
+    IF NOT IN$FSA(A) THEN
+         A = MPR + TIMES4(A);
+END SET$DATA$ADDR;
+
+
+MOVE$RA$RB: PROCEDURE;
+    CALL MOVE4(RA,RB);
+END MOVE$RA$RB;
+
+
+MOVE$RB$RA:  PROCEDURE;
+    CALL MOVE4(RB,RA);
+         END MOVERBRA;
+
+
+FLIP: PROCEDURE;
+    DECLARE TEMP(4) BYTE;
+    CALL MOVE4(RA,.TEMP);
+    CALL MOVE$RB$RA;
+    CALL MOVE4(.TEMP,RB);
+         END FLIP;
+
+
+LOAD$RA: PROCEDURE;
+    CALL SET$DATA$ADDR(RA);
+    CALL MOVE4(ARA,RA);
+    END LOADRA;
+
+RA$ZERO: PROCEDURE BYTE;
+    RETURN BRAZ = 0;
+END RA$ZERO;
+
+
+RB$ZERO: PROCEDURE BYTE;
+    RETURN BRBZ = 0;
+END RB$ZERO;
+
+
+RA$ZERO$ADDRESS: PROCEDURE BYTE;
+    RETURN ARA = 0;
+END RA$ZERO$ADDRESS;
+
+
+RB$ZERO$ADDRESS: PROCEDURE BYTE;
+    RETURN ARB = 0;
+END RB$ZERO$ADDRESS;
+
+
+RA$NEGATIVE: PROCEDURE BYTE;
+    RETURN ROL(BRA(1),1);
+END RA$NEGATIVE;
+
+
+RB$NEGATIVE: PROCEDURE BYTE;
+    RETURN ROL(BRB(1),1);
+END RB$NEGATIVE;
+
+
+FLAG$STRING$ADDR: PROCEDURE(X);
+    DECLARE X BYTE;
+    BRA(2) = X;
+END FLAG$STRING$ADDR;
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *           FLOATING POINT INTERFACE ROUTINES          *
+         *                                                      *
+         *       ALL FLOATING POINT OPERATIONS ARE PERFORMED    *
+         *       BY CALLING ROUTINES IN THIS SECTION.  THE      *
+         *       FLOATING POINT PACKAGE IS ACCESSED BY THE      *
+         *       FOLLOWING SIX ROUTINES:                        *
+         *           (1)  CONV$TO$BINARY                        *
+         *           (2)  CONV$TO$FP                            *
+         *           (3)  FP$INPUT                              *
+         *           (4)  FP$OUT                                *
+         *           (5)  FP$OP$RETURN                          *
+         *           (6)  FP$OP                                 *
+         *       CHECK$OVERFLOW DOES JUST THAT!!                *
+         *       THE REMAINING ROUTINES USE THE ABOVE           *
+         *       PROCEDURES TO ACCOMPLISH COMMON ROUTINES       *
+         *                                                      *
+         *       CONV$TO$BIN$ADDR AND OTHER ROUTINES WHICH      *
+         *       REFER TO AN ADDRESS PLACE THE RESULTS IN       *
+         *       THE FIRST TWO BYTES OF THE STACK AS AN 8080    *
+         *       ADDRESS QUANTITY WITH LOW ORDER BYTE FIRST     *
+         *                                                      *
+         *                                                      *
+         *                                                      *
+         ********************************************************
+    */
+
+DECLARE
+         FINIT     LIT       '0',                /* INITIALIZE*/
+         FSTR      LIT       '1',                /* STORE (ACCUM)*/
+         FLOD      LIT       '2',                /* LOAD ACCUM */
+         FADD      LIT       '3',                /* ADD TO ACCUM */
+         FSUB      LIT       '4',                /* SUB FROM ACCUM*/
+         FMUL      LIT       '5',                /* MUL BY ACCUM*/
+         FDIV      LIT       '6',                /* DIVIDE INTO ACCUM*/
+         FABS      LIT       '7',                /* ABS VALUE OF ACCUM*/
+         FZRO      LIT       '8',                /* ZERO ACCUM*/
+         FTST      LIT       '9',                /* TEST SIGN OF ACCUM*/
+         FCHS      LIT       '10',               /* COMPL. ACCUM*/
+         SQRT      LIT       '11',               /* SQRT OF ACCUM*/
+         COS       LIT       '12',               /* COS ACCUM*/
+         SIN       LIT       '13',               /* SIN ACCUM*/
+         ATAN      LIT       '14',               /* ARCTAN ACCUM */
+         COSH      LIT       '15',               /* COSH ACCUM*/
+         SINH      LIT       '16',               /* SINH ACCUM*/
+         EXP       LIT       '17',               /* EXPONENTIAL ACCUM*/
+         LOG       LIT       '18';               /* LOG ACCUM*/
+
+DECLARE /* EXTERNAL NAMES FOR SUBROUTINES */
+         CONV$TO$BINARY LIT 'CBIN',
+         CONV$TO$FP     LIT 'CFLT',
+         FP$INPUT       LIT 'FLTINP',
+         FP$OUT         LIT 'FLTOUT',
+         FP$OP$RETURN   LIT 'FLTRET',
+         FP$OP          LIT 'FLTOP';
+
+CHECK$OVERFLOW: PROCEDURE;
+    IF OVERFLOW THEN
+         DO;
+              CALL WARNING('OF');
+              CALL MOVE4(.MAXNUM,RA);
+              OVERFLOW = 0;
+         END;
+END CHECK$OVERFLOW;
+
+
+CONV$TO$BINARY: PROCEDURE(A) EXTERNAL;  /*CONVERTS FP NUM AT A TO BINARY
+         AND RETURNS RESULT TO A  */
+    DECLARE A ADDRESS;
+END CONV$TO$BINARY;
+
+CONV$TO$FP: PROCEDURE(A) EXTERNAL;  /* CONVERTS BINARY NUM AT A TO FP AND
+         LEAVES IT AT A  */
+    DECLARE A ADDRESS;
+END CONV$TO$FP;
+
+FP$INPUT: PROCEDURE(LENGTH,A) EXTERNAL;  /* CONVERTS STRING AT A LENGTH LENGTH
+         TO FP AND LEAVES RESULT IN FP ACCUM   */
+    DECLARE LENGTH BYTE, A ADDRESS;
+END FP$INPUT;
+
+
+FP$OUT: PROCEDURE(A) EXTERNAL;  /* CONVERTS FP ACCUM TO STRING AND PUTS IT
+         AT A  */
+    DECLARE A ADDRESS;
+END FP$OUT;
+
+
+FP$OP$RETURN: PROCEDURE(FUNC,A) EXTERNAL; /* PERFORMS FUNC AND RETURNS VALUE
+         TO A  */
+    DECLARE FUNC BYTE, A ADDRESS;
+END FP$OP$RETURN;
+
+
+FP$OP: PROCEDURE(FUNC,A) EXTERNAL;  /* PERFORMS FUNC POSSIBLY USEING
+         FP NUM ADDRESSED BY A . NOTHING IS RETURNED TO A */
+    DECLARE FUNC BYTE, A ADDRESS;
+END FP$OP;
+
+CONV$TO$BIN$ADDR: PROCEDURE;
+    CALL CONV$TO$BINARY(RA);
+    BRA(0) = BRA(3);
+    BRA(1) = BRA(2);
+END CONV$TO$BIN$ADDR;
+
+INPUT: PROCEDURE(PORT) BYTE EXTERNAL;
+    DECLARE PORT BYTE;
+    END INPUT;
+
+OUTPUT: PROCEDURE(PORT,VALUE) EXTERNAL;
+    DECLARE (PORT,VALUE) BYTE;
+    END OUTPUT;
+
+RANDOM: PROCEDURE EXTERNAL;
+    END RANDOM;
+
+
+ONE$VALUE$OPS: PROCEDURE(A);
+         DECLARE A BYTE;
+         CALL FP$OP(FLOD,RA);
+         CALL FP$OP$RETURN(A,RA);
+    CALL CHECK$OVERFLOW;
+END ONE$VALUE$OPS;
+
+TWO$VALUE$OPS: PROCEDURE(TYPE);
+    DECLARE TYPE BYTE;
+         CALL FP$OP(FLOD,RA);
+         CALL FP$OP$RETURN(TYPE,RB);
+    CALL POP$STACK;
+    CALL CHECK$OVERFLOW;
+END TWO$VALUE$OPS;
+
+ROUND$CONV$BIN: PROCEDURE;
+    CALL PUSH$STACK;
+    CALL MOVE4(.ONEHALF,RA);
+    CALL TWO$VALUE$OPS(FADD);
+    CALL CONV$TO$BIN$ADDR;
+END ROUND$CONV$BIN;
+
+FLOAT$ADDR: PROCEDURE(V);
+    DECLARE V ADDRESS;
+    ARA=0;
+    BRA(2)=HIGH(V); BRA(3)=LOW(V);
+    CALL CONV$TO$FP(RA);
+END FLOAT$ADDR;
+
+COMPARE$FP: PROCEDURE BYTE;
+   /* 1=LESS 2=GREATER 3=EQUAL  */
+         CALL FP$OP(FLOD,RB);
+         CALL FP$OP$RETURN(FSUB,RA);
+         IF RA$ZERO THEN
+                DO;
+                     CALL POP$STACK;
+                     RETURN 3;
+                END;
+         IF RA$NEGATIVE THEN
+              DO;
+                    CALL POP$STACK;
+                    RETURN 1;
+              END;
+         CALL POP$STACK;
+         RETURN 2;
+END COMPARE$FP;
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *         DYNAMIC STORAGE ALLOCATION PROCEDURES        *
+         *                                                      *
+         ********************************************************
+    */
+AVAILABLE: PROCEDURE(NBYTES) ADDRESS;
+    DECLARE
+            NBYTES   ADDRESS,
+            POINT    ADDRESS,
+            TEMP     ADDRESS,
+            TOTAL    ADDRESS,
+            HERE     BASED POINT   ADDRESS,
+            SWITCH   BASED POINT(5)   BYTE;
+    POINT = MBASE;
+    TOTAL = 0;
+    DO WHILE POINT <> 0;
+         IF SWITCH(4) = 0 THEN
+           DO;
+              TOTAL = TOTAL + (TEMP := HERE - POINT - 5);
+              IF NBYTES <> 0 THEN
+                DO;
+                   IF NBYTES + 5 <= TEMP THEN
+                        RETURN POINT;
+                END;
+           END;
+           POINT = HERE;
+    END;
+    IF NBYTES <> 0 THEN
+         CALL ERROR('NM');
+    RETURN TOTAL;
+END AVAILABLE;
+
+GETSPACE: PROCEDURE(NBYTES) ADDRESS;
+    DECLARE
+            NBYTES  ADDRESS,
+            SPACE   ADDRESS,
+            POINT   ADDRESS,
+            HERE    BASED POINT   ADDRESS,
+            TEMP    ADDRESS,
+            TEMP1   ADDRESS,
+            TEMP2   ADDRESS,
+            ADR1    BASED TEMP1   ADDRESS,
+            ADR2    BASED TEMP2   ADDRESS,
+            SWITCH  BASED POINT(5)   BYTE,
+            SWITCH2 BASED TEMP1(5)   BYTE;
+    IF NBYTES = 0 THEN
+         RETURN 0;
+    POINT = AVAILABLE(NBYTES);
+    /*LINK UP THE SPACE*/
+    SWITCH(4)=1;  /* SET SWITCH ON*/
+        TEMP1=POINT+NBYTES+5;
+         ADR1=HERE;
+         TEMP2=HERE + 2;
+        HERE,ADR2 = TEMP1;
+        SWITCH2(4)=0; /*SET REMAINDER AS AVAIL*/
+       TEMP1 = TEMP1 + 2;
+       ADR1 = POINT;
+    CALL FILL(POINT := POINT + 5,0,NBYTES);
+    RETURN POINT;
+END GETSPACE;
+
+RELEASE: PROCEDURE(SPACE);
+    DECLARE
+            SPACE      ADDRESS,
+            HOLD       ADDRESS,
+            NEXT$AREA  BASED     HOLD    ADDRESS,
+            SWITCH     BASED     SPACE(5)   BYTE,
+            HERE       BASED     SPACE   ADDRESS,
+            TEMP       ADDRESS,
+            ADRS       BASED     TEMP    ADDRESS,
+            LOOK       BASED     TEMP(5)    BYTE;
+
+    UNLINK: PROCEDURE;
+        TEMP=HERE;
+        IF ADRS<>0 THEN      /*NOT AT TOP OF FSA */
+         DO;
+            IF LOOK(4)=0 THEN   /*SPACE ABOVE IS FREE*/
+              DO;
+                   TEMP=(HERE:=ADRS) + 2;
+                   ADRS=SPACE;
+              END;
+         END;
+    END UNLINK;
+
+    HOLD,SPACE=SPACE-5;
+    SWITCH(4)=0;    /* RELEASES THE SPACE */
+    /* COMBINE WITH SPACE ABOVE AND BELOW IF POSSIBLE*/
+    CALL UNLINK;
+    SPACE=SPACE+2;  /* LOOK AT PREVIOUS BLOCK*/
+    IF (SPACE:=HERE)<>0 THEN
+    DO;
+        IF SWITCH(4)=0 THEN
+        DO;
+            CALL UNLINK;
+           HOLD=SPACE;
+        END;
+    END;
+END RELEASE;
+
+    /*
+         ********************************************************
+         *                                                      *
+         *            ARRAY ADDRESSING PROCEDURES               *
+         *                                                      *
+         *     CALC$ROW SETS UP AN ARRAY IN THE FSA IN ROW      *
+         *     MAJOR ORDER.  THE BYTE OF CODE FOLLOWING THE     *
+         *     OPERATOR IS THE NUMBER OF DIMENSIONS.  THE       *
+         *     STACK CONTAINS THE UPPER BOUND OF EACH DIMENSION *
+         *     RA HOLDS DIMENSION N, RB DIMENSION N-1 ETC.      *
+         *     THE LOWER BOUND IS ALWAYS ZERO.                  *
+         *                                                      *
+         *     CALC$SUB PERFORMS A SUBSCRIPT CALCULATION FOR    *
+         *     THE ARRAY REFERENCED BY RA.  THE VALUE OF EACH   *
+         *     DIMENSION IS ON THE STACK BELOW THE ARRAY        *
+         *     ADDRESS STARTING WITH THE NTH DIMENSION          *
+         *     A CHECK IS MADE TO SEE IF THE SELECTED ELEMENT   *
+         *     IS OUTSIDE THE AREA ASIGNED TO THE ARRAY         *
+         *                                                      *
+         ********************************************************
+    */
+
+CALC$ROW: PROCEDURE;
+    DECLARE
+            ASIZE       ADDRESS,
+            I           BYTE,
+            SAVERA      ADDRESS,
+            SAVERB      ADDRESS,
+            ARRAYADDR   ADDRESS,
+            NUMDIM      BASED RC BYTE,
+            ARRAYPOS    BASED ARRAYADDR ADDRESS;
+
+    ASIZE = 1;  /* INITIAL VALUE */
+    CALL STEP$INS$CNT;  /* POINT RC TO NUMDIM */
+    SAVERA = RA;  /* SAVE CURRENT STACK POINTER */
+    SAVERB = RB;
+    DO I = 1 TO NUMDIM; /* FIRST PASS ON ARRAY DIMENSIONS */
+         ARA,ASIZE = ASIZE * (ARA + 1); /* DISPLACEMENT AND TOTAL */
+         CALL POP$STACK;  /* NEXT DIMENSION */
+         END;
+    RA = SAVERA;  /* BACK TO ORIGINAL STACK POSITION */
+    RB = SAVERB;
+    SAVERA,ARRAYADDR = GETSPACE(TIMES4(ASIZE) + SHL(NUMDIM+1,1));
+    ARRAYPOS = NUMDIM;  /* STORE NUMBER OF DIM */
+    DO I = 1 TO NUMDIM;  /* STORE DISPLACEMENTS */
+         ARRAYADDR = ARRAYADDR + 2;
+         ARRAYPOS = ARA;
+         CALL POP$STACK;
+         END;
+    CALL PUSH$STACK;  /* NOW PUT ADDRESS OF ARRAY ON STACK */
+    ARA = SAVERA;
+END CALC$ROW;
+
+
+CALC$SUB: PROCEDURE;
+    DECLARE
+            ARRAYADDR ADDRESS,
+            ARRAYPOS  BASED ARRAYADDR ADDRESS,
+            I         BYTE,
+            NUMDIM    BYTE,
+            LOCATION  ADDRESS;
+
+    INC$ARRAYADDR: PROCEDURE;
+         ARRAYADDR = ARRAYADDR + 1 + 1;
+    END INC$ARRAYADDR;
+
+    ARRAYADDR = ARA;
+    CALL POP$STACK;
+    LOCATION = ARA;
+    NUMDIM = ARRAYPOS;
+    DO I = 2 TO NUMDIM;
+         CALL POP$STACK;
+         CALL INC$ARRAYADDR;
+         LOCATION = ARA * ARRAYPOS + LOCATION;
+         END;
+    CALL INC$ARRAYADDR;
+    IF LOCATION >= ARRAYPOS THEN
+         CALL ERROR('SB');
+    ARA = ARRAYADDR + 2 + TIMES4(LOCATION);
+END CALC$SUB;
+    /*
+         ********************************************************
+         *                                                      *
+         *     STORE PLACES RA IN THE PRT LOCATION REFERENCED   *
+         *     BY RB.  RA MAY CONTAIN A FLOATING POINT NUMBER   *
+         *     OR A REFERENCE TO A STRING.                      *
+         *     IN THE CASE OF A STRING THE FOLLOWING IS ALSO    *
+         *     PERFORMED:                                       *
+         *         (1)  IF THE PRT CELL ALREADY CONTAINS A      *
+         *         REFERENCE TO A STRING IN THE FSA THAT        *
+         *         STRING'S COUNTER IS DECREMENTED AND IF       *
+         *         EQUAL TO 1 THEN THE SPACE IS FREED           *
+         *         (2)  THE NEW STRINGS COUNTER IS INCREMENTED  *
+         *         IF IT IS ALREADY 255 THEN A COPY IS MADE     *
+         *         AND THE NEW COUNTER SET TO 2.                *
+         *                                                      *
+         ********************************************************
+    */
+
+STORE: PROCEDURE(TYPE);
+    DECLARE
+            TYPE       BYTE,
+            PTRADDR    ADDRESS,
+            PTR        ADDRESS,
+            STRINGADDR BASED PTRADDR  ADDRESS,
+            COUNTER    BASED PTR      BYTE;
+    CALL SET$DATA$ADDR(RB);
+    IF TYPE THEN  /* STORE STRING */
+         DO;
+              CALL FLAG$STRING$ADDR(0);  /* SET TEMP STRING OFF */
+         PTRADDR = ARB;  /* CAN WE FREE STRING DESTINATION POINTED TO */
+              IF IN$FSA(STRINGADDR) THEN   /* IN FSA ? */
+                   DO;
+                        PTR = STRINGADDR - 1;
+                        IF(COUNTER := COUNTER - 1) = 1 THEN
+                             CALL RELEASE(STRINGADDR);
+                   END;
+              IF IN$FSA(PTR := ARA - 1) THEN   /* INC COUNTER */
+                   DO;
+                   IF COUNTER = 255 THEN  /* ALREADY POINTED TO BY
+                                             254 VARIABLES */
+                        DO;
+                             PTR = PTR + 1;
+                             CALL MOVE(PTR,ARA := GETSPACE(COUNTER + 1),
+                                       COUNTER + 1);
+                             PTR = ARA - 1;
+                        END;
+                   COUNTER = COUNTER + 1;
+                   END;
+         END;
+    CALL MOVE4(RA,ARB);
+END STORE;
+    /*
+         ********************************************************
+         *                                                      *
+         *                  BRANCHING ROUTINES                  *
+         *                                                      *
+         ********************************************************
+    */
+
+UNCOND$BRANCH: PROCEDURE;
+    RC = RC + ARA - 1;
+    CALL POP$STACK;
+END UNCOND$BRANCH;
+
+
+COND$BRANCH: PROCEDURE;
+    IF RB$ZERO THEN
+         CALL UNCOND$BRANCH;
+    ELSE
+         CALL POP$STACK;
+    CALL POP$STACK;
+END COND$BRANCH;
+
+
+ABSOLUTE$BRANCH: PROCEDURE;
+    CALL STEP$INS$CNT;
+    RC = TWOBYTEOPRAND;
+    RETURN;
+END ABSOLUTE$BRANCH;
+    /*
+         ********************************************************
+         *                                                      *
+         *             GLOBAL STRING HANDLING ROUTINES          *
+         *                                                      *
+         ********************************************************
+    */
+
+CHECK$STRING$ADDR: PROCEDURE BYTE;
+    RETURN BRA(2);
+END CHECK$STRING$ADDR;
+
+STRING$FREE: PROCEDURE;
+    IF CHECK$STRING$ADDR THEN
+         CALL RELEASE(ARA);
+END STRING$FREE;
+
+
+GET$STRING$LEN: PROCEDURE(STRINGLOC) BYTE;
+    DECLARE
+            STRINGLOC     ADDRESS,
+            A     BASED STRINGLOC    BYTE;
+    IF STRINGLOC = 0 THEN
+         RETURN 0;
+    RETURN A;
+END GET$STRING$LEN;
+
+COMP$FIX: PROCEDURE(FLAG);
+    DECLARE FLAG     BYTE;
+    IF FLAG THEN
+         CALL MOVE4(.MINUSONE,RA);
+    ELSE
+         BRAZ = 0;
+END COMP$FIX;
+
+
+CONCATENATE: PROCEDURE;
+    /*
+         ********************************************************
+         *                                                      *
+         *    THE STRING POINTED TO BY RA IS CONCATENATED       *
+         *    TO THE STRING POINTED TO BY RB AND THE POINTER    *
+         *    TO THE RESULT IS PLACED IN RB. THE STACK IS POPPED*
+         *    AND THE RESULT IS FLAGGED AS A TEMPORARY          *
+         *    STRING.                                           *
+         *                                                      *
+         ********************************************************
+    */
+    DECLARE FIRSTSTRINGLENGTH  BYTE,
+            SECONDSTRINGLENGTH BYTE,
+            NEWSTRINGLENGTH    BYTE,
+            NEWSTRINGADDRESS   ADDRESS,
+            LENGTH             BASED NEWSTRINGADDRESS BYTE;
+    CHKCARRY: PROCEDURE;
+        IF CARRY THEN CALL ERROR('SL');
+        END CHKCARRY;
+
+    IF RA$ZERO$ADDRESS THEN  /* IT DOESNT MATTER WHAT RB IS */
+         DO;
+              CALL POP$STACK;
+              RETURN;
+         END;
+    IF RB$ZERO$ADDRESS THEN /* AS ABOVE BUT RESULT IS RA */
+         DO;
+              CALL MOVE$RA$RB;
+              CALL POP$STACK;
+              RETURN;
+         END;
+    FIRSTSTRINGLENGTH = GETSTRINGLEN(ARB) + 1;
+    CALL CHKCARRY;
+    SECONDSTRINGLENGTH = GETSTRINGLEN(ARA);
+    NEWSTRINGLENGTH = FIRSTSTRINGLENGTH + SECONDSTRINGLENGTH;
+    CALL CHKCARRY;
+    CALL MOVE(ARB,NEWSTRINGADDRESS := GETSPACE(NEWSTRINGLENGTH),
+              FIRSTSTRINGLENGTH);
+    CALL MOVE(ARA + 1,NEWSTRINGADDRESS + FIRSTSTRINGLENGTH,
+              SECONDSTRINGLENGTH);
+    CALL STRINGFREE;
+    CALL POPSTACK;
+    CALL STRINGFREE;
+    ARA = NEWSTRINGADDRESS;
+    LENGTH = NEWSTRINGLENGTH - 1;
+    CALL FLAG$STRING$ADDR(TRUE);
+END CONCATENATE;
+
+
+COMPARE$STRING: PROCEDURE BYTE;
+    /*
+         ********************************************************
+         *                                                      *
+         *    THE STRING POINTED TO BY RB IS COMPARED TO        *
+         *    THE STRING POINTED TO BY RA.                      *
+         *                 RB RELATION RA                       *
+         *    IF RB < RA THEN RETURN 1                          *
+         *    IF RB > RA THE RETURN 2                           *
+         *    IF RB = RA THEN RETURN 3                          *
+         *    TWO STRINGS ARE EQUAL IF AND ONLY IF THE TWO      *
+         *    STRINGS HAVE THE SAME LENGTH AND CONTAIN          *
+         *    IDENTICAL CHARACTERS. THE ASCII COLLATING         *
+         *    SEQUENCE IS USED TO DETERMINE THE RELATIONSHIP    *
+         *    BETWEEN EQUAL LENGTH STRINGS. IF TWO STRINGS      *
+         *    ARE NOT OF EQUAL LENGTH THE SHORTER IS ALWAYS     *
+         *    LESS THEN THE LONGER ONE. ALL NULL STRINGS ARE    *
+         *    EQUAL AND LESS THEN ANY OTHER STRING.             *
+         *                                                      *
+         ********************************************************
+    */
+    DECLARE FIRSTSTRING ADDRESS,
+            SECONDSTRING ADDRESS,
+            I            BYTE,
+            TEMPLENGTH   BYTE,
+            CHARSTRING1  BASED FIRSTSTRING BYTE,
+            CHARSTRING2  BASED SECONDSTRING BYTE;
+
+     FIXSTACK: PROCEDURE;
+            CALL STRING$FREE;
+            CALL POP$STACK;
+            CALL STRING$FREE;
+       END FIXSTACK;
+
+    /* FIRST HANDLE NULL STRINGS REPRESENTED BY RA AND OR RB
+    EQUAL TO ZERO */
+    IF RA$ZERO$ADDRESS THEN
+         SECONDSTRING= RA;
+    ELSE
+         SECONDSTRING = ARA;
+    IF RB$ZERO$ADDRESS THEN
+         FIRSTSTRING = RB;
+    ELSE
+         FIRSTSTRING = ARB;
+    TEMPLENGTH = CHARSTRING1;
+    DO I = 0 TO TEMPLENGTH;
+         IF CHARSTRING1 < CHARSTRING2 THEN
+              DO;
+                     CALL FIXSTACK;
+                     RETURN 1;
+                END;
+         IF CHARSTRING1 > CHARSTRING2 THEN
+            DO;
+                   CALL FIXSTACK;
+                   RETURN 2;
+              END;
+         FIRSTSTRING = FIRSTSTRING + 1;
+         SECONDSTRING = SECONDSTRING + 1;
+        END;
+    CALL FIXSTACK;
+    RETURN 3;
+END COMPARE$STRING;
+
+STRING$SEGMENT: PROCEDURE(TYPE);
+    DECLARE /* POSSIBLE TYPES */
+            LEFT  LIT '0',
+            RIGHT LIT '1',
+            MID   LIT '2';
+
+    DECLARE
+            TYPE    BYTE,
+            TEMPA   ADDRESS,
+            TEMPA2  ADDRESS,
+            LNG     BASED TEMPA BYTE,
+            TEMPB1  BYTE,
+            LNG2    BYTE;
+
+    INC$BRA: PROCEDURE BYTE;
+         RETURN BRAZ + 1;
+    END INC$BRA;
+
+    TEMPB1 = 0;
+    IF TYPE = MID THEN
+         DO;
+              CALL FLIP;
+              IF RA$NEGATIVE OR RA$ZERO THEN
+                   CALL ERROR('SS');
+              CALL CONV$TO$BIN$ADDR;
+              TEMPB1 = BRAZ;
+              CALL POP$STACK;
+         END;
+     IF RA$NEGATIVE OR (TEMPB1 > GETSTRING$LEN(ARB)) OR RA$ZERO THEN
+         DO;
+              CALL POP$STACK;
+              CALL STRINGFREE;
+              ARA = 0;
+              RETURN;
+         END;
+    CALL CONV$TO$BIN$ADDR;
+    IF BRAZ > (LNG2 := GETSTRING$LEN(ARB) - TEMPB1) THEN
+         DO;
+              IF TYPE=MID THEN
+                   BRAZ = LNG2 + 1;
+              ELSE
+                   BRAZ = LNG2;
+         END;
+    IF TYPE = LEFT THEN
+         TEMPA2 = ARB;
+    ELSE
+         IF TYPE = RIGHT THEN
+              TEMPA2 = ARB + LNG2 - BRAZ;
+         ELSE
+              TEMPA2 = ARB + TEMPB1 - 1;
+    CALL MOVE(TEMPA2,(TEMPA := GETSPACE(INC$BRA)),INC$BRA);
+    LNG = BRAZ;
+    CALL POP$STACK;
+    CALL STRINGFREE;
+    ARA = TEMPA;
+    CALL FLAG$STRING$ADDR(TRUE);
+END STRING$SEGMENT;
+
+
+
+LOGICAL: PROCEDURE(TYPE);
+    DECLARE
+            TYPE   BYTE,
+            I      BYTE;
+    CALL CONV$TO$BINARY(RA);
+    IF TYPE > 0 THEN
+         CALL CONV$TO$BINARY(RB);
+    DO I = 0 TO 3;
+         DO CASE TYPE;
+              BRA(I) = NOT BRA(I);
+              BRB(I) = BRA(I) AND BRB(I);
+              BRB(I) = BRA(I) OR BRB(I);
+              BRB(I) = BRA(I) XOR BRB(I);
+         END;
+    END; /* OF DO TWICE */
+    IF TYPE > 0 THEN
+         CALL POP$STACK;
+    CALL CONV$TO$FP(RA);
+END LOGICAL;
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *                CONSOLE OUTPUT ROUTINES               *
+         *                                                      *
+         ********************************************************
+    */
+NUMERIC$OUT: PROCEDURE;
+    /*
+         ********************************************************
+         *                                                      *
+         *    THE FLOATING POINT NUMBER IN RA IS CONVERTED TO   *
+         *    AN ASCII CHARACTER STRING AND THEN PLACED         *
+         *    IN THE WORKBUFFER.  THE LENGTH OF THE STRING      *
+         *    SET TO THE FIRST BYTE OF THE BUFFER               *
+         *                                                      *
+         ********************************************************
+    */
+    DECLARE
+             I      BYTE;  /* INDEX */
+    CALL FP$OP(FLOD,RA);  /* LOAD FP ACCUM WITH NUMBER FROM RA */
+    CALL FP$OUT(.PRINTWORKAREA(1));  /* CONVERT IT TO ASCII  */
+            /* RESULT IN PRINTWORKAREA PLUS 1 */
+     I = 0;
+     DO WHILE PRINTWORKAREA(I := I + 1) <> ' ';
+          END;
+     ARA = .PRINTWORKAREA;
+     PRINTWORKAREA(0) = I;
+END NUMERIC$OUT;
+
+
+CLEAR$PRINT$BUFF: PROCEDURE;
+    CALL FILL((PRINTBUFFER := PRINTBUFFERLOC),' ',PRINTBUFFLENGTH);
+END CLEAR$PRINT$BUFF;
+
+
+DUMP$PRINT$BUFF: PROCEDURE;
+    DECLARE
+            TEMP  ADDRESS,
+            CHAR  BASED TEMP BYTE;
+    TEMP=PRINTBUFFEND;
+    DO WHILE CHAR = ' ';
+        TEMP=TEMP - 1;
+         END;
+    CALL CRLF;
+    DO PRINTBUFFER = PRINTBUFFERLOC TO TEMP;
+        CALL PRINTCHAR(PRINTPOS);
+         END;
+    CALL CLEAR$PRINT$BUFF;
+END DUMP$PRINT$BUFF;
+
+WRITE$TO$CONSOLE: PROCEDURE;
+     DECLARE
+             HOLD     ADDRESS,
+             H        BASED     HOLD(1)    BYTE,
+             INDEX    BYTE;
+     IF (HOLD := ARA) <> 0 THEN  /* MAY BE NULL STRING */
+          DO INDEX = 1 TO H(0);
+               PRINTPOS = H(INDEX);
+               IF (PRINTBUFFER := PRINTBUFFER + 1) >
+                              PRINTBUFFEND THEN
+                    CALL DUMPPRINTBUFF;
+           END;
+END WRITE$TO$CONSOLE;
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *      FILE PROCESSING ROUTINES FOR USE WITH CP/M      *
+         *                                                      *
+         ********************************************************
+    */
+INITIALIZE$DISK$BUFFER: PROCEDURE;
+    CALL FILL(BUFFER,EOFFILLER,128);
+END INITIALIZE$DISK$BUFFER;
+
+
+BUFFER$STATUS$BYTE: PROCEDURE BYTE;
+    RETURN FCB(33);
+END BUFFER$STATUS$BYTE;
+
+SET$BUFFER$STATUS$BYTE: PROCEDURE(STATUS);
+    DECLARE STATUS BYTE;
+    FCB(33) = STATUS;
+END SET$BUFFER$STATUS$BYTE;
+
+
+WRITE$MARK: PROCEDURE BYTE;
+    RETURN BUFFER$STATUS$BYTE;
+END WRITE$MARK;
+
+
+SET$WRITE$MARK: PROCEDURE;
+    CALL SET$BUFFER$STATUS$BYTE(BUFFER$STATUS$BYTE OR 01H);
+END SET$WRITEMARK;
+
+
+CLEAR$WRITE$MARK: PROCEDURE;
+    CALL SET$BUFFER$STATUS$BYTE(BUFFER$STATUS$BYTE AND 0FEH);
+END CLEAR$WRITE$MARK;
+
+
+ACTIVE$BUFFER: PROCEDURE BYTE;
+    RETURN SHR(BUFFER$STATUS$BYTE,1);
+END ACTIVE$BUFFER;
+
+SET$BUFFER$INACTIVE: PROCEDURE;
+    CALL SET$BUFFER$STATUS$BYTE(BUFFER$STATUS$BYTE AND 0F9H);
+END SET$BUFFER$INACTIVE;
+
+SET$BUFFER$ACTIVE: PROCEDURE;
+    CALL SET$BUFFER$STATUS$BYTE(BUFFER$STATUS$BYTE OR 02H);
+END SET$BUFFER$ACTIVE;
+
+
+SET$RANDOM$MODE: PROCEDURE;
+    CALL SET$BUFFER$STATUS$BYTE(BUFFER$STATUS$BYTE OR 80H);
+END SET$RANDOM$MODE;
+
+RANDOM$MODE: PROCEDURE BYTE;
+    RETURN ROL(BUFFER$STATUS$BYTE,1);
+END RANDOM$MODE;
+
+
+STORE$REC$PTR: PROCEDURE;
+    FCBADD(18) = RECORDPOINTER;
+END STORE$REC$PTR;
+
+DISK$EOF: PROCEDURE;
+         IF EOFADDR = 0 THEN
+              CALL ERROR('EF');
+         RC = EOFADDR + 1;
+         RA = EOFRA;
+         RB = EOFRB;
+         IF RECORD$POINTER <> BUFFER THEN
+                CALL SET$BUFFER$STATUS$BYTE(BUFFER$STATUS$BYTE OR 04H);
+           RECORD$POINTER = RECORD$POINTER - 1;
+         CALL STORE$REC$PTR;
+         GOTO EOFEXIT;  /* DROP OUT TO OUTER LOOP */;
+END DISK$EOF;
+
+
+FILL$FILE$BUFFER: PROCEDURE;
+    IF DISKREAD = 0 THEN
+         DO;
+              CALL SET$BUFFER$ACTIVE;
+              RETURN;
+         END;
+    IF NOT RANDOM$MODE THEN
+         DO;
+             CALL DISK$EOF;
+             RETURN;
+         END;
+    CALL INITIALIZE$DISK$BUFFER;
+    CALL SET$BUFFER$ACTIVE;
+    FCB(32) = FCB(32) + 1;
+    RETURN;
+END FILL$FILE$BUFFER;
+
+
+WRITE$DISK$IF$REQ: PROCEDURE;
+    IF WRITE$MARK THEN
+    DO;
+         IF SHR(BUFFER$STATUS$BYTE,2) THEN
+              DO;
+                   IF FCB(32) > 0 THEN
+                        FCB(32) = FCB(32) - 1;
+                   CALL SET$BUFFER$STATUS$BYTE(BUFFER$STATUS$BYTE AND 0FBH);
+              END;
+         IF DISKWRITE <> 0 THEN
+              CALL ERROR('DW');
+         CALL CLEAR$WRITE$MARK;
+         IF RANDOM$MODE THEN
+              CALL SET$BUFFER$INACTIVE;
+         ELSE
+              CALL INITIALIZE$DISK$BUFFER;
+    END;
+    RECORD$POINTER = BUFFER;
+END WRITE$DISK$IF$REQ;
+
+
+AT$END$DISK$BUFFER: PROCEDURE BYTE;
+    RETURN (RECORD$POINTER := RECORD$POINTER + 1) >= BUFFER$END;
+END AT$END$DISK$BUFFER;
+
+VAR$BLOCK$SIZE: PROCEDURE BYTE;
+    RETURN BLOCKSIZE <> 0;
+END VAR$BLOCKSIZE;
+
+
+WRITE$A$BYTE: PROCEDURE(CHAR);
+    DECLARE CHAR BYTE;
+    IF VAR$BLOCK$SIZE AND (BYTESWRITTEN := BYTESWRITTEN + 1)
+               > BLOCKSIZE THEN
+         CALL ERROR('ER');
+    IF AT$END$DISK$BUFFER THEN
+         CALL WRITE$DISK$IF$REQ;
+    IF NOT ACTIVE$BUFFER AND RANDOM$MODE THEN
+         DO;
+              CALL FILL$FILE$BUFFER;
+              FCB(32) = FCB(32) - 1;  /* RESET RECORD NO */
+         END;
+    NEXTDISKCHAR = CHAR;
+    CALL SET$WRITE$MARK;
+END WRITE$A$BYTE;
+
+
+GET$FILE$NUMBER: PROCEDURE BYTE;
+    IF BRAZ > NUMFILES THEN
+         CALL ERROR('MF');
+    RETURN BRAZ;
+END GET$FILE$NUMBER;
+
+
+SET$FILE$ADDR: PROCEDURE;
+    IF (FILEADDR := FILES(GET$FILE$NUMBER)) 
+                                = 0 THEN
+         CALL ERROR('FU');
+    EOFADDR = EOFBRANCH(BRAZ);
+END SET$FILE$ADDR;
+
+
+SET$FILE$POINTERS: PROCEDURE;
+    BUFFER$END = (BUFFER := FILEADDR + 38) + DISKRECSIZE;
+    RECORDPOINTER = FCBADD(18);
+    BLOCKSIZE = FCBADD(17);
+    CALL SETDMA;
+END SET$FILE$POINTERS;
+
+
+SETUP$FILE$EXTENT: PROCEDURE;
+    IF OPEN = 255 THEN
+         DO;
+              IF CREATE = 255 THEN
+                   CALL ERROR('ME');
+         END;
+END SETUP$FILE$EXTENT;
+
+
+DISK$OPEN: PROCEDURE;
+    /*OPENS THE FILE - RA CONTAINS THE ADDRESS OF THE FILE NAME
+    AND RB CONTAINS THE BLOCK SIZE.
+    THE ARRAY FILES WILL HOLD THE ADDRESS OF THE FILE CONTROL BLOCK
+    IN THE FSA.  THE FCB IS FOLLOWED BY 3 FLAGS - BLOCKSIZE(ADDR)
+    RECORD POINTER(ADDR), WRITE FLAG(BYTE).  THIS IS FOLLOWED BY THE
+    128 BYTE BUFFER TO DO FILE I/O.*/
+
+    DECLARE
+            FILENAME ADDRESS,
+            NEXTFILE BYTE,
+            BUFF     ADDRESS,
+            CHAR     BASED BUFF(128) BYTE,
+            I        BYTE,
+            J        BYTE;
+
+    INC$J: PROCEDURE BYTE;
+         RETURN (J := J + 1);
+    END INC$J;
+
+    NEXTFILE = 0;
+    DO WHILE FILES(NEXTFILE := NEXTFILE + 1) <> 0;
+         END;
+    FILEADDR,FILES(NEXTFILE) = GETSPACE(166);
+    BUFFER = FILEADDR + 38;
+    CALL SETDMA;
+    CALL FILL((FILENAME:=FILEADDR+1),' ',11);
+    BUFF=ARA;
+    IF CHAR(2) = ':' THEN
+         DO;
+              FCB(0) = CHAR(1) AND 0FH;
+              I = CHAR(0) - 2;
+              BUFF = BUFF + 2;
+         END;
+    ELSE
+         I = CHAR(0);
+    IF I > 12 THEN
+         I = 12;
+    BUFF=BUFF+1;
+    J = 255;
+    DO WHILE(CHAR(INC$J) <> '.') AND (J < I);
+         END;
+    CALL MOVE(BUFF,FILENAME,J);
+    IF I > INC$J THEN
+         CALL MOVE (.CHAR(J),FILENAME + 8, I - J);
+    CALL SETUP$FILE$EXTENT;
+    CALL INITIALIZE$DISK$BUFFER;
+    FCBADD(18)=FILEADDR+256;
+    CALL POP$STACK;
+    FCBADD(17) = ARA;
+    CALL POP$STACK;
+END DISK$OPEN;
+
+
+SET$EOF$STACK: PROCEDURE;
+     EOFRA = RA;
+     EOFRB = RB;
+END SET$EOF$STACK;
+
+SETUP$DISK$IO: PROCEDURE;
+
+    CALL SET$FILE$ADDR;
+    CALL SET$FILE$POINTERS;
+    BYTES$WRITTEN=0;
+    FIRSTFIELD = TRUE;
+    CALL POP$STACK;
+END SETUP$DISK$IO;
+
+
+RANDOM$SETUP: PROCEDURE;
+    DECLARE
+            TEMP1     ADDRESS,
+            TEMP2   ADDRESS,
+            TEMP3     ADDRESS,
+            BYTECOUNT ADDRESS,
+            RECORD    ADDRESS,
+            EXTENT    BYTE;
+
+    IF NOT VAR$BLOCK$SIZE THEN
+         CALL ERROR('RU');
+    IF RA$ZERO$ADDRESS OR RA$NEGATIVE THEN
+         CALL ERROR('IR');
+    ARA = ARA - 1;
+    CALL SET$RANDOM$MODE;
+    CALL SET$BUFFER$INACTIVE;
+    CALL WRITE$DISK$IF$REQ;
+    TEMP2 = LOW(BLOCKSIZE)*HIGH(ARA) + LOW(ARA)*HIGH(BLOCKSIZE);
+    TEMP1 = LOW(BLOCKSIZE) * BRAZ;
+    BYTECOUNT = SHL(TEMP2,8) + TEMP1;
+    TEMP3 = HIGH(BLOCKSIZE) * BRA(1);
+    EXTENT = SHL(LOW(TEMP3) ,2) +
+               SHR((HIGH(TEMP1) + TEMP2),6);
+    RECORDPOINTER = (BYTECOUNT AND 7FH) + BUFFER - 1;
+    CALL STORE$REC$PTR;
+    RECORD = SHR(BYTECOUNT,7);
+    IF EXTENT<>FCB(12) THEN
+         DO;
+              IF CLOSE = 255 THEN
+                   CALL ERROR('CE');
+              FCB(12) = EXTENT;
+              CALL SETUP$FILE$EXTENT;
+         END;
+    FCB(32) = LOW(RECORD) AND 7FH;
+    CALL POP$STACK;
+END RANDOM$SETUP;
+
+
+GET$DISK$CHAR: PROCEDURE BYTE;
+     IF AT$END$DISK$BUFFER THEN
+         DO;
+              CALL WRITE$DISK$IF$REQ;
+              CALL FILL$FILE$BUFFER;
+         END;
+    IF NOT ACTIVE$BUFFER THEN
+         CALL FILL$FILE$BUFFER;
+    IF NEXTDISKCHAR = EOFFILLER THEN
+         CALL DISK$EOF;
+    RETURN NEXTDISKCHAR;
+END GET$DISK$CHAR;
+
+
+WRITE$TO$FILE: PROCEDURE(TYPE);
+    /* TYPE 0 MEANS WRITE A NUMBER, 1 MEANS A STRING*/
+    DECLARE
+            I       BYTE,
+            POINT   ADDRESS,
+            CHAR    BASED     POINT  BYTE,
+            COUNT   BYTE,
+            TYPE    BYTE,
+            NUMERIC LIT       '0',
+            STRING  LIT       '1';
+
+    INC$POINT: PROCEDURE;
+         POINT = POINT + 1;
+    END INC$POINT;
+
+    IF TYPE = NUMERIC THEN /* CONVERT TO ASCII STRING */
+         CALL NUMERICOUT;
+    IF NOT FIRSTFIELD THEN /* SEPARATE FIELDS WITH COMMAS */
+         CALL WRITE$A$BYTE(',');
+    ELSE
+         FIRSTFIELD = FALSE;
+    POINT = ARA; /* ARA POINTS TO CHAR STRING */
+    COUNT = CHAR;
+    IF TYPE = NUMERIC THEN /* ELIM TRAILING BLANK */
+         COUNT = COUNT - 1;
+    ELSE
+         CALL WRITE$A$BYTE(QUOTE); /* STRINGS PUT IN QUOTES */
+    CALL INC$POINT; /* POINT TO FIRST CHAR */
+    DO I = 1 TO COUNT;
+         IF CHAR = QUOTE THEN
+              CALL ERROR('QE');
+         CALL WRITE$A$BYTE(CHAR);
+         CALL INC$POINT;
+         END;
+    IF TYPE = STRING THEN
+         DO;
+              CALL WRITE$A$BYTE(QUOTE); /* ADD TRAILING QUOTE */
+              CALL STRING$FREE; /* MAY BE A TEMP STRING */
+         END;
+    CALL POP$STACK;
+END WRITE$TO$FILE;
+
+
+DISK$CLOSE: PROCEDURE;
+    CALL SET$FILE$POINTERS;
+    CALL WRITE$DISK$IF$REQ;
+    IF CLOSE = 255 THEN
+         CALL ERROR('CE');
+    CALL RELEASE(FILEADDR);
+END DISK$CLOSE;
+
+CLOSEFILES:  PROCEDURE;
+    DECLARE I BYTE;
+    I = 0;
+    DO WHILE(I:=I+1) <= NUMFILES;
+         IF(FILEADDR := FILES(I)) <> 0 THEN
+              CALL DISKCLOSE;
+         END;
+END CLOSEFILES;
+
+    /*
+         ********************************************************
+         *                                                      *
+         *                 ROUTINE TO EXIT INTERP               *
+         *                                                      *
+         ********************************************************
+    */
+EXIT$INTERP: PROCEDURE;
+    CALL CLOSEFILES;
+    CALL DUMP$PRINT$BUFF;
+    CALL CRLF;
+    CALL MON3;
+END EXIT$INTERP;
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *               GENERALIZED INPUT ROUTINES             *
+         *                                                      *
+         ********************************************************
+    */
+
+CONSOLE$READ: PROCEDURE;
+    CALL PRINTCHAR(WHAT);
+    CALL PRINTCHAR(' ');
+    CALL READ(.INPUTBUFFER);
+    IF SPACE(1) = CONTZ THEN
+         CALL EXIT$INTERP;
+    CONBUFFPTR = .SPACE;
+    SPACE(SPACE(0)+1)=EOLCHAR;
+END CONSOLE$READ;
+
+MORE$CON$INPUT: PROCEDURE BYTE;
+    RETURN CONBUFFPTR < .SPACE(SPACE(0));
+END MORE$CON$INPUT;
+
+
+CONSOLE$INPUT$ERROR: PROCEDURE;
+    CALL POPSTACK;
+    RC = REREADADDR;  /* RESET PROGRAM COUNTER */
+    CALL WARNING('II');
+    GOTO ERROR$EXIT;  /* RETURN TO OUTER LEVEL */
+END CONSOLE$INPUT$ERROR;
+
+
+GET$DATA$CHAR: PROCEDURE BYTE;
+    DECLARE CHAR BASED DATAAREAPTR BYTE;
+    IF(DATAAREAPTR := DATAAREAPTR + 1) >= SB THEN
+         CALL ERROR('OD');
+    RETURN CHAR;
+END GET$DATA$CHAR;
+
+
+GET$CON$CHAR: PROCEDURE BYTE;
+    DECLARE CHAR BASED CONBUFFPTR BYTE;
+    CONBUFFPTR = CONBUFFPTR + 1;
+    RETURN CHAR;
+END GET$CON$CHAR;
+
+
+NEXT$INPUT$CHAR: PROCEDURE BYTE;
+    IF INPUTTYPE = 0 THEN /* READ FROM DISK */
+         DO FOREVER;
+              IF INPUTINDEX >CONBUFFSIZE THEN
+                     CALL ERROR('DB');
+              IF(SPACE(INPUTINDEX):= GETDISKCHAR) = LF THEN
+                   DO;
+                        IF VAR$BLOCKSIZE THEN
+                             CALL ERROR('RE');
+                   END;
+              ELSE
+                   RETURN NEXTDISKCHAR;
+         END;
+    IF INPUTTYPE = 1 THEN /* INPUT FROM CONSOLE */
+         RETURN GETCONCHAR;
+    IF INPUTTYPE = 2 THEN /* READ FROM DATA STATEMENT */
+         RETURN GETDATACHAR;
+END NEXT$INPUT$CHAR;
+
+
+COUNT$INPUT: PROCEDURE;
+     /*
+        DETERMINE EXTENT OF NEXT FIELD AND COLLECT
+        THE FIELD IN THE APPROPRIATE BUFFER
+     */
+    DECLARE
+            HOLD  BYTE,
+            DELIM BYTE;
+    INPUT$INDEX = 0;
+    DO WHILE (HOLD := NEXT$INPUT$CHAR) = ' ';
+         END;
+    IF INPUTTYPE = 0 THEN
+         INPUTPTR = .SPACE;
+    IF INPUTTYPE = 1 THEN
+         INPUTPTR = CONBUFFPTR;                               
+
+    IF INPUTTYPE =2 THEN
+         INPUTPTR = DATAAREAPTR;
+    IF HOLD <> QUOTE THEN
+         DELIM = ',';
+    ELSE
+         DO;
+              DELIM = QUOTE;
+              IF INPUTTYPE <> 0 THEN
+                   INPUTPTR = INPUTPTR + 1;
+              HOLD = NEXT$INPUT$CHAR;
+         END;
+    DO WHILE (HOLD <> DELIM) AND (HOLD <> EOLCHAR);
+         INPUTINDEX = INPUTINDEX + 1;
+         HOLD = NEXT$INPUT$CHAR;
+         END;
+    IF DELIM = QUOTE THEN
+         DO WHILE((HOLD := NEXT$INPUT$CHAR) <> ',') AND (HOLD <> EOLCHAR);
+              END;
+    CALL PUSH$STACK;
+END COUNT$INPUT;
+
+
+GET$STRING$FIELD: PROCEDURE;
+    DECLARE
+            TEMP ADDRESS,
+            LNG  BASED TEMP BYTE;
+    CALL COUNT$INPUT;
+    CALL MOVE(INPUTPTR,(TEMP:=GETSPACE(INPUTINDEX + 1))+1,INPUTINDEX);
+    ARA = TEMP;
+    CALL FLAG$STRING$ADDR(0);
+    LNG = INPUTINDEX;  /* SET LENGTH IN NEW STRING */
+END GET$STRING$FIELD;
+
+
+GET$NUMERIC$FIELD: PROCEDURE;
+    CALL COUNT$INPUT;
+    IF INPUTINDEX > 0 THEN
+    DO;
+    CALL FP$INPUT(INPUTINDEX,INPUTPTR);
+    CALL FP$OP$RETURN(9,RA);
+    CALL CHECK$OVERFLOW;
+    END;
+      ELSE
+           IF INPUTTYPE = 1 THEN
+                CALL CONSOLE$INPUT$ERROR;
+           ELSE
+                BRAZ = 0;
+END GET$NUMERIC$FIELD;
+
+
+
+    /*
+         ********************************************************
+         *                                                      *
+         *          INTERPRETER INITIALIZATION ROUTINES         *
+         *                                                      *
+         ********************************************************
+    */
+
+
+INITIALIZE$EXECUTE: PROCEDURE;
+    GET$PARAMETERS: PROCEDURE;
+        MCD,RC = PARAM1;
+        DATAAREAPTR = (MDA := PARAM2) - 1;
+        MPR=PARAM3;
+        MBASE,ST = (SB := PARAM4) + NRSTACK;
+        RA = (RB := SB) + 4;
+    END GET$PARAMETERS;
+
+    INITMEM: PROCEDURE;
+        DECLARE BASE ADDRESS,
+                A BASED BASE(2) ADDRESS,
+                TOP BASED SYSBEGIN ADDRESS;
+        CALL MOVE(BEGIN+OFFSET,BEGIN,MPR-BEGIN);
+        CALL FILL(MPR,0,MBASE-MPR);
+        BASE=ST;
+        A(0)=TOP-4;
+        A(1),A(2) = 0;
+        BASE=A(0);
+        A(0) = 0;
+        A(1) = ST;
+    END INITMEM;
+
+
+    CALL GET$PARAMETERS;
+    CALL INITMEM;
+    CALL FILL(.FILES,0,TIMES4(NUMFILES));
+    CALL CLEAR$PRINT$BUFF;
+END INITIALIZE$EXECUTE;
+
+
+ /* ***** EXECUTIVE ROUTINE STARTS HERE ***** */
+    /*
+         ********************************************************
+         *                                                      *
+         ********************************************************
+    */
+EXECUTE:  PROCEDURE;
+     DO FOREVER;
+    IF ROL(C,1) THEN    /* MUST BE LIT OR LIT-LOD*/
+    DO;
+         CALL PUSH$STACK;
+        BRA(0)=CV(1);       /* LOAD IN REVERSE ORDER */
+        BRA(1)= C AND 3FH;
+        IF ROL(C,2) THEN CALL LOAD$RA;   /*LIT-LOD*/
+         CALL STEP$INS$CNT;
+        END;
+    ELSE
+         DO CASE C;
+
+ /*0  FAD: RB = RA+ RB  */
+        CALL TWO$VALUE$OPS(FADD);
+
+ /*1  FMI  RB = RB-RA; */
+         DO;
+              CALL FLIP;
+        CALL TWO$VALUE$OPS(FSUB);
+         END;
+
+ /*2 FMU  RB= RA*RB    */
+        CALL TWO$VALUE$OPS(FMUL);
+
+ /*3  FDI  RB = RA/RB  */
+         DO;
+              IF RA$ZERO THEN
+                   CALL WARNING('DZ');
+              CALL FLIP;
+              CALL TWO$VALUE$OPS(FDIV);
+         END;
+
+ /*4  EXP  RA=RB**RA    */
+         DO;
+              IF RB$ZERO THEN
+                 DO;
+                   IF RA$ZERO THEN
+                       CALL MOVE4(.PLUSONE,RB);
+                 END;
+              ELSE
+                   IF RB$NEGATIVE THEN
+                        CALL ERROR('NE');
+                   ELSE
+                        DO;
+                             CALL FP$OP(FLOD,RB);
+                             CALL FP$OP(LOG,0);
+                             CALL FP$OP(FMUL,RA);
+                             CALL FP$OP$RETURN(EXP,RB);
+                        END;
+                CALL POP$STACK;
+                CALL CHECK$OVERFLOW;
+         END;
+
+ /* 5 LSS, LESS THEN */
+         CALL COMP$FIX(COMPARE$FP=1);
+
+ /* 6 GTR, GREATER THEN */
+         CALL COMP$FIX(COMPARE$FP=2);
+
+ /* 7  EQU, EQUAL TO */
+         CALL COMP$FIX(COMPARE$FP=3);
+
+ /* 8  NEQ, NOT EQUAL TO */
+         CALL COMP$FIX(NOT(COMPARE$FP=3));
+
+ /* 9  GEQ, GREATER THEN OR EQUAL TO */
+         CALL COMP$FIX(NOT(COMPARE$FP=1));
+
+ /*10  LEQ, LESS THEN OR EQUAL TO */
+         CALL COMP$FIX(NOT(COMPARE$FP=2));
+
+ /*11  NOT*/
+         CALL LOGICAL(0);
+
+ /*12  AND*/
+         CALL LOGICAL(1);
+
+ /*13  BOR */
+         CALL LOGICAL(2);
+
+ /* 14 LOD*/
+            CALL LOAD$RA;
+
+ /* 15 STO */
+         DO;
+              CALL STORE(0);
+              CALL MOVE$RA$RB;
+              CALL POP$STACK;
+         END;
+
+ /* 16 XIT */
+         RETURN;
+
+ /* 17 DEL */
+         CALL POP$STACK;
+
+ /* 18 DUP */
+         DO;
+              CALL PUSH$STACK;
+         CALL MOVE$RB$RA;
+      END;
+
+ /* 19 XCH */
+         CALL FLIP;
+
+ /* 20 STD */
+         DO;
+              CALL STORE(0);
+              CALL POP$STACK;
+              CALL POP$STACK;
+         END;
+
+ /* 21 SLT */
+         CALL COMP$FIX(COMPARE$STRING = 1);
+
+ /* 22 SGT */
+         CALL COMP$FIX(COMPARE$STRING = 2);
+
+ /* 23 SEQ */
+         CALL COMP$FIX(COMPARE$STRING = 3);
+
+ /* 24 SNE */
+         CALL COMP$FIX(NOT(COMPARE$STRING = 3));
+
+ /* 25 SGE */
+         CALL COMP$FIX(NOT(COMPARE$STRING = 1));
+ /* 26 SLE */
+         CALL COMP$FIX(NOT(COMPARE$STRING = 2));
+
+ /* 27  STS */
+         DO;
+              CALL STORE(1);
+              CALL POP$STACK;
+              CALL POP$STACK;
+      END;
+
+ /* 28 ILS */
+         DO;
+              CALL PUSH$STACK;
+              CALL STEP$INS$CNT;
+              RC = (ARA := RC) + C;
+              CALL FLAG$STRING$ADDR(FALSE);
+         END;
+
+ /* 29 CAT */
+         CALL CONCATENATE;
+ /* 30 PRO */
+         DO;
+              CALL STEP$INS$CNT;
+              CALL PUSH$STACK;
+              ARA = RC + 1 + 1;
+              RC = TWOBYTEOPRAND;
+         END;
+
+ /* 31 RTN */
+         DO;
+              RC = ARA - 1;
+              CALL POP$STACK;
+         END;
+
+ /*32 ROW, CALCULATES SPACE REQUIREMENTS FOR ARRAYS*/
+         CALL CALC$ROW;
+
+ /* 33, SUB */
+ /*   SUB,CALCULATES SUBSCRIPT ADDRESSES */
+         CALL CALC$SUB;
+
+
+ /* RDV  READS A NUMBER FROM THE CONSOLE  */
+         DO;
+              IF NOT MORE$CON$INPUT THEN
+                    CALL CONSOLE$INPUT$ERROR;
+              CALL GET$NUMERIC$FIELD;
+         END;
+
+ /* 35, WRV : PRINTS THE NUMBER ON THE TOP OF THE STACK */
+         DO;
+              CALL NUMERIC$OUT;
+              CALL WRITE$TO$CONSOLE;
+              CALL POP$STACK;
+         END;
+
+ /* 36 WST: PRINTS THE STRING WHOSE ADDRESS IS ON TOPOF THE STACK*/
+          DO;
+               CALL WRITE$TO$CONSOLE;
+              CALL STRING$FREE;
+              CALL POP$STACK;
+         END;
+
+ /* 37, RDF */
+    /* RDF - PROCEDURE TO READY A RANDOM BLOCK */
+         DO;
+              CALL SETUP$DISK$IO;
+              CALL RANDOM$SETUP;
+              CALL SET$EOF$STACK;
+         END;
+
+ /* 38, RDB */
+    /* RDB - READY NEXT SEQUENTIAL BLOCK */
+          DO;
+              CALL SETUP$DISK$IO;
+              CALL SET$EOF$STACK;
+          END;
+
+ /* 39, ECR */
+          IF MORE$CON$INPUT THEN
+               DO;
+               CALL PUSHSTACK;
+               CALL CONSOLE$INPUT$ERROR;
+            END;
+
+ /* 40, OUT */
+          DO;
+               CALL OUTPUT(BRAZ,BRBZ);
+               CALL POP$STACK;
+               CALL POP$STACK;
+          END;
+
+    /*41 RDN - READ A NUMBER FROM DISK*/
+         DO;
+              INPUTTYPE = 0;
+              CALL GET$NUMERIC$FIELD;
+         END;
+
+    /*42 RDS - READ A STRING FROM DISK*/
+         DO;
+              INPUTTYPE = 0;
+              CALL GET$STRING$FIELD;
+         END;
+
+    /*43 WRN WRITE A NUMBER TO DISK*/
+         CALL WRITE$TO$FILE(0);
+
+    /*44 WRS - WRITE A STRING TO DISK */
+         CALL WRITE$TO$FILE(1);
+
+ /* 45, OPN */
+ /*OPN:   PROCEDURE TO CREATE FCBS FOR ALL INPUT FILES */
+        CALL DISK$OPEN;
+
+ /* 46 CON */
+         DO;
+              CALL PUSH$STACK;
+              CALL STEP$INS$CNT;
+              CALL MOVE4(TWOBYTEOPRAND,RA);
+              CALL STEP$INS$CNT;
+         END;
+
+ /* 47, RST: PUTS POINTER TO THE BEGINNING OF THE DATA AREA*/
+              DATAAREAPTR = MDA - 1;
+
+ /*48  NEG, NEGATIVE */
+         CALL ONE$VALUE$OPS(FCHS);
+
+ /* 49 , RES : READ STRING */
+         DO;
+              IF NOT MORE$CON$INPUT THEN
+                   CALL CONSOLE$INPUT$ERROR;
+              CALL GET$STRING$FIELD;
+         END;
+
+ /* 50 NOP */
+;
+
+ /* 51 DAT */
+  ;
+
+ /* 52 DBF */
+         CALL DUMPPRINTBUFF;
+
+ /* 53 NSP */
+         DO;
+              DECLARE I BYTE;
+              I=0;
+              DO WHILE PRINTBUFFER > POSITION(I);
+                   I = I + 1;
+                   END;
+              IF I = MAXPOSNUM THEN
+                   CALL DUMP$PRINT$BUFF;
+              ELSE
+                   PRINTBUFFER = POSITION(I);
+         END;
+
+ /* 54 BRS */
+         CALL ABSOLUTE$BRANCH;
+
+ /* 55 BRC */
+         DO;
+              IF RA$ZERO THEN
+                   CALL ABSOLUTE$BRANCH;
+              ELSE
+                   RC = RC + 1 + 1;
+              CALL POP$STACK;
+         END;
+
+ /* 56 BFC */
+         CALL COND$BRANCH;
+
+ /* 57 BFN */
+         CALL UNCOND$BRANCH;
+
+ /* 58 CBA */
+         CALL CONV$TO$BINARY(RA);
+
+ /* 59 RCN */
+         DO;
+              INPUTTYPE = 1;
+               REREADADDR = RC;
+              CALL CONSOLE$READ;
+         END;
+
+ /* 60 DRS READ STRING FROM DATA AREA */
+         DO;
+              INPUTTYPE = 2;
+              CALL GET$STRING$FIELD;
+         END;
+
+ /* 61 DRF READ F/P NUMBER FROM DATA AREA */
+         DO;
+              INPUTTYPE = 2;
+              CALL GET$NUMERIC$FIELD;
+         END;
+
+    /*62 EDR - END OF RECORD FOR READ*/
+    /*ADVANCES TO NEXT LINE FEED*/
+         DO;
+              IF VAR$BLOCK$SIZE THEN
+                   DO WHILE GET$DISK$CHAR <> LF;
+                        END;
+              CALL STORE$REC$PTR;
+         END;
+
+    /*63 EDW - END OF RECORD FOR WRITE*/
+         DO;
+              IF VAR$BLOCK$SIZE THEN
+                    DO WHILE BYTES$WRITTEN < (BLOCKSIZE - 2);
+                         CALL WRITE$A$BYTE(' ');
+                         END;
+              CALL WRITE$A$BYTE(CR);
+              CALL WRITE$A$BYTE(LF);
+              CALL STORE$REC$PTR;
+         END;
+    /*64 CLS - CLOSE A FILE*/
+         DO;
+              CALL SET$FILE$ADDR;
+              CALL DISK$CLOSE;
+              FILES(BRAZ),EOFBRANCH(BRAZ) = 0;
+              CALL POP$STACK;
+         END;
+
+ /* 65 ABSOLUTE */
+         BRA(1) = BRA(1) AND 7FH;
+
+ /* 66 INTEGER */
+         DO;
+              CALL CONV$TO$BINARY(RA);
+              CALL CONV$TO$FP(RA);
+         END;
+
+ /* 67 RANDOM NUMBER GENERATOR */
+         DO;
+              CALL RANDOM;
+              CALL PUSH$STACK;
+              CALL MOVE4(.SCALE,RA);
+              CALL PUSH$STACK;
+              CALL FLOAT$ADDR(SEED);
+              CALL TWO$VALUE$OPS(FDIV);
+         END;
+
+ /* 68 SGN */
+         DO;
+              DECLARE FLAG BYTE;
+              FLAG = NOT RA$NEGATIVE;
+              CALL COMP$FIX(NOT RA$ZERO);
+              IF FLAG THEN
+                   CALL ONE$VALUE$OPS(FCHS);
+         END;
+
+ /* 69 SINE */
+         CALL ONE$VALUE$OPS(SIN);
+
+ /* 70 COSINE */
+         CALL ONE$VALUE$OPS(COS);
+
+ /* 71 ARCTANGENT */
+         CALL ONE$VALUE$OPS(ATAN);
+
+ /* 72 TANGENT */
+         DO;
+              CALL PUSH$STACK;
+              CALL MOVE$RB$RA;
+              CALL ONE$VALUE$OPS(SIN);
+              CALL POP$STACK;
+              CALL ONE$VALUE$OPS(COS);
+              CALL PUSH$STACK;
+              IF RB$ZERO THEN
+                   CALL ERROR('TZ');
+              CALL TWO$VALUE$OPS(FDIV);
+         END;
+
+ /* 73 SQUAREROOT */
+         CALL ONE$VALUE$OPS(SQRT);
+
+ /* 74 TAB */
+         DO;
+              CALL ROUND$CONV$BIN;
+              DO WHILE ARA > PRINTBUFFLENGTH;
+                   ARA = ARA - PRINTBUFFLENGTH;
+                   END;
+              IF ((ARA := ARA - 1 + PRINTBUFFERLOC) <= PRINTBUFFER)
+                     AND (PRINTBUFFER <> PRINTBUFFERLOC) THEN
+                   CALL DUMP$PRINT$BUFF;
+              PRINTBUFFER = ARA;
+         CALL POP$STACK;
+         END;
+
+ /* 75 EXPONENTATION */
+         CALL ONE$VALUE$OPS(EXP);
+
+ /* 76 FREE AREA IN FSA */
+          DO;
+               CALL PUSH$STACK;
+               CALL FLOAT$ADDR(AVAILABLE(0));
+          END;
+
+ /* 77  IRN  */
+         SEED = LOCALSEED;
+
+ /* 78 LOG */
+         CALL ONE$VALUE$OPS(LOG);
+
+ /* 79 POSITION OF PRINT BUFFER PTR */
+          DO;
+               CALL PUSH$STACK;
+               CALL FLOAT$ADDR(PRINTBUFFER - (PRINTBUFFERLOC - 1));
+          END;
+
+ /* 80 INP */
+          DO;
+               CALL ROUND$CONV$BIN;
+               CALL FLOAT$ADDR(INPUT(BRAZ));
+          END;
+
+ /* 81 ASCII CONVERSION */
+          DO;
+               DECLARE
+                       HOLD ADDRESS,
+                       TEMP BYTE,
+                       H    BASED    HOLD(1)   BYTE;
+               IF (HOLD := ARA) = 0 OR H(0) = 0 THEN
+                    CALL ERROR('AC');
+               TEMP = H(1);
+               CALL STRING$FREE;
+               CALL FLOAT$ADDR(TEMP);
+          END;
+
+ /* 82 CHR CONVERTS TO ASCII */
+         DO;
+              DECLARE HOLD ADDRESS,
+                      LOC BASED HOLD(1) BYTE;
+              CALL CONV$TO$BIN$ADDR;
+              HOLD = GETSPACE(2);
+              LOC(0) = 1;
+              LOC(1) = BRA(0);
+              ARA = HOLD;
+              CALL FLAGSTRINGADDR(TRUE);
+         END;
+
+ /* 83 LEFT END OF STRING */
+         CALL STRING$SEGMENT(0);
+
+ /* 84 LENGTH OF STRING */
+       DO;
+            DECLARE LENGTH BYTE;
+            LENGTH = GET$STRING$LEN(ARA);
+            CALL STRING$FREE;
+            CALL FLOAT$ADDR(LENGTH);
+       END;
+
+ /* 85 MIDDLE OF STRING */
+         CALL STRING$SEGMENT(2);
+
+ /* 86 RIGHT END OF STRING */
+         CALL STRING$SEGMENT(1);
+
+ /* 87 CONVERSION TO STRING */
+          DO;
+               CALL NUMERIC$OUT;
+               CALL MOVE(.PRINTWORKAREA,ARA :=
+                     GETSPACE(PRINTWORKAREA(0) + 1),PRINTWORKAREA(0) + 1);
+               CALL FLAG$STRING$ADDR(TRUE);
+          END;
+
+ /* 88 VALUE  */
+       DO;
+       CALL FP$INPUT(GET$STRING$LEN(ARA),ARA+1);
+       CALL STRING$FREE;
+         CALL FP$OP$RETURN(9,RA);
+       END;
+
+ /* 89 COSH */
+         CALL ONE$VALUE$OPS(COSH);
+
+ /* 90 SINH */
+         CALL ONE$VALUE$OPS(SINH);
+
+ /* 91 RON  */
+         CALL ROUND$CONV$BIN;
+
+ /* 92 CKO  */
+         /* RA CONTAINS MAX NUMBER OF LABELS IN THE ON STATEMENT
+            RB CONTAINS SELECTED LABEL.
+            CHECK TO INSURE SELECTED LABEL EXISTS. IF NOT AN ERROR
+            HAS OCCURED */
+         DO;
+              IF (BRBZ := BRBZ - 1) > BRAZ - 1 THEN
+                   CALL ERROR('OI');
+              CALL POP$STACK;
+               BRAZ = SHL(BRAZ,1) + BRAZ + 1;
+         END;
+ /* 93 EXR  */
+         CALL LOGICAL(3);
+
+
+ /* 94 DEF  */
+         DO;
+              CALL STEP$INS$CNT;
+              EOFBRANCH(GET$FILE$NUMBER) = TWOBYTEOPRAND;
+              CALL STEP$INS$CNT;
+              CALL POPSTACK;
+         END;
+
+
+ /* 95  BOL */
+         DO;
+              CURRENTLINE = ARA;
+              CALL POP$STACK;
+         END;
+
+ /* 96  ADJ */
+         ARA = ARA + MCD;
+
+         END;  /* END CASE */
+    CALL STEP$INS$CNT;
+    END;   /* OF DO FOREVER  */
+
+
+
+END EXECUTE;
+    /*
+         ********************************************************
+         *                                                      *
+         ********************************************************
+    */
+
+MAINLINE:
+    CALL CRLF;
+    CALL INITIALIZE$EXECUTE;
+EOFEXIT:  /* ON END OF FILE OF CURRENT DISK FILE COME HERE */
+ERROR$EXIT:  /* REGROUP ON CONSOLE INPUT ERROR */
+    CALL EXECUTE;
+    CALL EXIT$INTERP;
+END;

@@ -1,0 +1,996 @@
+BASCOM:
+DO;
+
+         /* BASIC - E COMPILER MODIFIED FOR RESIDENT OPERATION
+         BY GARY A. KILDALL, DIGITAL RESEARCH, PACIFIC GROVE, CA.
+         VERSION 1.4  - ORIGINAL DISTRIBUTION BY EUBANKS, NPS,
+         VERSION 1.5  - FIXES UNINITIALIZED STORAGE PROBLEMS
+                           WFCB(32) = 0,  RFCB(12) = 0, CONT = 0
+                           HASHTABLE = 0...0
+                        ALLOWS $ PARAMETERS IN CALL, RATHER THAN PROGRAM
+          */
+
+    DECLARE JMPTOMAIN (3) BYTE DATA(0C3H,0,0); /* FILLED WITH DDT */
+
+
+        /*
+         *********************************************************
+         *                                                       *
+         *                   BASIC-E COMPILER                    *
+         *                                                       *
+         *             U. S. NAVY POSTGRADUATE SCHOOL            *
+         *                  MONTEREY, CALIFORNIA                 *
+         *                                                       *
+         *             WRITTEN BY GORDON EUBANKS, JR.            *
+         *                                                       *
+         *                    CPM VERSION 1.4                    *
+         *                                                       *
+         *                     DECEMBER 1976                     *
+         *                                                       *
+         *********************************************************
+        */
+
+        /*
+         *********************************************************
+         *                                                       *
+         *    THE BASIC-E COMPILER IS DIVIDED INTO THE FOLLOW-   *
+         *     ING MAJOR SECTIONS:                               *
+         *            (1) GLOBAL DECLERATIONS AND LITERAL        *
+         *                DEFINITIONS                            *
+         *            (2) SYSTEM INPUT OUTPUT ROUTINES AND       *
+         *                ASSOCIATED VARIABLE DECLERATIONS       *
+         *            (3) SCANNER                                *
+         *            (4) SYMBOL TABLE ROUTINES                  *
+         *            (5) PARSER AND CODE GENERATION             *
+         *                                                       *
+         *    BASIC-E REQUIRES A SOURCE PROGRAM AVAILABLE ON     *
+         *     AN INPUT DEVICE AND WILL WRITE A BINARY OUTPUT    *
+         *     FILE WHICH MAY BE EXECUTED BY THE RUN TIME        *
+         *     MONITOR.  THE SOURCE MUST BE READ TWICE.          *
+         *     THE NORMAL OUTPUT DEVICE IS THE CONSOLE.          *
+         *                                                       *
+         *     MODIFICATION OF THE COMPILER FOR OTHER OPERATING  *
+         *     SYSTEMS WILL REQUIRE MODIFICATIONS TO SECTION     *
+         *     (2) AND IN SECTION 1 REDEFINITION OF LITERALS IN  *
+         *     SECTIONS "SYSTEM PARAMETERS WHICH MAY REQUIRE     *
+         *     MODIFICATION BY USERS" AND "EXTERNAL ENTRY        *
+         *     POINTS".  OTHER CHANGES SHOULD NOT BE REQUIRED    *
+         *                                                       *
+         *********************************************************
+        */
+
+
+        /*
+         **********************************************************
+         *                                                        *
+         *          ****     SECTION   1     ****                 *
+         *                                                        *
+         **********************************************************
+        */
+        /*
+         *********************************************************
+         *                                                       *
+         *                   GLOBAL LITERALS                     *
+         *                                                       *
+         *********************************************************
+        */
+
+$INCLUDE(:F1:BASCOM.LIT)
+
+        /*
+         *********************************************************
+         *                                                       *
+         *                EXTERNAL ENTRY POINTS                  *
+         *    THESE ENTRY POINTS ALLOW INTERFACING WITH CP/M     *
+         *                                                       *
+         *********************************************************
+        */
+
+DECLARE
+        BDOS    LIT            '05H',  /* ENTRY POINT TO CP/M */
+        PARMS   LIT            '6DH',  /* $ PARAMETERS */
+        BOOT    LIT            '0H';   /* RETURN TO SYSTEM */
+
+
+MON1: PROCEDURE(F,A);
+    DECLARE F BYTE, A ADDRESS;
+    /* PATCHED WITH JMP 0005 */
+    L: GO TO L;
+    END MON1;
+
+MON2: PROCEDURE(F,A) BYTE;
+    DECLARE F BYTE, A ADDRESS;
+    /* PATCHED WITH JMP 0005 */
+    L: GO TO L;
+    RETURN 0;
+    END MON2;
+
+MON3: PROCEDURE PUBLIC;
+    /* USED TO RETURN TO CP/M */
+    DECLARE A ADDRESS; A = BOOT;
+    CALL A;
+    END MON3;
+
+
+        /*
+         *********************************************************
+         *                                                       *
+         *                  GLOBAL VARIABLES                     *
+         *                                                       *
+         *********************************************************
+        */
+DECLARE
+        PASS1  BYTE PUBLIC INITIAL(TRUE),     /* PASS1 FLAG */
+        PASS2  BYTE PUBLIC INITIAL(FALSE),      /* PASS2 FLAG */
+               /*
+                  COMPILER TOGGLES
+               */
+        LISTPROD     BYTE PUBLIC INITIAL(FALSE),
+        LISTSOURCE   BYTE PUBLIC INITIAL(FALSE),
+        DEBUGLN      BYTE PUBLIC INITIAL(FALSE),
+        LOWERTOUPPER BYTE INITIAL(TRUE),
+        NOINTFILE    BYTE INITIAL(FALSE),
+        LSTFLAG      BYTE INITIAL(FALSE),  /* LST DEVICE IF 'F' */
+        ERRSET       BYTE INITIAL(FALSE),
+        ERRORCOUNT   ADDRESS PUBLIC INITIAL(0),
+        COMPILING    BYTE PUBLIC,
+        DATACT       ADDRESS PUBLIC, /* COUNTS SIZE OF DATA AREA */
+
+
+  /*   FLAGS USED DURING CODE GENERATION */
+        FORSTMT      BYTE PUBLIC,
+        RANDOMFILE   BYTE PUBLIC,
+        FILEIO       BYTE PUBLIC,
+        INPUTSTMT    BYTE PUBLIC,
+        GOSUBSTMT    BYTE PUBLIC,
+
+  /*   THE FOLLOWING GLOBAL VARIABLES ARE USED BY THE SCANNER      */
+
+        TOKEN     BYTE PUBLIC,  /* TYPE OF TOKEN JUST SCANNED */
+        SUBTYPE   BYTE PUBLIC,  /* SUBTYPE OF CURRENT TOKEN */
+        FUNCOP    BYTE PUBLIC,  /* IF TOKEN FUNC THEN THIS IS FUNC NUMBER */
+        HASHCODE  BYTE PUBLIC,  /* HASH VALUE OF CURRENT TOKEN */
+        NEXTCHAR  BYTE PUBLIC,  /* CURRENT CHARACTER FROM GETCHAR */
+        ACCUM(IDENTSIZE)     BYTE PUBLIC,  /* HOLDS CURRENT TOKEN */
+        ACCLEN BYTE PUBLIC AT(.ACCUM(0)),   /* ACCUM 0 IS LENGTH */
+        CONT    BYTE PUBLIC,  /* INDICATES ACCUM WAS FULL, STILL MORE */
+        COLUMN  BYTE INITIAL(0),  /* CURRENT COLUMN */
+
+            /*
+             **************************************************
+             *                                                *
+             *  THE FOLLOWING LITERAL DEFINITIONS ESTABLISH   *
+             *  MNEMONIC NAMES FOR THE TOKENS WHICH ARE THE   *
+             *  OUTPUT OF THE LALR PARSER PROGRAM.            *
+             *                                                *
+             **************************************************
+            */
+        POUND LIT '12', LPARN LIT '02', RPARN  LIT '05',
+        ASTRK LIT '04', TPLUS LIT '03', TMINUS LIT '07',
+        LESST LIT '01', TCOLIN LIT '11', SCOLN  LIT '06',
+        EXPON LIT '14', EQUAL LIT '13', GTRT   LIT '10',
+        TDATA LIT '99', TAND  LIT '24', TCR    LIT '23',
+        TELSE LIT '34', TDEF  LIT '25', TDIM   LIT '26',
+        TFOR  LIT '28', TEND  LIT '27', TFILE  LIT '35',
+        TIF   LIT '17', TGOSB LIT '43', TGOTO  LIT '36',
+        TNEXT LIT '37', TINPT LIT '44', TLET   LIT '29',
+        SLASH LIT '08', TNOT  LIT '30', TON    LIT '20',
+        TOR   LIT '21', TPRNT LIT '45', TREAD  LIT '38',
+        TREST LIT '48', TRETN LIT '46', TSTEP  LIT '39',
+        TSTOP LIT '40', TTHEN LIT '41', TTO    LIT '22',
+        FUNCT LIT '53', TGEQ  LIT '15', TSUB   LIT '32',
+        TLEQ  LIT '18', COMMA LIT '09', TGO    LIT '16',
+        TNE   LIT '19', TCLOS LIT '42', TXOR   LIT '33',
+        TOUT  LIT '31', TIRN LIT '51',  STRING LIT '50',
+        IDENTIFIER LIT '52',            FLOATPT LIT '49',
+        UDFUNCT LIT '54',               TREM LIT '0';
+
+        /*
+         *********************************************************
+         *                                                       *
+         *       ****       SECTION    2       ****              *
+         *                                                       *
+         *      SYSTEM DEPENDENT ROUTINES AND VARIABLES          *
+         *                                                       *
+         *            THE FOLLOWING ROUTINES ARE USED            *
+         *            BY THE COMPILER TO ACCESS DISK             *
+         *            FILES AND THE CONSOLE.  THESE              *
+         *            ROUTINES ASSUME THE USE OF THE             *
+         *            CP/M DISK OPERATING SYSTEM.                *
+         *                                                       *
+         *      THE FCB'S ARE USED BY THE SYSTEM TO MAINTAIN     *
+         *      INFORMATION ON OPEN FILES.  THEY ARE ONLY USED   *
+         *      BY PROCEDURES IN THIS SECTION.  THE BUFFERS      *
+         *      AND POINTERS TO THE BUFFERS ARE USED BY THE      *
+         *      REMAINDER OF THE PROGRAM BUT THEIR SIZE MAY      *
+         *      BE VARIED TO SUIT THE DISK SYSTEM BEING USED     *
+         *                                                       *
+         *********************************************************
+        */
+
+DECLARE
+        PARMLIST(9) BYTE INITIAL('         '),  /* $ PARAMS SAVED HERE */
+        RFCBADDR    ADDRESS INITIAL(5CH),
+            /* NOTE: CP/M PROVIES 5CH AS FCB AREA AND 80H AS A
+                     BUFFER FOR PROGRAM USE */
+        RFCB BASED RFCBADDR(33)    BYTE,  /* SOURCE FCB */
+        WFCB(33)                   BYTE  /* INTERMEDIATE FILE FCB */
+                                   INITIAL(0,'        ','INT',0,0,0,0),
+        SBLOC                      ADDRESS INITIAL(80H),
+        SOURCEBUFF BASED SBLOC(SOURCERECSIZE)BYTE,  /* SOURCE BUFFER */
+        SOURCEPTR       BYTE INITIAL(SOURCERECSIZE), /* BUFFER INDEX */
+        CURSOURCERECSIZE BYTE INITIAL(SOURCERECSIZE),
+        DISKOUTBUFF(INTRECSIZE)      BYTE,
+        BUFFPTR            BYTE INITIAL(255), /* BUFFER INDEX */
+        LINEBUFF(CONBUFFSIZE)        BYTE,  /* CONSOLE OUT BUFFER */
+        LINEPTR            BYTE INITIAL(0), /* BUFFER INDEX */
+        LINENO ADDRESS PUBLIC,    /* CURRENT LINE NUMBER */
+        SEPARATOR BYTE   PUBLIC INITIAL(COLIN);
+
+          DECLARE
+                  PCHAR    LIT    '2',  /* CHAR TO CONSOLE */
+                  PBUFF    LIT    '9',  /* BUFFER TO CONSOLE */
+                  RCHAR    LIT    '1',  /* CHAR FROM CONSOLE */
+                  RBUFF    LIT   '10',  /* BUFFER FROM CONSOLE */
+                  OFILE    LIT   '15',  /* OPEN FILE */
+                  CFILE    LIT   '16',   /* CLOSE FILE */
+                  DFILE    LIT   '19',  /* DELETE FILE */
+                  RFILE    LIT   '20',  /* READ FILE */
+                  WFILE    LIT   '21',  /* WRITE FILE */
+                  MFILE    LIT   '22',  /* MAKE FILE */
+                  SDMA     LIT   '26',  /* SET DMA */
+                  FILEERR  LIT  '255',  /* ERROR RTN CODE */
+                  FILEEOF  LIT    '1';  /* EOF RTN CODE */
+
+MOVE: PROCEDURE (SOURCE,DEST,COUNT) PUBLIC;
+    DECLARE
+            SOURCE ADDRESS,
+            DEST   ADDRESS,
+            COUNT     BYTE,
+            SCHAR BASED SOURCE BYTE,
+            DCHAR BASED DEST   BYTE;
+
+    DO WHILE(COUNT := COUNT -1) <> 255;
+         DCHAR = SCHAR;
+         SOURCE = SOURCE + 1;
+         DEST = DEST + 1;
+         END;
+    RETURN;
+END MOVE;
+
+FILL: PROCEDURE (DEST,CHAR,COUNT) PUBLIC;
+      /* MOVE CHAR TO A N TIMES */
+    DECLARE
+            DEST        ADDRESS,
+            CHAR        BYTE,
+            COUNT       BYTE,
+            DCHAR       BASED     DEST     BYTE;
+     DO WHILE (COUNT := COUNT -1) <> 255;
+          DCHAR = CHAR;
+          DEST = DEST + 1;
+          END;
+    RETURN;
+END FILL;
+
+
+CHAROUT: PROCEDURE(CHAR);
+    DECLARE CHAR BYTE;
+    IF LSTFLAG THEN /* GO TO THE LIST DEVICE */
+        CALL MON1(5,CHAR); ELSE CALL MON1(2,CHAR);
+    END CHAROUT;
+
+PRINTCHAR: PROCEDURE(CHAR);
+    DECLARE CHAR BYTE;
+    /* CHECK FOR TABS AND END OF LINE */
+    IF CHAR = TAB THEN /* EXPAND TO NEXT COLUMN */
+        DO WHILE ((COLUMN := COLUMN + 1) AND 7) <> 0;
+        CALL CHAROUT(' ');
+        END; ELSE
+        DO; COLUMN = COLUMN + 1; CALL CHAROUT(CHAR);
+        IF CHAR = LF THEN COLUMN = 0;
+        END;
+END PRINTCHAR;
+
+PRINT: PROCEDURE(A) PUBLIC;
+    DECLARE A ADDRESS;
+    DECLARE MSG BASED A BYTE;
+        DO WHILE MSG <> '$';
+        CALL PRINTCHAR(MSG);
+        A = A + 1;
+        END;
+END PRINT;
+
+
+DISKERR: PROCEDURE;
+    CALL PRINT(.('DE    $'));
+    CALL MON3;  /* RETURN TO SYSTEM */
+    RETURN;
+END DISKERR;
+
+OPEN$SOURCEFILE: PROCEDURE;
+    /*  SETS UP THE FCB FOR THE SOURCE PROGRAM
+        WHICH MUST BE OF TYPE 'BAS' AND THEN OPENS
+        THE FILE.  CP/M PUTS THE NAME USED AS A
+        PARAMETER WHEN THE COMPILER IS EXECUTED, AT
+        5CH.
+    */
+
+    CALL MOVE(.('BAS'),RFCBADDR+9,3);
+    RFCB(32),RFCB(12) = 0;
+    IF MON2(OFILE,RFCBADDR) = FILEERR THEN
+         DO;
+              CALL PRINT(.('NS $'));
+              CALL MON3;  /* RETURN TO SYSTEM */
+         END;
+END OPEN$SOURCEFILE;
+
+
+REWIND$SOURCE$FILE: PROCEDURE PUBLIC;
+    /* CP/M DOES NOT REQUIRE ANY ACTION PRIOR TO REOPENING */
+    RETURN;
+END REWIND$SOURCE$FILE;
+
+
+CLOSE$INT$FILE: PROCEDURE PUBLIC;
+    IF MON2(CFILE,.WFCB) = FILEERR THEN
+         CALL DISKERR;
+END CLOSE$INT$FILE;
+
+SETUP$INT$FILE: PROCEDURE PUBLIC;
+     /*  MAKES A NEW FILE */
+    IF NOINTFILE THEN  /* ONLY MAKE FILE IF THIS TOGGLE IS OFF */
+         RETURN;
+    CALL MOVE(.RFCB,.WFCB,9);
+    CALL MON1(DFILE,.WFCB);
+    IF MON2(MFILE,.WFCB) = FILEERR THEN
+         CALL DISKERR;
+    WFCB(32) = 0; /* ZERO NEXT RECORD */
+ END SETUP$INT$FILE;
+
+READ$SOURCE$FILE: PROCEDURE BYTE;
+    DECLARE DCNT BYTE;
+    IF(DCNT := MON2(RFILE,RFCBADDR)) > FILEEOF THEN
+         CALL DISKERR;
+    RETURN DCNT; /* ZERO IF READ ELSE 1 IF EOF - ERRORS > 1 */
+END READ$SOURCE$FILE;
+
+
+WRITE$INT$FILE: PROCEDURE PUBLIC;
+    IF NOINTFILE THEN
+         RETURN;
+    CALL MON1(SDMA,.DISKOUTBUFF);
+    IF MON2(WFILE,.WFCB) <> 0 THEN
+         CALL DISKERR;
+    CALL MON1(SDMA,80H); /* RESET DMA ADDRESS */
+END WRITE$INT$FILE;
+
+
+CRLF: PROCEDURE PUBLIC;
+     CALL PRINTCHAR(EOLCHAR);
+     CALL PRINTCHAR(LF);
+    RETURN;
+END CRLF;
+
+
+PRINT$DEC: PROCEDURE(VALUE) PUBLIC;
+    /*
+        CONVERTS VALUE TO A DECIMAL NUMBER WHICH IS PRINTED
+        ON THE CONSOLE.  USED FOR LINENUMBERING STATEMENTS
+        AND TO PRINT PRODUCTIONS.
+    */
+    DECLARE
+            VALUE ADDRESS,
+            I     BYTE,
+            FLAG  BYTE,
+            COUNT BYTE;
+    DECLARE DECIMAL(4) ADDRESS DATA(1000,100,10,1);
+    FLAG = FALSE;
+    DO I = 0 TO 3;
+         COUNT = 30H;
+         DO WHILE VALUE >= DECIMAL(I);
+              VALUE = VALUE - DECIMAL(I);
+              FLAG = TRUE;
+              COUNT = COUNT + 1;
+         END;
+         IF FLAG OR (I >= 3) THEN
+              CALL PRINTCHAR(COUNT);
+         ELSE
+              CALL PRINTCHAR(' ');
+    END;
+    RETURN;
+END PRINTDEC;
+
+
+SETFLAGS: PROCEDURE PUBLIC;
+    /*
+       RESET COMPILER FLAGS USED DURING PARSING
+    */
+      RANDOMFILE,FILEIO,
+      INPUTSTMT, FORSTMT, GOSUBSTMT = FALSE;
+END SETFLAGS;
+
+
+        /*
+         *********************************************************
+         *                                                       *
+         *     THE FOLLOWING ROUTINE GENERATES THE INTERMEDIATE  *
+         *     LANGUAGE FILE. EMIT IS THE ONLY ROUTINE TO        *
+         *     ACTUALLY WRITE TO THE DISK.  GENERATE, EMITDAT,   *
+         *     AND EMITCON CALL EMIT.                            *
+         *                                                       *
+         *********************************************************
+        */
+
+
+
+EMIT: PROCEDURE(OBJCODE) PUBLIC;
+    DECLARE OBJCODE BYTE;
+    IF (BUFFPTR:=BUFFPTR + 1) >= INTRECSIZE THEN /* WRITE TO DISK */
+         DO;
+              CALL WRITE$INT$FILE;
+              BUFFPTR = 0;
+         END;
+    DISKOUTBUFF(BUFFPTR) = OBJCODE;
+    RETURN;
+END EMIT;
+
+
+        /*
+         *********************************************************
+         *                                                       *
+         *           ***     SCANNER SECTION     ***             *
+         *                                                       *
+         *********************************************************
+        */
+
+CLEAR$LINE$BUFF: PROCEDURE;
+    CALL FILL(.LINEBUFF,' ',CONBUFFSIZE);
+END CLEAR$LINE$BUFF;
+
+
+LIST$LINE: PROCEDURE(LENGTH);
+    DECLARE
+            LENGTH BYTE,
+            I      BYTE;
+    CALL PRINT$DEC(LINENO);
+    CALL PRINT$CHAR(SEPARATOR);
+    CALL PRINT$CHAR(' ');
+    DO I = 0 TO LENGTH;
+         CALL PRINT$CHAR(LINEBUFF(I));
+         END;
+    CALL CRLF;
+    CALL CLEAR$LINE$BUFF;
+    SEPARATOR = COLIN;
+END LIST$LINE;
+
+        /*
+         **********************************************************
+         *                                                        *
+         *    GETCHAR SETS THE GLOBAL VARIABLE NEXTCHAR TO THE    *
+         *    NEXT SOURCEFILE CHARACTER AND RETURNS NEXTCHAR TO   *
+         *    THE CALLING ROUTINE.                                *
+         *                                                        *
+         *    TABS ARE REPLACED WITH A BLANK AND IF EITHER        *
+         *    LISTSOURCE IS TRUE OR AN ERROR HAS OCCURED LINES    *
+         *    ARE OUTPUT TO THE CONSOLE.                          *
+         *                                                        *
+         **********************************************************
+        */
+
+GETCHAR: PROCEDURE BYTE PUBLIC;
+    DECLARE ADDEND(*) BYTE
+         DATA ('END',EOLCHAR,LF); /*TO ADD END IF LEFT OFF */
+    NEXT$SOURCE$CHAR: PROCEDURE BYTE;
+         RETURN SOURCEBUFF(SOURCEPTR);
+    END NEXT$SOURCE$CHAR;
+
+    CHECKFILE: PROCEDURE BYTE;
+         /*
+              CHECKFILE MAINTAINS THE SOURCE BUFFER FULL AND
+              CHECKS FOR END OF FILE ON THE SOURCE FILE.
+              IF A LINE FEED IS FOUND IT IS SKIPPED.
+              IF END OF FILE IS DETECTED THEN TRUE IS RETURNED
+              ELSE FALSE IS RETURNED.
+         */
+         DO FOREVER;  /* ALLOW US TO SKIP LINE FEEDS */
+              IF (SOURCEPTR := SOURCEPTR + 1) >= CURSOURCERECSIZE THEN
+                   DO;
+                        SOURCEPTR = 0;
+                        IF READ$SOURCE$FILE = FILEEOF THEN
+                             RETURN TRUE;
+                   END;
+              IF (NEXTCHAR := NEXT$SOURCE$CHAR) <> LF THEN
+                   RETURN FALSE;
+         END;  /* OF DO FOREVER */
+    END CHECKFILE;
+
+    IF CHECKFILE OR (NEXTCHAR = EOFFILLER)  THEN
+                   DO; /* EOF REACHED */
+                        CALL MOVE(.ADDEND,SBLOC,5);
+                        SOURCEPTR = 0;
+                        NEXTCHAR = NEXT$SOURCE$CHAR;
+                   END;
+       IF LINEPTR < CONBUFFSIZE THEN
+              LINEBUFF(LINEPTR := LINEPTR + 1) = NEXTCHAR;  /* OUTPUT LINE */
+         IF NEXTCHAR = EOLCHAR THEN
+              DO;
+                   LINENO = LINENO + 1;
+                   IF LISTSOURCE OR ERRSET THEN
+                        CALL LISTLINE(LINEPTR - 1);  /* NOT EOLCHAR */
+                   LINEPTR = 0;
+              END;
+    IF NEXTCHAR = TAB THEN
+         NEXTCHAR = ' ';  /* ONLY NEED REPLACE WITH 1 BLANK  */
+    RETURN NEXTCHAR;
+END GETCHAR;
+
+
+GETNOBLANK: PROCEDURE;
+    DO WHILE((GETCHAR = ' ') OR (NEXTCHAR = EOFFILLER));
+         END;
+    RETURN;
+END GETNOBLANK;
+
+
+
+
+CHECK$CONTINUATION: PROCEDURE;
+    /*
+        CHECK FOR CONTINUATION CHAR. IF FOUND SET NEXTCHAR
+        TO FIRST CHARACTER ON NEXT LINE.  IT THEN LOOKS TO
+        THE PARSER AS IF IT WAS ALL ONE LINE.
+    */
+    IF NEXTCHAR = CONTCHAR THEN
+         DO;
+              DO WHILE GETCHAR <> EOLCHAR;
+                   END;
+              CALL GETNOBLANK;
+         END;
+    RETURN;
+END CHECK$CONTINUATION;
+
+
+        /*
+         **********************************************************
+         *                                                        *
+         *    ERROR IS THE COMPILER ERROR HANDLING ROUTINE        *
+         *    IF AN ERROR IS DETECTED WHILE PARSING A STATEMENT   *
+         *    THE REMAINDER OF THE STATEMENT IS SKIPPED AND THE   *
+         *    STATEMENT IS WRITTEN ON THE CONSOLE FOLLOWED BY A   *
+         *    TWO LETTER DISCRIPTION OF THE ERROR. AN UP ARROR    *
+         *    INDICATES WHERE IN THE LINE THE ERROR WAS DETECTED  *
+         *    THE PARSER IS RESET AND COMPILATION CONTINUES WITH  *
+         *    THE NEXT STATEMENT.                                 *
+         *                                                        *
+         **********************************************************
+        */
+
+ERROR: PROCEDURE(ERRCODE) PUBLIC;
+       DECLARE
+               ERRCODE ADDRESS,
+               POINTER BYTE;
+    POINTER = LINEPTR + 2;
+    IF PASS2 THEN
+         ERRSET = TRUE;  /* SO SOURCE LINE WILL BE LISTED */
+    IF TOKEN <> TCR THEN
+         DO;  /* SKIP REMAINDER OF LINE */
+              DO WHILE NEXTCHAR <> EOLCHAR;
+                   CALL CHECK$CONTINUATION;
+                   NEXTCHAR = GETCHAR;
+                   END;
+              CALL GET$NO$BLANK;
+         END;
+    IF PASS2 THEN
+         DO;       /* PRINT ERROR MESSAGE */
+              ERRORCOUNT = ERRORCOUNT + 1;
+              CALL PRINTCHAR(HIGH(ERRCODE));
+              CALL PRINTCHAR(LOW(ERRCODE));
+              CALL PRINTCHAR(QUESTIONMARK);
+              DO WHILE(POINTER:=POINTER - 1) >= 1;
+                   CALL PRINTCHAR(' ');
+                   END;
+              CALL PRINTCHAR(UPARROW);
+              CALL CRLF;
+         END;
+    ERRSET, COMPILING = FALSE;
+    CALL SETFLAGS;
+    RETURN;
+  END ERROR;
+
+        /*
+         *********************************************************
+         *                                                       *
+         *    INITIALIZE$SCANNER SETS NEXTCHAR TO THE FIRST      *
+         *    NON-BLANK CHARACTER ON THE INPUT FILE AND          *
+         *    INITIALIZES THE OUTPUTLINE COUNTER AND POINTER     *
+         *                                                       *
+         *    INITIALIZE$SCANNER IS CALLED AT THE BEGINNING OF   *
+         *    PASS ONE AND PASS TWO.                             *
+         *                                                       *
+         *********************************************************
+        */
+IN$SCANNER: PROCEDURE PUBLIC;
+    DECLARE COUNT BYTE;
+    DECLARE I BYTE;
+    IF PASS1 THEN /* GET PARAMETER LIST */
+        CALL MOVE(PARMS,.PARMLIST,8); /* LAST BLANK IS LEFT UNFILLED */
+    CALL OPEN$SOURCEFILE;
+    CONT,COLUMN,LINENO,LINEPTR = 0;
+    CALL CLEAR$LINE$BUFF;
+    SOURCEPTR = SOURCERECSIZE;
+    SEPARATOR = COLIN;
+    CALL GETNOBLANK;
+    IF PARMLIST(0) = '$' THEN
+         DO; I = 0;
+              DO WHILE (COUNT := PARMLIST(I:=I+1)) <> ' ';
+                   IF(COUNT := COUNT - 'A') <= 5 THEN
+                        DO CASE COUNT;
+                             LISTPROD = TRUE;
+                             LISTSOURCE = FALSE;
+                             NOINTFILE = TRUE;
+                             LOWERTOUPPER = FALSE;
+                             DEBUGLN = TRUE;
+                             LSTFLAG = TRUE;
+                        END; /* OF CASE */
+              END;
+         END;
+END IN$SCANNER;
+
+
+        /*
+         *********************************************************
+         *                                                       *
+         *    THE SCANNER ACCEPTS INPUT CHARACTERS FROM THE      *
+         *    SOURCE FILE RETURNING TOKENS TO THE PARSER.        *
+         *    CONVERSION TO UPPERCASE IS PERFORMED WHEN SCAN-    *
+         *    NING IDENTIFIERS UNLESS LOWERTOUPPER IS FALSE.     *
+         *    BLANKS ARE IGNORED.  EACH TOKEN IS PLACED IN       *
+         *    ACCUM.  ACCLEN   IS THE LENGTH OF THE TOKEN.       *
+         *    THE TOKEN IS HASHCODED BY SUMMING EACH ASCII       *
+         *    CHARACTER MODULO HASHTBLSIZE AND THE RESULT IS     *
+         *    RETURNED IN HASHCODE.  SUBTYPE AND FUNCOP ARE      *
+         *    SET IF THE TOKEN IS A PREDEFINED FUNCTION.         *
+         *    REM AND DATA STATEMENTS ARE HANDLED COMPLETELY     *
+         *    BY THE SCANNER. IF THE RESERVED WORD REM OR        *
+         *    REMARK IS DETECTED THE INPUT IS SCANNED UNTIL      *
+         *    THE END OF THE CURRENT INPUT LINE IS LOCATED.      *
+         *    THE NEXT TOKEN (A CARRIAGE RETURN) IS THEN         *
+         *    SCANNED AND RTURNED. DATA STATEMENTS ARE SIMILAR   *
+         *    EXCEPT THE DATA IS WRITTEN OUT USEING EMITDAT      *
+         *                                                       *
+         *********************************************************
+        */
+SCANNER: PROCEDURE PUBLIC;
+
+        /*
+         **********************************************************
+         *                                                        *
+         *    THE FOLLOWING UTILITY PROCEDURES ARE USED BY THE    *
+         *    SCANNER.                                            *
+         *                                                        *
+         **********************************************************
+        */
+
+    PUTINACCUM: PROCEDURE;
+         IF NOT CONT THEN
+              DO;
+                   ACCUM(ACCLEN := ACCLEN + 1) = NEXTCHAR;
+                   HASHCODE = (HASHCODE + NEXTCHAR) AND HASHMASK;
+                   IF ACCLEN >= (IDENTSIZE - 1) THEN
+                        CONT = TRUE;
+              END;
+         RETURN;
+    END PUTINACCUM;
+
+
+    PUTANDGET: PROCEDURE;
+         CALL PUTINACCUM;
+         CALL GETNOBLANK;
+         RETURN;
+    END PUTANDGET;
+
+
+    PUTANDCHAR: PROCEDURE;
+         CALL PUTINACCUM;
+         NEXTCHAR = GETCHAR;
+         RETURN;
+    END PUTANDCHAR;
+
+
+    NUMERIC: PROCEDURE BYTE;
+         RETURN(NEXTCHAR - '0') <= 9;
+    END NUMERIC;
+
+    LOWERCASE: PROCEDURE BYTE;
+         RETURN (NEXTCHAR >= 61H) AND (NEXTCHAR <= 7AH);
+    END LOWER$CASE;
+
+
+    DECIMALPT: PROCEDURE BYTE;
+         RETURN NEXTCHAR = '.';
+    END DECIMALPT;
+
+
+    CONV$TO$UPPER: PROCEDURE;
+         IF LOWERCASE AND LOWERTOUPPER THEN
+              NEXTCHAR = NEXTCHAR AND 5FH;
+         RETURN;
+    END CONV$TO$UPPER;
+
+
+    LETTER: PROCEDURE BYTE;
+        CALL CONV$TO$UPPER;
+         RETURN ((NEXTCHAR - 'A') <= 25) OR LOWERCASE;
+    END LETTER;
+
+
+    ALPHANUM: PROCEDURE BYTE;
+         RETURN NUMERIC OR LETTER OR DECIMALPT;
+    END ALPHANUM;
+
+
+    SPOOLNUMERIC: PROCEDURE;
+         DO WHILE NUMERIC;
+              CALL PUTANDCHAR;
+              END;
+         RETURN;
+    END SPOOLNUMERIC;
+
+
+    SETUP$NEXT$CALL: PROCEDURE;
+         IF NEXTCHAR = ' ' THEN
+              CALL GETNOBLANK;
+         CONT = FALSE;
+         RETURN;
+    END SETUP$NEXT$CALL;
+
+EMITDAT: PROCEDURE(OBJCODE);
+     /*
+       WRITES DATA STATEMENTS DURING PASS2 AND
+       COUNTS SIZE OF DATA AREA.
+     */
+    DECLARE OBJCODE BYTE;
+    DATACT = DATACT + 1;
+    IF PASS2 THEN
+         CALL EMIT(OBJCODE);
+    RETURN;
+END EMITDAT;
+
+        /*
+         *********************************************************
+         *                                                       *
+         *      LOOKUP IS CALLED BY THE SCANNER WITH THE         *
+         *       PRINTNAME OF THE CURRENT TOKEN IN               *
+         *      THE ACCUMULATOR.  LOOKUP DETERMINES IF THIS      *
+         *      TOKEN IS A RESERVED WORD AND  SETS THE           *
+         *      VALUE OF TOKEN.  IF THE TOKEN IS A PREDEFINED    *
+         *      FUNCTION THEN THE SUBTYPE AND FUNCOP ARE ALSO    *
+         *      SET.                                             *
+         *      THE RESERVED WORD TABLE IS DIVIDED INTO 7        *
+         *      TABLES FOR RESERVED WORDS OF LENGTH 1 TO 7.      *
+         *      THE FOLLOWING VECTORS ARE ALSO USED:             *
+         *          TK - TOKEN ASSOCIATED WITH RESERVED WORD     *
+         *          OFFSET - INDEX INTO LNG VECTOR FOR A GIVEN   *
+         *                   R/W LENGTH                          *
+         *          COUNT - NUMBER OF R/W OF A GIVEN LENGTH      *
+         *          TKOS - INDEX INTO TK FOR A GIVEN R/W LENGTH  *
+         *          ST - SPECIAL DATA FOR PREDEFINED FUNCTIONS   *
+         *                                                       *
+         *      PREDEFINED FUNCTIONS HAVE TOKEN VALUES >64.      *
+         *      THIS NUMBER BECOMES THE FUNCOP AND THE TOKEN     *
+         *      IS FUNCT.  FUNCOP IS THE MACHINE CODE FOR THE    *
+         *      PARTICULAR PREDEFINED FUNCTION.                  *
+         *                                                       *
+         *********************************************************
+        */
+
+    LOOKUP: PROCEDURE BYTE;
+
+         DECLARE MAXRWLNG LIT '9';  /* MAX LENGTH OF A RESERVED WORD */
+
+         DECLARE LNG1(*) BYTE
+             DATA(EOLCHAR,'<','(','+','*',')','-',',','=','/',
+                           ';','>',':',POUNDSIGN,UPARROW),  /*  15  */
+                 LNG2(*) BYTE
+                      DATA('IF','TO','GO','ON','OR','EQ','LT','GT',
+                           'LE','GE','NE'),       /*  11  */
+                 LNG3(*) BYTE
+                       DATA('FOR','LET','REM','DIM','DEF','NOT','AND',
+                           'TAN','SIN','COS','SQR','TAB','LOG','LEN',
+                           'FRE','ATN','ABS','EXP','INT','END','POS',
+                           'RND','SGN','INP','ASC','VAL','XOR','SUB',
+                            'OUT'),
+                                      /*  29  */
+                 LNG4(*) BYTE DATA('THEN','READ','GOTO','ELSE','NEXT',
+                           'STOP','DATA','FILE','CHR$','MID$',
+                           'STEP','STR$','COSH','SINH'),  /*  14  */
+                 LNG5(*) BYTE DATA('PRINT','INPUT','GOSUB','CLOSE',
+                                     'LEFT$'),           /*  5  */
+                 LNG6(*) BYTE DATA('RETURN','RIGHT$','REMARK'),  /* 3 */
+                 LNG7(*) BYTE DATA('RESTORE'),  /*  1  */
+                 LNG9(*) BYTE DATA('RANDOMIZE'),
+                 TK(*) BYTE  DATA(0,TCR,LESST,LPARN,TPLUS,ASTRK,RPARN,TMINUS,
+                           COMMA,EQUAL,SLASH,SCOLN,GTRT,TCOLIN,POUND,
+                           EXPON,        /* LNG 1 */
+                           TIF,TTO,TGO,TON,TOR,EQUAL,LESST,GTRT,TLEQ,
+                           TGEQ,TNE,   /* LNG2 */
+                           TFOR,TLET,TREM,TDIM,TDEF,TNOT,TAND,
+                           72,69,70,73,74,78,84,76,71,65,75,
+                           66,TEND,79,67,68,80,81,88,TXOR,TSUB,TOUT,
+                                       /* LNG 3 */
+                           TTHEN,TREAD,TGOTO,TELSE,TNEXT,TSTOP,TDATA,
+                           TFILE,82,85,TSTEP,87,89,90,  /* LNG 4 */
+                           TPRNT,TINPT,TGOSB,TCLOS,83,       /* LNG 5 */
+                           TRETN,86,TREM,  /* LNG 6 */
+                           TREST,TIRN),
+               OFFSET(*) BYTE DATA(0,0,15,37,124,180,205,223,230,230),
+               COUNT(*) BYTE DATA(0,15,11,29,14,5,3,1,0,1),
+               TKOS(*) BYTE DATA(0,0,15,26,55,69,74,77,78,78),
+               ST(*) BYTE DATA(1,1,0,1,1,1,1,1,1,1,1,0,0,1,0,1,
+                           5,65,70,5,71,70,65,5,1,1);
+
+         DECLARE
+                 PTR              ADDRESS,
+                 FIELD BASED PTR (1) BYTE,
+                 I                BYTE;
+
+         COMPARE: PROCEDURE BYTE;
+              DECLARE I BYTE;
+              I = 0;
+              DO WHILE (FIELD(I) = ACCUM(I := I + 1)) AND I <= ACCLEN;
+                   END;
+              RETURN I > ACCLEN;
+         END COMPARE;
+
+         IF ACCLEN > MAXRWLNG THEN
+              RETURN FALSE;
+         PTR = OFFSET(ACCLEN) + .LNG1;
+         DO I = 1 TO COUNT(ACCLEN);
+              IF COMPARE THEN
+                   DO;
+
+                        IF((TOKEN := TK(TKOS(ACCLEN) + I)) > 64) AND
+                           (TOKEN <> TDATA) THEN
+                             DO;
+                                  SUBTYPE = ST(TOKEN - 65);
+                                  FUNCOP = TOKEN;
+                                  TOKEN = FUNCT;
+                             END;
+                        RETURN TRUE;
+                   END;
+              PTR = PTR + ACCLEN;
+              END;
+         RETURN FALSE;
+    END LOOKUP;
+
+
+    DO FOREVER;  /* TO HANDLE REM, DAT AND CONTINUATION */
+    ACCLEN, HASHCODE, TOKEN, SUBTYPE = 0;
+        /* FIRST CASE - IS THIS A STRING OR THE CONTINUATION
+           OF A STRING?  (ONLY STRINGS MAY BE CONTINUED)
+        */
+    IF(NEXTCHAR = STRINGDELIM) OR CONT THEN
+         DO; /* FOUND STRING */
+              TOKEN = STRING;
+              CONT = FALSE;
+              DO FOREVER;  /* ALLOWS "" IN STRING TO BE " */
+                   DO WHILE GETCHAR <> STRINGDELIM;
+                   IF NEXTCHAR = EOLCHAR THEN CALL ERROR('US');
+                        CALL PUTINACCUM;
+                        IF CONT THEN RETURN;
+                        END;
+                   CALL GETNOBLANK;
+                   IF NEXTCHAR <> STRINGDELIM THEN
+                        RETURN;
+                   CALL PUT$IN$ACCUM;
+              END; /* OF DO FOREVER */
+         END; /* OF RECOGNIZING A STRING */
+       /*
+           NEXT CASE IS A NUMERIC WHICH MUST START WITH A
+           NUMBER OR WITH A PERIOD
+           ONLY FIRST IDENTSIZE CHARACTERS ARE RETAINED
+       */
+  ELSE IF NUMERIC OR DECIMALPT THEN
+         DO; /* HAVE DIGIT */
+              TOKEN = FLOATPT;
+               DO WHILE NEXTCHAR = '0'; /* ELIM LEADING ZEROS */
+                    NEXTCHAR = GETCHAR;
+                    END;
+              CALL SPOOLNUMERIC;  /* GET ALL THE NUMBERS */
+              IF DECIMALPT THEN
+                   DO;
+                        CALL PUTANDCHAR;
+                        CALL SPOOLNUMERIC;
+                   END;
+              CALL CONV$TO$UPPER;
+              IF NEXTCHAR = 'E' THEN
+                   DO;  /* A FLOATING POINT NUMBER */
+                        CALL PUTANDGET;
+                        IF (NEXTCHAR = '+') OR (NEXTCHAR='-') THEN
+                             CALL PUTANDGET;
+                        IF NOT NUMERIC THEN
+                             CALL ERROR('IF');
+                        CALL SPOOL$NUMERIC;
+                   END;
+               IF ACCLEN = 0 THEN
+                    HASHCODE, ACCUM(ACCLEN := 1) = '0';
+              CALL SETUP$NEXT$CALL;
+              RETURN;
+         END; /* OF RECOGNIZING NUMERIC CONSTANT */
+
+       /*
+           NEXT CASE IS IDENTIFIER. MAY BE RESERVED WORD
+           IN WHICH CASE MAY BE REM, OR DATA. THESE STATEMENTS
+           ARE HANDLED BY THE SCANNER VICE THE PARSER AND THEN
+           ANOTHER LOOP THROUGH THE SCANNER IS MADE.
+           ONLY IDENTSIZE-1 CHARACTERS ARE RETAINED
+       */
+    ELSE IF LETTER THEN
+         DO; /* HAVE A LETTER */
+              DO WHILE ALPHANUM;
+                   CALL PUTANDCHAR;
+                   END;
+              IF NEXTCHAR = '$' THEN
+                   DO;
+                        SUBTYPE = STRING;
+                        CALL PUTANDCHAR;
+                   END;
+              ELSE
+                   SUBTYPE = FLOATPT;
+              IF NOT LOOKUP THEN
+                   DO;
+                        IF ACCUM(1) = 'F' AND ACCUM(2) = 'N'
+                                AND ACCLEN <> 1 THEN
+                             TOKEN = UDFUNCT;
+                        ELSE
+                             TOKEN = IDENTIFIER;
+                        CALL SETUP$NEXT$CALL;
+                        RETURN;
+                   END;
+              ELSE /* IS A RW */
+                   IF TOKEN = TREM THEN
+                        DO WHILE NEXTCHAR <> EOLCHAR;
+                             NEXTCHAR = GETCHAR;
+                             CALL CHECK$CONTINUATION;
+                             END;
+                   ELSE
+                        IF TOKEN = TDATA THEN
+                             DO;
+                                   DECLARE DAT LIT '51';
+                                  CALL EMITDAT(DAT);
+                                  CALL EMITDAT(NEXTCHAR);
+                                  DO WHILE GETCHAR <> EOLCHAR;
+                                       CALL CHECK$CONTINUATION;
+                                       CALL EMITDAT(NEXTCHAR);
+                                       END;
+                                  CALL EMITDAT(',');
+                                  CALL EMITDAT(0);
+                                  DATACT = DATACT - 1;
+                             END;
+                        ELSE
+                             DO;
+                                  CALL SETUP$NEXT$CALL;
+                                  RETURN;
+                             END;
+         END; /* OF RECOGNIZING RW OR IDENT */
+        /*
+            LAST CASE IS A SPECIAL CHARACTER - IT MAY BE
+            THE CONTINUATION CHARACTER IN WHICH CASE JUST
+            GO TO NEXT LINE AND SCAN SOMEMORE.
+        */
+    ELSE
+         DO; /* SPECIAL CHARACTER */
+              IF NEXTCHAR = CONTCHAR THEN
+                   CALL CHECK$CONTINUATION;
+              ELSE
+                   DO;
+                        CALL PUTANDGET;
+                        IF NOT LOOKUP THEN
+                             CALL ERROR('IC');
+                        RETURN;
+                   END;
+         END; /* OF RECOGNIZING SPECIAL CHAR */
+    END;  /* OF DO FOREVER */
+
+END SCANNER;
+END;
