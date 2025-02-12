@@ -1,3 +1,3 @@
-load "sieve.bas"
+load "SIEVE.BAS"
 run
 
