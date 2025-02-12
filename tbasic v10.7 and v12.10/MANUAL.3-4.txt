@@ -1,0 +1,90 @@
+* LOAD [DISK(<0-3>),]<string expression>[,<string expression>]
+Loads a program from the ASCII LOAD (logical unit #2) device
+into memory.  A NEW command is automatically issued before the
+program is loaded.  If the optional line descriptor string is
+used, execution begins automatically at that line.  This
+makes it possible to chain ASCII programs the same way that
+the BLOAD can chain binary programs.  If the optional DISK
+function is not used, the last disk accessed is used.
+Examples:  LOAD DISK(3),"CHESS","START"    LOAD "STARTREK"
+
+MOVEBOF
+Moves to the beginning of the selected disk file before executing
+the next disk operation.  Doesn't apply to random files.
+Examples:   MOVEBOF:GET HEADING$    MOVEBOF:PUT FILE(5),SIZE
+
+MOVEEOF
+Moves to the end of the selected disk file before executing
+the next disk operation.  Doesn't apply to random files.
+Examples:   MOVEEOF:GET FILE(61),PTR   MOVEEOF:PUT RECORD$
+
+NEXT [<variable list]
+Terminates a "FOR" loop.  Without the optional variable list,
+it terminates the most recent loop.  See the "FOR" statement.
+After leaving the loop, the index variable remains the last value.
+Examples:  NEXT        NEXT N        NEXT I,J,K
+
+ON <numeric expression> GOSUB <line descriptor list>
+Calls a subroutine at the line in the list corresponding to
+the value of <numeric expression>.  If <numeric expression>
+equals zero, or if it's greater than the number of line
+descriptors, execution continues with the next statement.  If
+it's less than zero, an error results.
+Examples:  ON I GOSUB 20,5,100,10     ON 2*I GOSUB TEST+2,SUBR5
+
+ON <numeric expression> GOTO <line descriptor list>
+Transfers execution (branches) to the line in the list corresponding
+to the value of INT(<numeric expression>).  If <numeric expression>=0
+or if it's greater than the number of line descriptors, execution
+continues with the next statement.  If it's <0 an error results.
+Examples:  ON N GOTO 10,20,30,40    ON N-2 GOTO FIRST,CALC,LAST
+
+OPEN [<special function>,]<numeric expression>[,<string expression>]
+Makes a file available for use through the logical device specified
+by the numeric expression.  Normally, this would be logical
+devices 2, 3, 4, or 5.  BLOAD, BSAVE, LOAD, SAVE, and APPEND do not
+require an OPEN or a CLOSE statement, only BPUT, BGET, PUT, and GET.
+See DISK, FILE, RECORD, and TYPE special functions.  The optional
+<string expression> need only be used to name a file when
+the file name is different than the last file accessed.
+Examples:   OPEN 3   OPEN 3,"DATA"   OPEN FILE(7),DISK(1),3,"DATA"
+
+OUT <numeric expression #1>,<numeric expression #2>
+Sends byte resulting from the first expression to the port
+determined by the second expression.
+Examples:  OUT 1,7    OUT PORT,DATA    OUT X-5,Z+2
+
+POKE <numeric expression #1>,<numeric expression #2>
+Stores byte from second expression into memory location of the first.
+Examples:  POKE 4096,255    POKE ADDRESS,BYTE    POKE A+256,48+N
+
+PRINT <expression list>  or   ?<expression list>
+Prints the value of each expression on the expression list
+onto the PRINT device (logical unit #1).  Spacing between elements is
+defined by punctuation.  A comma starts the following element at the
+next 14 column field.  A semicolon starts the following
+element immediately after the preceeding element.  If the last
+character of the list is a comma or a semicolon, no carriage
+return will be printed at the end of the statement.  Otherwise,
+a carriage return will be printed at the end of the statement.
+Examples:  PRINT "X=",X    PRINT 33*X,A$,CHR$(7)   ?FRE(0)
+
+
+
+
+
+
+
+
+
+			   3-4
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,76 @@
+Logical Operators:
+
+OR, AND, and NOT are used as logical operators in IF statements.
+OR and AND operate on the logical expressions between which
+they are placed, while NOT operates on the logical expression
+following it.  Remember that the value of a logical expression
+must be either -1 (true) or 0 (false).
+
+OR
+When OR is placed between two logical expressions, the total
+expression is true if either or both of the two logical expressions
+are true.
+
+AND
+When AND is placed between two logical expressions, the total
+expression is true if and only if both of the two logical
+expressions are true.
+
+NOT
+When NOT is placed before a logical expression, the total
+expression is true if the logical expression is false,
+and the total expression is false if the logical expression
+is true.
+
+Below are truth tables for the three logical operators, where
+T stands for TRUE (-1), F stands for FALSE (0),
+and A and B are logical expressions:
+
+    A    B    A OR B    A AND B    NOT A
+
+    F    F      F          F         T
+    F    T      T          F         T
+    T    F      T          F         F
+    T    T      T          T         F
+
+Examples:
+
+0 AND 1 equals 0
+1 AND 1 equals 1
+2 AND 1 equals 0
+2 AND 3 equals 2
+
+0 OR 1 equals 1
+1 OR 1 equals 1
+2 OR 1 equals 3
+2 OR 3 equals 3
+
+NOT 0 equals -1
+NOT -1 equals 0
+NOT 1 equals -2
+
+
+
+
+
+
+
+
+
+				6-2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

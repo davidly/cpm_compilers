@@ -1,0 +1,74 @@
+	Known Bugs, Limitations, and Peculiarities
+
+Hopefully this section will remain small.  We have, however,
+decided to not ignore the fact, like some manufacturers do,
+that there will be forever bugs and other strange things in
+the system.  To expect us to be perfect is asking too much,
+but we will at least work toward that objective.  In that
+direction, we have already spent several months searching
+for these vermin, and exterminating them as quickly as
+possible.  But we know that our customers will find some for
+us, so we'd appreciate it if you would let us know, preferably
+in writing, when you see any of these creatures creeping about.
+This page of the manual will change from one release to the
+next, with an effort to make the page match the release.
+
+	Peculiarities and Limitations:
+
+CTL STK ERROR message is somewhat obscure.
+
+A space is required after all statement reserved words.  For
+example, LETX=3 would be incorrect, but LET X=3 is correct.
+
+Assignments of values to variables are not allowed in command
+mode unless the variable has been previously defined in a
+program.  For example, LET X=3 would not work in command mode
+unless X had already been defined in a program.
+
+The expression  1/2  will evaluate to 0, since integer mode
+is retained until a floating point value is seen.  Use the
+expression  1./2  or  1/2.  to get the correct answer of .5 .
+
+The LET statement name gets put in if you don't use it.
+
+Parentheses may get rearranged to an equivalent sequence.
+This is a product of the way expressions are represented internally.
+
+Tabs are not allowed in the middle of a statement.
+
+Random numbers evidently always end in the digit 5.
+
+When entering a number in exponential (E) format, always put either
+a space, minus sign, or plus sign after the E, then two digits.
+
+
+
+	Bugs:
+
+Sometimes goes into ENTRY mode at the wrong time.
+
+The sequence :LET X=3  (cr)  >LET X=4  crashes.
+
+When the interpreter runs out of free memory space, the garbage-
+collection routine does not always work correctly.
+
+
+DEF FNA(X) = X+Y doesn't work correctly, since Y is not on the
+dummy variable list in the parenthesis.
+
+FRE(0) returns minus numbers after 32768.
+
+
+				I
+
+
+
+
+
+
+
+
+
+
+
+

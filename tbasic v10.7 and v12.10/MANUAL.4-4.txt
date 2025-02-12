@@ -1,0 +1,72 @@
+SQR(<numeric expression>)
+Returns the square root of <numeric expression>.  An error message
+will result if <numeric expression> evaluates to a negative number.
+Examples:  SQR(B*B-4*A*C)    SQR(2)    SQR(X)
+
+STR$(<numeric expression>)
+Returns the string representation of <numeric expression>,
+without leading or trailing spaces.
+Examples:  STR$(3052.67)    STR$(NUMBER)    STR$(X*Y/Z)
+
+TAB(<numeric expression>)
+Spaces to column <numeric expression> on the PRINT device.
+If tabbed column is less than the present position, the next
+output from PRINT will go on the next line in the correct
+position.
+Examples:  TAB(20)    TAB(30)    TAB(N*2)    TAB(POSITION)
+
+TAN(<numeric expression>)
+Returns the tangent of angle <numeric expression>, which is in radians.
+Examples:  TAN(DEGREES*3.14/180)    TAN(.25)    TAN(X^2/Y)
+
+USR(<expression>)
+Calls a user (machine language) subroutine at the address in
+location USER.  The address of location USER is in the 11th
+and 12th bytes after the start of BASIC (see appendix C).
+The <numeric expression> is evaluated and placed in registers
+D&E.  The USR function returns with the value that is returned
+in registers D&E.  For example, if the machine language subroutine
+decremented D&E by 5, the value of the USR function would be 5
+less than it's argument.  Of course, anything may be done in a
+USR subroutine, but it is recommended that all registers that
+are changed besides D&E should be saved and restored on a stack.
+Example:   USR(0)   USR(N)   USR(N*M)   USR(ARG)
+
+VAL(<string expression>)
+Returns the numerical value of the string <string expression>.
+Leading spaces are ignored.  If the string expression is not a
+valid number, zero is returned.
+Examples:  VAL(FIELD4$)    VAL(COST$)    VAL(A$)    VAL("3.14")
+
+
+
+
+
+IMPORTANT NOTE:
+Functions are never to be used by themselves, but only
+where variables, constants, and expressions can be used.
+For example:  CALL(PLOT,X) would be incorrect,
+whereas       LET Y=CALL(PLOT,X) would be correct, even
+though Y was not used for anything else.  This is because
+the CALL function, like other functions, returns a value
+which must be assigned to something, in this case, Y.
+
+
+
+
+
+
+
+				4-4
+
+
+
+
+
+
+
+
+
+
+
+

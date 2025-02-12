@@ -1,0 +1,89 @@
+	TABLE OF POINTER ADDRESSES - version 9.7
+
+This table of addresses is always located at the start
+of the main part of the Tarbell BASIC interpreter (not
+in the I/O section).  The items will always be in the
+same order, although new items may be added onto the
+end of the table.  It's purpose is to allow external
+routines, such as those used in the I/O section, to
+access internal BASIC subroutines and tables, without
+having to change the I/O section whenever the main
+section is changed.  It can also be helpful to those
+who do not have the full listing, to find these items.
+
+Address Range	Description
+(hexadecimal)
+
+0803 - 0804	CHANL - Contains the address of the Channel Table.
+0805 - 0806	TRMNL - Contains the address of the Terminal Table.
+0807 - 0808	SSSS - Defines the end of useable memory.  If zero,
+		causes BASIC to use all available memory.
+0809 - 080A	CNVRA - Defines the number of digits that will be printed
+		in normal (as opposed to scientific) notation.
+080B - 080C	USER - Contains the address of a location which contains
+		the address of a user routine accessed by the USR function.
+080D - 080E	MODES - Contains the address of the MODES Table.
+080F - 0810	FSRC - Address of pointer to start of source.
+0811 - 0812	ESRC - Address of pointer to end of source.
+0813 - 0814	ERROR - Pointer to error routine.
+0815 - 0816	TSCN - Points to token just scanned.
+0817 - 0818	NSCN - Points to token to be scanned next.
+0819 - 081A	CHCK - Points to checksum routine.
+081B - 081C	INFL - Integer to Floating, (HL) to (DE).
+081D - 081E	FLIN - Floating to Integer, (HL) to (DE).
+081F - 0820	STNM - String at (HL) to number at (DE).
+0821 - 0822	NMST - Number at (HL) to string at (DE).
+0823 - 0824	CMPR - Zero and carry set as for (HL)-(DE).
+0825 - 0826	SINE - Sine(HL) to (DE).
+0827 - 0828	SICO - Cosine(HL) to (DE).
+0829 - 082A	TANG - tangent(HL) to (DE).
+082B - 082C	ATAN - Arctangent(HL) to (DE).
+082D - 082E	BCDB - Number at (HL) to binary in HL.
+082F - 0830	BBCD - Binary number in HL to number at (DE).
+0831 - 0832	ETOX - E to the (HL) power to (DE).
+0833 - 0834	LOGX - Log base E (HL) to (DE).
+0835 - 0836	SQUR - (HL) to 1/2 to (DE).
+0837 - 0838	PWRS - (HL) to the (DE) power to (BC).
+0839 - 083A	ADDER - (HL)+(DE) to (BC)
+083B - 083C	SUBER - (HL)-(DE) to (BC)
+083D - 083E	MULER - (HL)*(DE) to (BC)
+083F - 0840	DIVER - (HL)/(DE) to (BC)
+0841 - 0842	KILL - Kill allocated dynamic RAM block.
+0843 - 0844	AMBL - Allocate a dynamic RAM block.
+0845 - 0846	EOF - End-of-file flag byte address.
+0847 - 0848	RECORD - Address of random file record number.
+0849 - 084A	FILE - Address of (file # or adr of name).
+084B - 084C	TYPE - Address of file type number.
+084D - 084E	NAME - Address of address of file name.
+084F - 0850	CMP16 - Address of 16-bit compare routine.
+0851 - 0852	SUB16 - Address of 16-bit subtract routine.
+0853 - 0854	MOVE - Address of block move routine.
+0855 - 0856	MULT - 8 by 8 multiply, DE=D*E.
+0857 - 0858	ZERO - Zeroes A bytes starting at HL.
+0859 - 085A	DIV - L=HL/E, unrounded, h=remainder.
+085B - 085C	DO - Address of first parameter of DO function.
+085D - 085E	DOPARA - Adr of 2nd parameter of DO function.
+085F - 0860	DISK - Address of disk number.
+0861 - 0862	KIND - Adr of Kind (of transfer) byte.
+0863 - 0864	FUNK - Mass storage function byte.
+0865 - 0866	PTDIR - Location of DIR statement call.
+0867 - 0868	PTREN - Location of RENAME statement call.
+0869 - 086A	PTERA - Location of ERASE statement call.
+086B - 086C	PTRES - Location of RESET statement call.
+086D - 086E	PTSEA - Location of SEARCH function call.
+086F - 0870	PTFLX - Location of FILEXISTS function call.
+
+
+
+
+
+				C-2
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,70 @@
+<variable list>
+A sequence of variable names, seperated by commas or semicolons.
+
+<logical constant>
+A constant which has the value of either -1 (true) or 0 (false).
+Notice that in some systems, any integer other than zero is 
+considered true.  This can produce an ambiguity, however, in
+that a NOT TRUE operation could produce a TRUE value.
+
+<logical operator>
+AND, OR, and NOT are the logical operators.  When the AND
+operator is between two logical constants, the combination
+is true if both values are true.  When the OR operator is
+between two logical expressions, the combination is
+true if either value is true.  When the NOT operator is 
+before a logical expression, the combination produces a TRUE
+value if the expression were FALSE, and a FALSE value if the
+expression were TRUE.  The logical operators all perform
+as if they were operating on each bit of a 16-bit
+binary number, with all bits operated on in parallel.
+Examples:  2 AND 3 produces 3
+	   1 OR 4  produces 5
+	   NOT 0 produces -1
+
+
+
+<logical variable>
+A variable whose value is either -1 (true) or 0 (false).
+
+<logical expression>
+An expression which evaluates to either a -1 (true) or 0 (false).
+
+Examples:  
+
+	LET TRUE=-1:LET FALSE=0
+	TRUE AND TRUE  produces TRUE
+	TRUE AND FALSE produces FALSE
+	FALSE AND TRUE produces FALSE
+	FALSE AND FALSE produces FALSE
+	TRUE OR TRUE produces TRUE
+	TRUE OR FALSE produces TRUE
+	FALSE OR TRUE produces TRUE
+	FALSE OR FALSE produces FALSE
+	NOT TRUE produces FALSE
+	NOT FALSE produces TRUE
+
+<line descriptor>
+A sequence of <alphanumeric character>s, which
+starts with the first character position (left-hand margin)
+in a TARBELL BASIC statement line, and which is terminated
+by either a space or a tab (ctl-I), and which is not one of
+the reserved words in Appendix H.  If the descriptor is in
+a statement referencing another statement, a + or - offset
+may be included.
+
+<line descriptor list>
+A sequence of line descriptors, seperated by commas.
+
+
+				B-3
+
+
+
+
+
+
+
+
+
+

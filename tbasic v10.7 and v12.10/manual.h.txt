@@ -1,0 +1,71 @@
+		Reserved Word List
+
+These words should not be used as line descriptors or
+variable names:
+
+ABS  AND  APPEND  ASC  ASSIGN  ATN
+
+BGET  BLOAD  BPUT  BSAVE  BYE 
+
+CALL  CHANGE  CHANNEL  CHECK  CHR$  CLEAR  CLOSE  CONT  COS
+
+DATA  DEF  DELETE  DIM  DISK  DO  DROP
+
+EDIT  ELSE  END  ENTER  EOF  ERASE  EXP
+
+FILE  FILEXISTS  FOR  FRE
+
+GET  GOPROC  GOSUB  GOTO
+
+HEX  HEX$
+
+IF  INP  INPUT  INT
+
+KILL
+
+LEFT$  LEN  LET  LIST  LOAD  LOC  LOG
+
+MATCH  MID$  MOVEBOF  MOVEEOF
+
+NEW  NEXT  NOT
+
+OCT  OCT$  ON  OPEN  OR  OUT
+
+PEEK  POKE  POS  PRINT  PROCEDURE  PUT
+
+READ  RECEIVE  RECORD  REM  RESET  RESTORE  RETURN  RIGHT$  RND  RUN
+
+SAVE  SEARCH  SGN  SIN  SPACE$  SPC  SQR  STEP  STOP  STR$  SYMBOL
+
+TAB  TAN  THEN  TO  TYPE
+
+USR
+
+VAL
+
+WAIT  WIDTH
+
+
+
+
+
+
+
+
+
+
+
+
+
+				H
+
+
+
+
+
+
+
+
+
+
+

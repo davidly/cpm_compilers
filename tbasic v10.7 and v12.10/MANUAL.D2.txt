@@ -1,0 +1,65 @@
+INTERNAL FORMATS (continued)
+
+String Array Pointer Format:
+  Byte 0:  bit 0-not used, bit 1=0, bit 2=0, bit 3=1, bit 4=0,
+	   bit 5=0, bit 6=0 if not array,=1 if array, bit 7 not used.
+  Byte 1 = number of dimensions.
+  Bytes 2&3 is a pointer to string locator or string.
+  Bytes 4&5 are not used.
+String variables are treated internally as single dimension arrays.
+
+Numeric Array Pointer Format:
+  Byte 0:  bit 0=0 if integer, 1 if floating point.
+	   bit 1=0, bit 2=1, bit 3=0, bit 4=0, bit 5=0,
+           bits 6&7 are unused.
+  Byte 1 = number of dimensions.
+  Bytes 2&3 is a pointer to table location.
+  Bytes 4&5 are not used.
+
+Numeric Format (constants and variables)
+  Byte 0:  bit 0=0 if integer, 1 if floating point.
+	   bit 1=1, bit 2=0, bit 3=0, bit 4=0, bit 5=0,
+	   bit 6 is sign of exponent, bit 7 sign of mantissa.
+  Byte 1 = BCD exponent if floating point, MSD, MSD-1 if integer.
+  Byte 2 = LSD+7, LSD+6
+  Byte 3 = LSD+5, LSD+4
+  Byte 4 = LSD+3, LSD+2
+  Byte 5 = LSD+1, LSD
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			    D-2
+
+
+
+
+
+
+
+
+
+

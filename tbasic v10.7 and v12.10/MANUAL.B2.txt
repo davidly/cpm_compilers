@@ -1,0 +1,76 @@
+<string constant>
+A string constant is a sequence of any characters, represented
+literally, either <alphanumeric character>s or <special character>s
+enclosed in quotes ("), or CHR$ functions with a constant argument.
+There is no limit to the length of a string constant.  Quotes may
+be represented by a double quote (""), or by CHR$(34).  Control
+characters may be represented by using the CHR$ function.
+Examples:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789 !"    "#$%&'()"
+
+<constant>
+A value which is named as such explicity in the program.  May be 
+either a <string constant> or a <numeric constant>.
+Examples:    "DON TARBELL"    3.14159    2    "ABCDEFG"
+
+<expression>
+A sequence of constants and/or variables, separated by operators
+according to certain rules (see pages 14&15) and optionally grouped
+by parenthesis.
+Examples:  1    X    "ABC"+REST$    3*(X/Y)    SQR(B^2-4*A*C)
+
+<numeric expression>
+An expression which evaluates to a number.
+Examples:  1+1   2*(3+5)   N/2   4*LEN(STRING$)   SIN(X)
+
+<string expression>
+An expression which evaluates to a string.
+Examples:  LEFT$("ABCDEFG",3)   "123"+"ABC"+A$   CHR$(N+64)
+
+<expression list>
+A sequence of expressions normally separated by commas or semicolons.
+Examples:  "THE COST IS ";COST;" DOLLARS.",TOTAL,X*5/Y    X,Y    X
+
+<variable>
+An entity which can assume different values, either string or numeric.
+
+<variable name>
+A sequence of <alphanumeric character>s, beginning with a letter,
+which is used to identify a particular variable.  If a variable
+name ends with a dollar sign ($), it is forced to a string.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				B-2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

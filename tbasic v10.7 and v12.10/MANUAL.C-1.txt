@@ -1,0 +1,69 @@
+			MEMORY USAGE - version 9.7
+
+Address Range	Description
+(hexadecimal)
+
+0000 to 00FF	Unused, available space for your stuff, except in
+		CP/M systems, where it is used by CP/M.
+
+0100 to 07FF	Standard Input/Output Routines (Listing Included).
+		There may be extra room here.  See the listing.
+
+0800 to 0802	A jump instruction into TARBELL BASIC.
+
+0803 to 0870	A table of addresses, each of which point to a
+		useful table, subroutine, or parameter in BASIC.
+		These addresses may be used from outside the
+		main body of the interpreter.  Examples of this
+		are shown in the Tarbell BASIC I/O system listing.
+		See page C-2 for a list of these addresses.
+
+0871 to 5A5B	The TARBELL BASIC interpreter, which may be in ROM.
+		Note that these addresses may change with versions.
+
+5A5C to 5C3A	Interpreter Workspace, must be in RAM. (fixed length)
+		This can be seen on the last page of the source
+		listing as a series of DS's.
+
+Pointer Names
+
+FSRC		Program Source, in internal form.  Fixed at RUN time.
+
+ESRC		Variables and Array Pointers.  Fixed at RUN time.
+
+FRAV to PNTR	FOR/NEXT and local variable (control) stack.  Dynamic.
+
+PNTR+100	Input Line Space.  Dynamic.
+
+
+NOTE:  The preceeding areas expand upward in memory addressing,
+       the following areas expand downward in memory addressing.
+
+
+FARY		Array and String Space.  Dynamic.
+
+SDIR		Symbol Directory.  Fixed at RUN time.
+
+STAB		Symbol Table.  Fixed at RUN time.
+
+MEND		End of Specified Memory.
+
+
+
+Allocation Notes:
+Before runtime, will consist only of moving the symbol directory
+as the symbol table grows.  At runtime, variable and array pointers
+fished out of symbol directory and space assigned.  As local variables
+are encountered, they are assigned on the stack.  Arrays and strings
+are assigned by sequential assignment-random release- clean up garbage
+when full.
+
+			    C-1
+
+
+
+
+
+
+
+

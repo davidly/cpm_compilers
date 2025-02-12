@@ -1,0 +1,69 @@
+EDIT Commands:
+
+ U   Prints the line up to the present pointer position.
+nD   Deletes n characters starting with the present pointer position.
+ K   Kills (deletes) a whole line, then enters insert mode. (MUST insert!)
+ N   Inserts the current edit buffer as a new line.
+ W   Deletes (Wipes out) the line being edited.
+nSs  Moves the pointer to the n'th occurance of string s.
+ Is  Performs command S first, then inserts characters at the 
+     pointer position until a carriage return is entered.
+nCs  Changes the nth occurance of string following C to the
+     string inserted from keyboard.
+ Q   Returns to command level.
+ P   Prints the line in the edit line buffer.
+ A   Appends characters to the end of the line until a carriage
+     return is entered.
+nL   Lists n lines starting with the present line, and enters edit
+     mode on the last line listed.
+ T   Type the rest of the line past the pointer, then the line up
+     to the pointer.
+ R   Replace the edited line in source with the current edit buffer,
+     and print out new line.   ***** IMPORTANT NOTE *****
+     Until this command is executed, the source line is not changed.
+nF   Move forward n lines and enter edit mode there.
+nB   Move backward n lines and enter edit mode there.
+ Ms  Move to (line descriptor) and enter edit mode there (search
+     string s is used for line descriptor).
+nX   Move pointer back n characters.
+n<space>   Move pointer forward n characters.
+
+
+Reserved Word List:
+
+ABS  AND  APPEND  ASC  ASSIGN  ATN
+BGET  BLOAD  BPUT  BSAVE  BYE 
+CALL  CHANGE  CHANNEL  CHECK  CHR$  CLEAR  CLOSE  CONT  COS
+DATA  DEF  DELETE  DIM  DISK  DO  DROP
+EDIT  ELSE  END  ENTER  EOF  ERASE  EXP
+FILE  FILEXISTS  FOR  FRE
+GET  GOPROC  GOSUB  GOTO
+HEX  HEX$
+IF  INP  INPUT  INT
+KILL
+LEFT$  LEN  LET  LIST  LOAD  LOC  LOG
+MATCH  MID$  MOVEBOF  MOVEEOF
+NEW  NEXT  NOT
+OCT  OCT$  ON  OPEN  OR  OUT
+PEEK  POKE  POS  PRINT  PROCEDURE  PUT
+READ  RECEIVE  RECORD  REM  RESET  RESTORE  RETURN  RIGHT$  RND  RUN
+SAVE  SEARCH  SGN  SIN  SPACE$  SPC  SQR  STEP  STOP  STR$  SYMBOL
+TAB  TAN  THEN  TO  TYPE
+USR
+VAL
+WAIT  WIDTH
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

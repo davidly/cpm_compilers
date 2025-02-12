@@ -1,0 +1,70 @@
+	Comparisons With Other BASIC's
+
+Speed:
+
+TARBELL BASIC will generally run slower than ALTAIR BASIC
+by a factor up to three, in most tests involving numbers.
+This is because TARBELL BASIC uses 10 digits of BCD instead
+of 8 digits of binary.  This precludes penny roundoff errors.
+
+One place where TARBELL BASIC is faster, however, is in
+variable and label (line number/descriptor) references.
+This advantage in speed will not be significant on small
+benchmark programs, but only on the larger programs, with
+many variables and labels.  The reason for the higher
+speed in this area is that TARBELL BASIC substitutes
+pointers for variable and label references, so instead of
+having to make a lengthy search through a table or program,
+the item is found immediately by a vectoring method.
+
+If you purchase the source, you may notice that several
+of the subroutines are equivalent to Z-80 instructions.
+One good way for Z-80 users to drastically improve the
+speed of their TARBELL BASIC, is by patching in Z-80
+instructions for these subroutines.
+
+Readability:
+
+This is where TARBELL BASIC really shines.  Whereas most other
+BASIC's use line numbers, and are restricted to a few sig-
+nificant characters in the variable names, TARBELL BASIC
+allows line descriptors and long variable names.
+
+Formatted PRINT output (PRINT USING):
+
+Although PRINT USING is not currently part of TARBELL BASIC,
+it is easier to implement in a subroutine than in most other
+BASIC's.  This is because arguments are allowed for the 
+GOSUB and GOPROC statements, and local variables are allowed
+by using the PROCEDURE statement.
+
+Interpreter vs Compiler:
+
+The current implementation of TARBELL BASIC is as an
+interpreter.  This allows the programmer to debug a
+program online, instead of continually going back and
+forth between edit, compile, and run operations.  It
+does, however, take up more memory than a compiler.
+For example, whereas TARBELL BASIC requires about
+24k of memory, CBASIC-2 requires only 18k.  There is
+one ray of hope, though.  Since we make the source
+available at low cost, it is quite feasible to remove
+all those portions of the interpreter that a user
+doesn't need for a particular situation.
+
+Cost:
+
+Let's face it, we're way below the competition!
+
+
+				L
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,68 @@
+		ERROR CODE EXPLANATIONS
+
+The system of programming error detection and reporting
+in TARBELL BASIC is a compromise between the need for
+clear error reporting, and the memory required for error
+detection and messages.  Some systems use error code numbers,
+or 1 or 2 code letters.  These usually have to be looked up
+in the reference manual, so they waste time.  Some use long
+english explanations, which are nice, but take up a lot of
+memory space.  TARBELL BASIC uses abbreviated messages, which
+are hopefully easy to remember after they're looked up the first
+time.
+
+No.  Mnemonic		Description
+
+1    OVRFLW		Arithmetic Overflow (too large a number).
+2    UNDRFLW		Arithmetic Underflow (too small a number).
+3    /0			A division by zero was attempted.
+4    EX>>		Exponent was too large (EXP function).
+5    BIN CON >>		Number too large to convert to binary.
+6    -LOG		Attempted to take log of a minus number.
+7    LINE DES		Illegal line descriptor.
+8    COMM		Illegal command.
+9    VRBL AS STATE	Variable name used as statement name.
+10   SYNTAX		The statement was not properly formed.
+11   VRBL NM		Illegal variable name.
+12   >>)		Too many right parenthesis.
+13   >>(		Too many left parenthesis.
+14   2 OPERS		Two operators in a row.
+15   2 OPANDS		Two operands in a row.
+16   ILGL FUNC		Illegal user defined function.
+17   STATE AS VRBL	Statement name used as variable.
+18   NEW SYMB		New symbol when in command mode.
+19   NO TO		No "TO" in "FOR" statement.
+22   CAN'T CONT		Can't continue 'cause program was modified.
+23   READ		An error was detected on a tape or disk read.
+24   STRING		Illegal string usage.
+25   COMMA		Illegal comma or semicolon.
+26   OPRND		Illegal Operand.
+27   <*mem*>		Out of memory.
+28   UNDIM		Undimensioned array referenced.
+29   SUBSCPT>>		An array subscript was too large.
+30   SUBSCPT OVFLW	Subscript overflow.
+31   ASSIGN		An assignment to a non-variable (4=4).
+32   STR AS NUM		A string is used where a number is needed.
+33   NUM AS STR		A number is used where a string is needed.
+34   CNTRL STCK		The control stack is where the following
+			items are placed:  return location for
+			subroutines & procedures, arguments for
+			subroutines & procedures, index variables
+			for FOR-NEXT loops.
+35   ON GOTO		ON...GOTO, GOSUB index out of limits.
+36   <<DATA		Out of Data.
+37   RCV DATA		Receive data error.
+39   -SQR		The square root of a minus number is illegal.
+40   LOGICAL		A true (-1) or false (0) was expected.
+
+The message BASIC IS CRASHED indicates that the BASIC interpreter
+has be written into, thus making the interpreter unreliable.
+
+			    A
+
+
+
+
+
+
+

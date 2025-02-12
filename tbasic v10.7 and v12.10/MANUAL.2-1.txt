@@ -1,0 +1,75 @@
+Commands:  (can only be used from command mode)
+
+* BYE
+Causes a jump to location 0000 in memory.  Example:  BYE
+
+CHANGE <line descriptor> [<line descriptor>]
+Performs the DELETE command, then the ENTER command at the
+first line descriptor.  Example:   CHANGE LOOP LOOP+5
+
+CLEAR [<expression>]
+Sets all program variables to zero.  Sets all strings to nulls.
+Releases all string and array space.  In ALTAIR BASIC,
+"CLEAR <<expression>>" defines the amount of space to allot
+for strings.  TARBELL BASIC will automatically allot all space not
+being used for actual programs to strings and arrays.  To maintain
+compatability with ALTAIR BASIC, "CLEAR <expression>" will be
+processed identically to the CLEAR command.
+Examples:  CLEAR		CLEAR 2000  (does the same thing)
+
+CONT
+Continues program execution after a control/C has been input or
+after a "STOP" or "END" statement has been executed.  Execution
+resumes at the statement following the break, unless an input
+from the terminal was interrupted.  In the latter case, execution
+resumes with the interrupted statement.  Execution cannot be
+continued if the program was modified by direct
+mode entries.  Example:    CONT
+
+* DELETE <line descriptor> [<line descriptor>]
+Eliminates the line(s) indicated from the stored program.  If only
+the first <line descriptor> is present, only that one line is deleted.
+If both <line descriptor>'s are present, both those lines, and
+all lines in between are deleted.  If there is no such line
+descriptor, an error message is issued.
+Examples:	DELETE START+4	    DELETE LOOP LOOP+5
+
+* ENTER [<line descriptor>]  or  :[<line descriptor>]
+Causes TARBELL BASIC to go to program entry mode.  Any input after
+this statement is interpreted as program statements.  A carriage
+return delimits each line.  The "ENTER" statement is provided to
+allow statements without names to be entered.  If <line descriptor>
+is ommitted, entry begins after the last statement currently in
+memory.  If <line descriptor> is present, entry begins immediately before
+the line indicated.  Entry mode is terminated by two carriage returns 
+in a row.  Multiple statements per line are allowed if separated by a colon.
+The colon shown in the command format above, however, is a shorthand
+form of ENTER, the same way that "?" is a shorthand form of PRINT.
+The first line in a program should always have a label.
+If any of the following commands are invoked from entry mode, they
+will be performed, then command mode will be reentered:
+  LIST,DELETE,EDIT,RUN.
+Examples:	ENTER	    ENTER ADDC+3     ENTER LOOP     : START+1
+
+LIST [<line descriptor>] [<line descriptor>]
+Lists the program starting from the statement corresponding with
+the first <line descriptor>, until the end is reached, if there is no
+second <line descriptor>, or until a control/C is entered.
+If neither <line descriptor> is present, the whole program is listed.
+Examples:	LIST     LIST START+10     LIST LOOP END1
+
+				2-1
+
+
+
+
+
+
+
+
+
+
+
+
+
+

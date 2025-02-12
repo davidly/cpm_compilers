@@ -1,0 +1,70 @@
+		DEFINITIONS OF TERMS USED IN THIS MANUAL
+
+<numeral>
+Any of the following:  0  1  2  3  4  5  6  7  8  9
+
+<upper case letter>
+Any of the following:  ABCDEFGHIJKLMNOPQRSTUVWXYZ
+
+<lower case letter>
+Any of the following:  abcdefghijklmnopqrstuvwxyz
+
+<letter>
+Any <upper case letter> or <lower case letter>.
+
+<alphanumeric character>
+A <numeral>, a <letter>, or a dollar sign ($).
+
+<special character>
+Any of the following:  !"#$%&'()=-^\{}[]+;*:<>,.?/
+or a space.
+
+<control character>
+Control characters are bytes that do not normally print
+a visible character on a terminal, but instead, may perform
+some particular function in the terminal or terminal driver.
+Examples of common control characters are listed below:
+00  null	03  quit	07  bell	08  backspace
+09  horz tab	0A  line feed	0B  vert tab	0C  form feed
+0D  carriage-return		13  stop temporarily
+15  cancel line			1A  end-of-file
+1B  escape			7F  rub out
+
+<character>
+A <alphanumeric character>, <special character>, or
+a <control character>.
+
+<numeric constant>
+A number, represented by a series of numerals, preceeded by
+an optional plus (+) or minus (-) sign, including an optional decimal
+point (.), and ending with an optional "E", followed by a +, =, or
+a space, followed by a power of ten.  Three characters must follow
+the "E".  A space may be used instead of a plus sign (+).
+The range of a floating point number (one with a decimal point) is
+from 9.9999999E+99 to 9.9999999E-99, plus and minus.  The range of
+a integer number is from 0 to 9999999999, plus and minus.  Expressions
+evaluate to integers if and only if every element of the expression
+evaluates to an integer.
+
+
+
+
+
+
+
+
+
+
+
+
+				B-1
+
+
+
+
+
+
+
+
+
+

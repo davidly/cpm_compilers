@@ -1,0 +1,70 @@
+FILE(<numeric expression from 0 to 63>)
+This function is used to specify the number of the file
+being used.  It is not used when loading or saving programs,
+only data.  The initial file number is zero.  Since the file
+number stays the same until the FILE function is used, it is
+not necessary to use this function until it is required to
+access a data file different than the last one accessed.
+The file number can be any arbitrary number from 0 to 63.
+It should be used in the OPEN statement for the file, and
+any time a different file number is required.
+Examples:  OPEN FILE(34),DISK(1),3,"DATAFILE"
+	   PUT FILE(34),TESTDATA$
+	   GET FILE(34),TESTDATA$
+	   CLOSE FILE(34),3
+
+* TYPE(<numeric expression of 0 or 1>)
+The value of the expression is placed in location TYPE,
+described in appendix C.  This function is normally used to
+specify the type of file which is being OPENed.  The
+following conventions will be used by the I/O sections
+provided by Tarbell Electronics:  0 for sequential,
+1 for random.  TYPE is initialized to 0 by the I/O section.
+The TYPE function only has an effect during an OPEN
+statement.  The TYPE of a program transfer (LOAD, SAVE) is
+always zero (sequential).
+Examples:	SEQ=0:RAN=1
+	OPEN DISK(1),FILE(7),TYPE(RAN),RECORD(80),2,"RANFILE"
+	GET FILE(7),RECORD(N),X,Y$,Z
+
+RECORD(<numeric expression>)
+The value of the expression is placed in location RECORD,
+described in appendix C.  This function is normally used to
+specify the record number of a random file, as part of a
+GET or PUT operation, or to specify the number of bytes
+per record, as part of an OPEN operation.  When the RECORD
+function is used as part of a GET or PUT statement, the
+transfer begins at a location in the file determined by
+decrementing the record number by one, then multiplying it
+by the record size (set in OPEN statement).  RECORD numbers
+start at 1, so RECORD(1) would always start with the first
+byte in the file.  If RECORD(0) is used, or if the RECORD
+function is not used with a random file, the next character
+transferred will be immediately after the last character
+transferred, similar to a sequential operation.  See the
+example above.
+
+A random file can be thought of as a continuous stream of
+characters, with a dividing line at each n characters,
+where n is the number of bytes per record, specified by
+the RECORD function in an OPEN statement.  The records
+are the groups of characters between the lines.  Record
+number 1 is the first group, record 2 the second group,
+and so on.  The random feature allows the programmer to
+specify any record number for immediate access, without
+having to search through the whole file.
+
+
+
+
+				5-2
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,72 @@
+* GOPROC <line descriptor>[,<variable list>]
+Calls the statement <line descriptor>, passing the variables on the
+list.  Similar to GOSUB, except it allows the subroutine to have
+local variables, which are not affected by assignments outside
+the procedure.  Also allows passing variables to the subroutine.
+The subroutine need not contain a PROCEDURE statement, which is
+only used to declare local (not global) variables.
+Examples:    GOPROC SEARCH,STR1$,STR2$,POSITION   GOPROC SORT
+
+GOSUB <line descriptor>[,<variable list>]
+A subroutine call is made to the line indicated.  That is,
+execution continues at <line descriptor> until a RETURN statement
+is encountered, at which time execution is continued at the
+statement following the GOSUB statement.  Variables on the
+optional <variable list> are passed to the subroutine on the
+control stack, and may be picked up by a RECEIVE statement,
+in the same way that they are in a GOPROC operation.
+Examples:  GOSUB CALC,X,A$    GOSUB 10570    GOSUB GET+1
+
+GOTO <line descriptor>
+An unconditional branch is made to the line indicated.  That is,
+execution continues at <line descriptor> instead of the next
+statement.  Examples:  GOTO 100    GOTO LOOP+2    GOTO LAST-5
+
+* IF <logical expression> GOTO <line descriptor>
+If the value of <logical expression> = -1, then execution
+continues at the line indicated.  Otherwise, execution continues
+with the line following the IF statement.  The logical connectives
+allowed in <logical expression> are:  AND, OR, NOT, >, <, = .
+See Appendix B for explanation of logical expressions.
+Examples:  IF X<128 AND X>31 GOTO EXTRA    IF STR$<>"NO" GOTO 100
+
+* IF <logical expression> THEN <statement> [ELSE <statement>]
+If the value of <logical expression> = -1 (true), then the first
+<statement> is executed.  Otherwise, it is not.  If the ELSE option is
+used, the second statement is executed if the value of <logical
+expression> is false.  See Appendix B for def. of logical expression.
+Examples:  IF ANS$="YES" THEN GOSUB INSTR        IF 3*Y=4 THEN PRINT "OK"
+	   IF ARRAY(N)=0 THEN GOTO LOOP ELSE STOP
+
+INPUT ["<string>"];<variable list>
+Assigns entries from the INPUT (logical unit #0) device to the
+variables on the list.  Prompts may be included by enclosing a
+string in quotes, separated from the variables by semicolons.
+With no prompt, a "?" is printed.  A carriage return must be
+used to terminate string input.  If a carriage return alone is
+entered, the variable is set to a null for strings or to a zero
+for numbers.  If a number is entered in "e" format, be sure to
+put a sign or a space after the E, then two digits.
+Examples:  INPUT A,B$    INPUT "FILENAME";NAM$
+
+KILL <string expression>
+Deletes symbol of name <string expression>.  This is used when
+a variable is not required for the rest of the program, and it
+is desired to conserve memory space.
+Examples:  KILL "X$"    KILL "QTY"   KILL VARNAM$
+
+[LET] <variable name>=<expression>
+Assigns the value of <expression> to <variable name>.  The word
+"LET" is optional.  Examples:  LET X$=Y$+Z$    LET INDEX=5  X=2+2
+
+				3-3
+
+
+
+
+
+
+
+
+
+

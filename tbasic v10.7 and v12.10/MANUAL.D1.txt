@@ -1,0 +1,61 @@
+		INTERNAL FORMATS
+
+Symbol Table Format:  ASCII, last character has bit 7 set=1.
+
+Symbol Directory Format:
+Bytes 0&1 are pointer to location (0 if inactive dummy).
+Byte 2 bits have meanings as follows:
+  0-statement name	1-variable	2-function
+  3-channel name	4-array		5-unused
+  6-has been stored to	7-trace on
+
+Numeric Array Format:
+bytes n,n+1 = back pointer
+bytes 2+n to n+x+1 = number of elements per dimension
+where n=(table pointer), and x=number of dimensions
+bytes 2+n+x to 1+n+x+(6*E) = number storage
+where E=total number of elements
+To locate an element within an array, location=base+offset,
+where base=2+n+x, and offset computed by:
+	N=1
+	OFFSET=S(N)
+LOOP	N=N+1
+	OFFSET=(OFFSET)(D(N))+S(N)
+	IF N<>LAST DIMENSION GOTO LOOP
+	OFFSET=OFFSET*6
+	END
+Where S is subscript, D cements in a dimension, () mean contents of.
+Example:  Array dimensioned 3,4,5; Get element 2,1,4.
+	N	Offset
+	1	2
+	2	2*4+1=9
+	3	9*5+4=49
+	3	49*6=294
+
+String Locator:
+  bytes n,n+1=back pointer.
+  bytes n+2 to n+1+m=number of elements per dimension.
+  bytes m+n+2 to n+1+(2E)+m=string pointers.
+  Where m=number of dimensions, and E=number of elements.
+  2 Bytes per pointer, same organization as elements of
+  numeric arrays.  If (pointer)=0, string is (null).
+  Otherwise, points to first address of (string).
+
+String Format:
+  bytes n,n+1=back pointer.
+  n+2 to n+1+m=ASCII data.
+  Where m=number of characters.  Last character as bit 7=1.
+  All other characters have bit 7=0.
+
+
+
+
+			    D-1
+
+
+
+
+
+
+
+

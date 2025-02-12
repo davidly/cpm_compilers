@@ -1,0 +1,71 @@
+Special Functions:
+
+The purpose of the special functions is to set values into
+memory locations, so that these values can be used by external
+subroutines.  Invocation of any of these functions does not
+cause control to leave BASIC, as it does with the USR and CALL
+functions.  Thus, the functions may be used without having any
+routine that actually uses their results.  One thing peculiar
+about these functions is that they have no value.  That is,
+no value is returned when they are used.  They may be used
+nearly anywhere, except that they must be separated from all
+other elements of an expression by commas, and if they are
+used in an assignment statement (LET or FOR), they must be
+the last elements of the expression.  Normally, they are used
+in disk input/output statements, such as LOAD, SAVE, OPEN,
+CLOSE, GET, PUT, etc. to pass useful parameters.  Another
+thing common to all these functions is that once the function
+is used, the associated parameter(s) remain that way until it
+is used again.  That way, the functions only need to be used
+when it a change is required from the current values.  The
+parameters are all initialized to zero by the I/O section
+when BASIC is first entered.
+
+
+DISK(<numeric expression between 0 and 3>)
+This function is normally used to specify the number of the
+disk drive which you wish to select.  If the function is not
+used, the last drive selected will be used.  The value
+of <numeric expression> is placed in the location DISK.  See
+appendix C for the address of the pointer.  The I/O section
+normally initializes the DISK number to the currently logged drive.
+Examples:  OPEN DISK(1),FILE(8),3,"DATATEST"
+	   LOAD DISK(0),"STARTREK"
+
+DO(<expression>,<expression>)
+Each expression can be either a numeric expression or a
+string expression.  If numeric, the 2-byte number is passed.
+If string, the string's address is passed.  The first
+expression is passed to location DO.  The second expression
+is passed into location DOPARA.  The addresses of these
+locations are in the address table at the beginning of BASIC.
+See appendix C.  The main idea of the DO function is to use
+the first expression to decide on the type of function, and
+to use the second expression to pass the argument.  The present
+I/O section does not support any particular DO operation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				5-1
+
+
+
+
+
+
+
+
+
+
+

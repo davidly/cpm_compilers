@@ -1,0 +1,70 @@
+OCT(<string expression>)
+Returns the decimal equivalent of the string expression, which
+should be a valid octal number.
+Examples:    OCT("377")    OCT(OCTADR$)
+
+* OCT$(<numeric expression>)
+Returns a string which represents the octal value of the numeric
+expression.  Examples:  OCT$(10)    OCT$(X+Y)    OCT$(DECIMAL)
+
+PEEK(<numeric expression>)
+Returns the value of the byte in memory address <numeric expression>.
+Examples:  PEEK(0)    PEEK(1024+OFFSET)    PEEK(DECIMALADDRESS)
+
+POS(<expression>)
+Returns the current position of the PRINT device.  If used within a
+PRINT statement, zero will always be returned, since the function is
+evaluated before the line is printed.  This function is normally used
+after a PRINT statement ending with a semicolon.
+Examples:  POS(0)    POS("")    POS(anything)
+
+RIGHT$(<string expression>,<numeric expression>)
+Returns the rightmost <numeric expression> characters of
+<string expression>.    Examples:  RIGHT$(SENT$,1)    RIGHT$(S$,NUM)
+
+RND(<numeric expression>)
+If <numeric expression> is less than zero, starts a new sequence of
+random numbers.  If it's equal to zero, returns the same number as
+the last RND returned.  If it's greater than zero, returns the next
+random number in the sequence. 
+Examples:    RND(-1)    RND(0)    RND(1)    RND(X)
+
+SEARCH(<string expression>)
+Searches the current disk file from the current position, for
+the first (or next) occurance of <string expression>.  Returns
+the number of carriage-returns + 1 that it passed while searching.
+Examples:   PRINT SEARCH(A$+B$)   MOVEBOF:X$=SEARCH(INDEX$)
+
+SGN(<numeric expression>)
+If <numeric expression> is greater than zero, returns 1.
+If it's equal to zero, returns 0; if less than zero, returns -1.
+Examples:  SGN(-2.57)    SGN(0)    SGN(353.2)    SGN(X^3+Z)
+
+SIN(<numeric expression>)
+Returns the sine of angle <numeric expression>, which is in radians.
+Examples:  SIN(DEG*PI/180)    SIN(.256)    SIN(X/Y)
+
+SPACE$(<numeric expression>)
+Returns a string of <numeric expression> spaces.
+Examples:  SPACES$(BUFFERSIZE)    SPACES$(4+LEN(LINE$))
+
+SPC(<numeric expression>)
+Prints <numeric expression> spaces on the PRINT device.
+Examples:  SPC(20)    SPC(N/3)    SPC(INT(X*2))
+
+
+
+
+
+
+			   4-3
+
+
+
+
+
+
+
+
+
+

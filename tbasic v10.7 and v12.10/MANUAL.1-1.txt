@@ -1,0 +1,67 @@
+		TARBELL CASSETTE BASIC
+
+Written by Tom Dilatush of REAL TIME MICROSYSTEMS, 2240 Main St.
+No. 18, Chula Vista, CA 92011 for Don Tarbell of TARBELL ELECTRONICS,
+950 Dovlen Place, Suite B, Carson, CA 90746.
+
+This manual describes TARBELL BASIC in such a way as to be
+understood by those having previous experience with other BASIC's.
+It is not intended as a tutorial, as there are several good 
+BASIC texts (see Appendix K).  Where reasonable it is
+upward compatible from ALTAIR* 8800 BASIC release 4.0 8k version.
+Items which differ significantly from that version are marked
+with an asterisk.  Items enclosed in angles (<item>) are defined
+in Appendix B.  Items enclosed in brackets ([item]) are optional.
+
+Keyboard Control Characters:
+
+7F  rubout	deletes the last character entered (except in EDIT mode)
+15  control-U	deletes the current line being entered
+03  control-C	stops the program from running or a listing operation
+09  control-I	tabs 8 spaces to the right
+13  control-S	stops the program or printing temporarily until another
+		key is pushed
+2E  period	when pressed in entry mode at beginning of line,
+		creates a label with a number 1 higher than the
+		preceding label.
+
+Modes of Operation:
+
+    Direct Mode:
+	Most TARBELL BASIC statements may be entered and executed while
+	in command level.  This statement may be only one line, but
+	may be any length up to the limits of memory.  Statements which
+	would modify allocated memory, such as DIM & LET, are not allowed
+	in direct mode entries.  Statement names are not allowed.
+	Multiple statements per line may be seperated by colons (:).
+
+    Entry Mode:
+	This mode is entered by typing "ENTER" or ":", and is
+	used for creating lines of program text from the keyboard.
+	it is also used for inserting lines.  See ENTER command.
+
+    Edit Mode:
+	This mode is entered by typing "EDIT" and a line descriptor.
+	It is used for making changes to existing lines without
+	having to retype the whole line.  See EDIT command.
+
+    Run Mode:
+	This is the normal, programmed mode.  The stored TARBELL
+	BASIC program begins executing when a "RUN" command is entered.
+
+To acquire a better feel for the modes of operation, and for using
+TARBELL BASIC in general, see the sample run in Appendix F.
+
+
+
+* ALTAIR is a trademark/tradename of Pertec Computer Corp.
+
+
+				1-1
+
+
+
+
+
+
+

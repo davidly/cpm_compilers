@@ -1,0 +1,70 @@
+STOP
+Terminates execution of the BASIC program, and returns back to
+the command mode with the message:  STOP IN <line descriptor> .
+Example:	STOP
+
+WAIT <num. expr. #1>,<num. expr. #2>[,<num. expr. #3>]
+An input from port <expr1> is performed.  The byte received
+is XOR'd with <expr3> if included, then AND'ed with <expr2>.
+The above operation is repeated until a non-zero result is
+obtained, upon which the next statement is executed.
+Example:  WAIT 0,1    WAIT PORT,MASK,INVERT
+
+WIDTH <physical device number>,<characters per line>
+Sets the width of lines printed on unit <phsical device number>
+to <characters per line>.
+Examples:   WIDTH 1,64    WIDTH 5,72
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				3-6
+
+
+
+
+
+
+
+
+
+

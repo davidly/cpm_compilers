@@ -1,0 +1,71 @@
+INPUT/OUTPUT (continued)
+
+
+Mass Storage (cassette or disk) flag useage:
+
+When a file is opened, the zero flag in the 8080
+CPU is set upon entering the mass storage output routine.
+When a file is closed, the carry flag in the 8080
+CPU is set upon entering the mass storage output routine.
+If the carry flag is set upon returning from a mass storage
+input routine, it is an indication to the BASIC interpreter
+than an error has occured on a read operation.
+
+
+Console (CRT, teletype, etc) flag usage:
+
+When an input routine is entered with the zero flag set,
+it is a check for control-C or control-S, rather than an
+actual keyboard read operation.  If a control-C was pressed
+on the keyboard, a return is made with the zero flag set.
+
+
+The Terminal (TRMNL) Table:
+
+This is a table located in the scratch area above BASIC.
+There are ten entries, with three bytes per entry, each
+entry corresponding to one of the ten I/O channels defined
+by the CHANL table.  The first byte of each entry is the
+terminal width, that is, the number of characters after
+which there is a carriage-return issued.  The second byte
+is the current terminal position.  The third byte is used
+to determine the rubout.  The low 7 bits of the byte is
+the code which is sent to the terminal when a 7F(hex) is
+received from the keyboard.  If the upper bit is 0, the
+internal pointer is not decremented.  If it is 1, it is.
+
+
+The KIND byte:
+
+This is a byte located in the scratch area above BASIC.
+It is set every time any mass storage (cassette or disk)
+operation is invoked.  It's purpose is to make available
+to the I/O section information about the kind of transfer
+being made.  Only the low 5 bits are currently used.
+
+Content	Statement		Bit	If 0	If 1
+   0	LOAD			 0	input	output
+   1	SAVE			 1	ASCII	binary
+   2	BLOAD			 2	program	data
+   3	BSAVE			 3  not append	append
+   4	GET			 4  not opn/cls  open/close
+   5	PUT
+   6	BGET
+   7	BPUT
+   8	APPEND
+   20	OPEN
+   21	CLOSE
+
+
+				E-2
+
+
+
+
+
+
+
+
+
+
+

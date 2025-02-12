@@ -1,0 +1,90 @@
+		INTRINSIC (BUILT-IN) FUNCTIONS
+
+A FUNCTION, built-in or otherwise, can be used anywhere that
+an expression can be used.  It can be a part of an expression,
+and it can have an expression as it's argument.  It returns a
+single value, which is defined by the descriptions below.
+Some functions return string values, and some return numeric ones.
+
+ABS(<numeric expression>)
+Returns the absolute value of <numeric expression>.  In other words,
+the expression is evaluated;  if the result is minus, the minus
+sign is removed to make it positive.
+Examples:  ABS(X-5*SIN(Y))    ABS(B^2-4*A*C)
+
+ASC(<string expression>)
+Returns the ASCII code of the first character of <string expression>.
+(i.e. the number which corresponds with the ASCII character)
+Examples:  ASC("A")    ASC(ANS$)    ASC(A$(N))
+
+ATN(<numeric expression>)
+Returns the arctangent of <numeric expression>, which is in radians.
+Examples:  ATN(RADIANS)    ATN(DEGREES*PI/180)    ATN(.053)
+
+* CALL(<numeric expression>,<numeric expression>)
+Calls a machine language subroutine at the address indicated by
+the first <numeric expression>, with the value of the second
+<numeric expression> in registers D&E.  The CALL function
+evaluates to the number which is returned in registers D&E.
+The returned value in D&E is in the range -32768 to +32767.
+Example:   PRINT CALL(PLOT,X)
+
+CHR$(<numeric expression>)
+Returns a single character string whose ASCII code is <numeric expression>.
+Examples:  CHR$(7)    CHR$(48+NUM)    CHR$(CONTROL)
+
+COS(<numeric expression>)
+Returns the cosine of the angle <numeric expression>, which
+is in radians.  Example:  COS(DEG*3.14159/180)
+
+EOF(<numeric expression>)
+Returns false (0) if an end-of-file has not been encountered,
+or true (-1) if an end-of-file has been encountered, during
+the last read operation from a file through the logical unit
+specified by <numeric expression>.
+Examples:    IF EOF(2) THEN GOTO QUIT    LET CASFLG=EOF(4)
+
+EXP(<numeric expression>)
+Returns the constant e (2.718282) to the <numeric expression> power.
+Examples:  EXP(1)    EXP(0)    EXP(X+Y*2)
+
+FILEXISTS(<string expression>)
+Returns with 0 (false) if the file named by the string expression
+does not exist.  Returns with -1 (true) if the file does exist.
+Example:   IF FILEXISTS("STARTREK") THEN GOTO FOUND ELSE GOTO NOTFOUND
+
+FRE(<expression>)
+Returns the amount of free (unused) space in memory.  Because
+the null string ("") takes less space in memory, this form will
+return a slightly larger number than a numeric argument.
+Examples:  FRE("")    FRE(0)    FRE(1)
+
+* HEX(<hexadecimal string>)
+Returns the decimal equivalent of the <hexadecimal string>.
+Examples:   LET ADDR=HEX(HADDR$)    FOR N=0 TO HEX("A")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			   4-1
+
+
+
+
+
+
+
+
+
+

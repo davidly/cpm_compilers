@@ -1,0 +1,3 @@
+load "e.bas"
+run
+

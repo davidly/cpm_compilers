@@ -1,0 +1,70 @@
+Statements:    (can be used from either command or RUN mode)
+
+* APPEND [DISK(<0-3>),]<string expression>[,<string expression>]
+Appends a section of program from the ASCII LOAD device (logical
+unit #2) to the end of the program presently in memory.  If the
+optional line descriptor string is present, execution will begin there.
+If optional DISK function is not used, last disk accessed is used.
+Examples:  APPEND DISK(3),"FOURIER"    APPEND SUBNAM$
+
+* ASSIGN <logical device number>,<physical device number>
+Assigns a physical device to a logical device.  Internally,
+this command sets a bit in the MODES table.  See Appendix E
+for a list of the logical and physical devices.
+Examples:  ASSIGN 3,1   ASSIGN PR,CRT   ASSIGN LOGICAL,PHYSICAL
+
+* BGET [FILE(<0-63>),][RECORD(<numeric expression>),]<variable list>
+Reads from Binary Input logical device into named variables.
+If optional file number is not used, the file accessed will
+be the one used in the last executed FILE function.  An OPEN
+statement with a matching file number must have been used already.
+If the FILE function has not been used, file 0 is assumed.
+Examples:   BGET RECORD(N),A$   BGET FILE(63),QTY,COST   BGET X,Y(N)
+
+* BLOAD [DISK(<0-3>),]<string expression>[,<string expression>]
+Reads a program named <string expression> into memory from the
+binary input logical device.  All characters of string are used.
+The program must have been saved with BSAVE statement.
+If optional DISK function not used, last disk accessed is used.
+If optional line descriptor string used, starts execution at
+that location, and can be used to chain programs in this way.
+Examples:   BLOAD "PAYROLL"   BLOAD NEXTPROG$,"BEGIN"
+
+* BPUT [FILE(<0-63>),][RECORD(<num. expr.>),]<variable list>
+Writes the named variables onto the binary output logical device.
+The same rules about the FILE function apply as with BGET.
+Examples:   BPUT FILE(N),RECORD(X),QTY   BPUT A,B,C(N)   BPUT X
+
+* BSAVE [DISK(<0-3>),]<string expression>
+Writes a program named <string expression> onto the binary output
+logical device.  All characters of the string are used.  Programs
+saved using this command will save and load considerably faster
+than those saved with the SAVE command.
+Examples:   BSAVE DISK(0),"PAYROLL"   BSAVE PROGNAME$
+
+CHANNEL
+Prints a table of the assignments of physical to logical
+devices.  See Appendix E for the default assignments.
+
+* CHECK
+Makes the following mass storage input a checking operation,
+instead of an actual read into memory.  It can be used before
+a LOAD, BLOAD, GET, or BGET to check the data integrity.  An
+error message will be issued if an error is detected.
+Examples:  CHECK:LOAD "INV"     CHECK:BGET FILE(2),DATA$
+
+
+
+
+
+				3-1
+
+
+
+
+
+
+
+
+
+

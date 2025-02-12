@@ -1,0 +1,65 @@
+* PROCEDURE <variable list>
+Used to declare local variables.  The variables on the list can
+be used without disturbing their original values in the main
+program.  The original value of each variable will be restored by
+the next RETURN statement.  (See GOPROC, RECEIVE, RETURN)
+Examples:  PROCEDURE ANS$,X     PROCEDURE A,B,RESULT
+
+* PUT [FILE(<0-63>),][RECORD(<num. expr.>),]<variable list>
+Write from variables on <variable list> to the ASCII SAVE device.
+The FILE used should have been previously OPEN'd.  If items on
+the variable list are seperated by commas, a cr-lf pair is put
+between each item on the disk file.  If semicolons are used,
+no seperator is put between records.  The last item on the list
+will end with a cr-lf unless followed by a semicolon.
+Examples:   PUT FILE(7),PART$,COST   PUT X,Y   PUT RECORD(N),T$;
+
+READ <variable list>
+Assigns the value of each expression of a "DATA" statement to
+a variable on the variable list, starting with the first element
+of the first "DATA" statement.  Expressions of the "DATA"
+statement(s) are evaluated when the first element of the "DATA"
+statement is read.  (See DATA and RESTORE statements.)
+Examples:     READ X,Y     READ X,Y,Z$     READ TABLE(N)
+
+* RECEIVE <variable list>
+Transfers values of variables from "GOPROC" or "RETURN" statement
+to <variable list>.  The variables on the list are filled in
+the same order that the variables appear on the GOPROC or RETURN
+statement.  Examples:  RECEIVE X    RECEIVE RES$,ANSWER
+
+REM[anything]
+Allows insertion of remarks in the program text.  The remarks
+must follow the REM statement on the same line.
+Examples:  REM   THIS PROGRAM CALCULATES TRIG TABLES
+
+RESET
+Perform a disk operating system reset.  This may be used in
+CP/M, for example, to reread the directory after changing a
+disk, and before writing onto a new one.
+Example:   RESET
+
+RESTORE [<line identifier>]
+Sets the READ DATA pointer to the first data statement, or,
+optionally, to the statement <line identifier>.  This allows
+reading seperate tables or seperate portions of a table without
+having to read through all DATA statements.
+Examples:  RESTORE      RESTORE TABLE2       RESTORE START+5
+
+RETURN [<variable list>]
+Causes execution to continue at the statement following the last
+GOSUB or GOPROC statement executed.  If the optional variable list is
+included, passes the values of the variables on the list to
+the variables on the list of a "RECEIVE" statement.
+Examples:  RETURN    RETURN N    RETURN X$,ANSWER,RESULT$
+
+* SAVE [DISK(<0-3>),]<string expression>
+Writes the BASIC program from memory onto the ASCII save device.
+Examples:   SAVE DISK(2),"STARTREK"   SAVE PROGNAME$
+
+				3-5
+
+
+
+
+

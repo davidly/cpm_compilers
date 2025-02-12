@@ -1,0 +1,84 @@
+NEW
+Deletes the program in memory, clears all variables, releases all
+string and array space.  Example:   NEW
+
+RUN [<line descriptor>]
+If the line descriptor is included, starts execution of the BASIC
+program at the line specified.  If the line descriptor is omitted,
+execution begins at the first line in memory.  In either case, a
+CLEAR is automatically executed first.
+Examples:   RUN		RUN COMD	RUN SUBROUTINE+1
+
+* SYMBOL
+Types a table of variable names, line descriptors, their types and
+their locations.  Example:	SYMBOL
+
+
+* EDIT <line descriptor>
+Causes the interpreter to enter the edit mode on the line described.  The 
+line will be printed.  Once in edit mode, single letter commands of
+the form nXs are used, where n is the iteration constant (1 if ommitted),
+X is the command (detailed below), and s is the search string (if required).
+Note that if it is desired to use a command without the search string,
+a carriage-return should be entered immediately after the command letter.
+
+Commands:
+
+ U   Prints the line up to the present pointer position.
+nD   Deletes n characters starting with the present pointer position.
+ K   Kills (deletes) a whole line, then enters insert mode. (MUST insert!)
+ N   Inserts the current edit buffer as a new line.
+ W   Deletes (Wipes out) the line being edited.
+nSs  Moves the pointer to the n'th occurance of string s.
+ Is  Performs command S first, then inserts characters at the 
+     pointer position until a carriage return is entered.
+nCs  Changes the nth occurance of string following C to the
+     string inserted from keyboard.
+ Q   Returns to command level.
+ P   Prints the line in the edit line buffer.
+ A   Appends characters to the end of the line until a carriage
+     return is entered.
+nL   Lists n lines starting with the present line, and enters edit
+     mode on the last line listed.
+ T   Type the rest of the line past the pointer, then the line up
+     to the pointer.
+ R   Replace the edited line in source with the current edit buffer,
+     and print out new line.   ***** IMPORTANT NOTE *****
+     Until this command is executed, the source line is not changed.
+nF   Move forward n lines and enter edit mode there.
+nB   Move backward n lines and enter edit mode there.
+ Ms  Move to (line descriptor) and enter edit mode there (search
+     string s is used for line descriptor).
+nX   Move pointer back n characters.
+n<space>   Move pointer forward n characters.
+
+The rubout key functions on insert/change commands as a delete key.
+A rubout during command entry will cause the command to be aborted.
+Commands are not echoed -- this makes it much easier to see what you
+are editing--if in doubt about what you typed, use the P command.
+Don't use the C or I commands at the end of a line if they cause the
+line to be longer.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				2-2
+
+
+
+
+
+
+

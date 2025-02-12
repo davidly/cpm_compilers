@@ -1,0 +1,75 @@
+			OPERATORS
+
+Arithmetic Operators (in order of precedence)
+
+1.  expressions enclosed in parenthesis
+2.  ^		exponentiation
+3.  -		negation
+4.  *  /	multiplication and division
+5.  +  -	addition and subtraction
+6.  relational operators (same for all)
+	=	equal
+	<>	not equal
+	<	less than
+	>	greater than
+	<=	less than or equal
+	>=	greater than or equal
+7.  NOT		inversion of all bits
+8.  AND		logical multiplication of each bit
+9.  OR		logical addition of each bit
+
+
+
+
+
+
+String Operators
+
+1.  +		Concatenates (hooks together) two strings end-to-end.
+
+2.  Comparison Operators
+
+	=	equals
+	>	greater than
+	<	less than
+	<=	less than or equal
+	>=	greater than or equal
+	<>	not equal
+
+    Comparison is made by comparing the ASCII codes of each character
+    of each string, starting with the first character of each string.
+    The comparison continues with each set of corresponding characters
+    until there is a mismatch, at which time the string with the code
+    having the higher ASCII value is declared the greater.  If there
+    is no mismatch, the strings are of equal value.  If one string is
+    shorter than the other, the longer string is considered greater.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				6-1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

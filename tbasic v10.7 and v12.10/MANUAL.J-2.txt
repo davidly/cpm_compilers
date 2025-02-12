@@ -1,0 +1,124 @@
+	Making Changes to Your Input/Output Routines
+
+If you have a CP/M disk operating system, once the changes are
+made to your Basic Input/Output System (BIOS) for your particular
+console I/O set-up, you will be able to run CP/M compatable
+programs without modification.  Unfortunately, no such standard
+has been widely adopted for cassette users.  Each time software
+is to be integrated into a cassette-oriented system, the routines
+which communicate with the console (CRT, teletype, etc), will
+usually have to be modified.  This is because there is no way
+for the software manufacturer to know what port numbers, status
+bits, and initialization is required for your console interface.
+This is also true of any other devices which you're using, such
+as a line printer.  With the console, however, the problem is
+more serious, because there's no way to use most software at all
+without the console device and the associated software.  It would
+be prudent, therefore, for cassette-oriented users to become
+familiar enough with the console I/O routines, and how they work,
+to be able to make the necessary modifications themselves.
+
+There are normally three console routines which require modification:
+1)  the console status check, which is used to check the status of
+    your keyboard without actually reading it.  This routine is
+    regularly called by running programs, to allow interuption
+    of the run by pressing a control character, like Ctl-C.
+2)  the console input routine, which reads a character from the
+    console keyboard.
+3)  the console output routine, which is used to print a character
+    on your CRT or teletype console.
+
+The first thing to do is to locate these routines in the I/O
+section of your new software.  For Tarbell BASIC and CP/M,
+Tarbell Electronics provides well-commented listings of these
+modules along with the software.  If you scan through the
+comments in the listing, you should be able to find the console
+I/O routines easily.  Further, the labels for the routines
+usually make some sense.  For example the three routines in
+Tarbell BASIC are CHKSTS (check status), CONINS (console in),
+and CONOTS (console out), and in CP/M they are CONST, CONIN,
+and CONOT respectively.
+
+Next examine the status routine more closely.  The routine
+will normally look similar to the following:
+
+machine code	label	assembly language   ;comments
+    DB 00	CHKSTS:	IN   CONSP	;READ CONSOLE STATUS.
+    E6 01		ANI  CONIM	;LOOK AT KB READY BIT.
+    3E 00		MVI  A,0	;SET A=0 FOR RETURN.
+    C0			RNZ		;NOT READY WHEN NOT ZERO.
+    2F			CMA		;IF READY, A=FF.
+    C9			RET		;RETURN FROM CHKSTS.
+
+Once you've found the routine, the next thing to do is to
+determine what changes have to be made.  There are several ways
+to do this.  You need to determine what the corresponding
+routine should look like for your console interface.  You may
+be able to find this information in your interface manual,
+from the person that sold you the interface, or from listings
+of software that is already running on your machine.  To
+understand what information is required, it will be necessary
+to understand how the routine above works.
+
+The column under "machine code" is a hexadecimal representation
+of the bits that are in your computer memory when the software
+is loaded.  You may need a binary-to-hexadecimal conversion
+chart to recognize these in your memory.  In the actual listing,
+the memory address (also in hex) will be immediately to the
+left of the machine code.  The first byte above is DB.  This
+is the machine code equivalent of the IN assembly language
+instruction to the right.  This tells the machine to read from
+an I/O port into register A, and will normally not be changed.
+The second byte is 00.  This is the port number from which the
+read will be made, and is considered a part of the input (IN)
+instruction.  This port number may be different for your machine.
+It is the port from which a byte representing the interface
+status is read into register A.  Each bit of the status byte
+generally means something different.  One bit generally tells
+whether a key on the keyboard has been pushed since last reading
+the keyboard.  Another bit indicates whether the console CRT
+or printer part of the interface is ready to receive another
+byte.  Other bits may be unused, or used for special purposes.
+The next instruction (ANI CONIM) is used to isolate or "mask"
+the bit of interest at this point.  In the example shown above,
+the E6 represents the ANI, and will remain the same.  The 01
+represents a binary 00000001, which indicates the keyboard
+status bit, and which may be different on your system.  The
+action of the ANI (AND-IMMEDIATE) instruction is to clear all
+the bits in register A to zero, except the bit(s) in the byte
+above (in this case the right-most or least-significant bit)
+which are 1.  Another thing that the ANI instruction does at
+the same time is to set status bits in the CPU, which tell
+something about the result of the operation.  One of these
+bits is called the Z flag, which is set whenever an operation
+results in all zeroes.  In the example above, if the least-
+significant bit (bit 0) is a 1, the Z flag will be 0 (false).
+If bit 0 is a 0, the Z flag will be 1 (true).  The status bit
+for the keyboard in your controller may be in a different bit
+position than bit 0.  If it were bit 1, for example, the byte
+after the E6 above would be 02 (00000010) instead.
+
+The next instruction, 3E 00 (MVI A,0), just puts a zero into
+register A for the calling routine, and will normally not be
+changed.  It also does not change the Z flag in the CPU, so
+whatever resulted from the ANI instruction still stands.
+
+The RNZ instruction (C0) is a conditional return on non-zero.
+In this example, it will return if the result of the ANI
+instruction was not zero, which means that a key had not been
+pushed on the keyboard.  In some systems, bit 0 may be not zero
+(1) when the keyboard was pushed.  In this case, an RZ (C8)
+(return on zero) instruction should be substitued for the RNZ.
+
+By the way, if you have a front panel, the substituations can be
+made by using the examine button to locate the correct byte,
+and the deposit button to change the byte.  If you have a
+monitor in ROM (read-only-memory), the substitutions can be
+made from the keyboard in hexadecimal.
+
+Still in the above example, if a return operation is not
+performed, the contents of register A will be complemented
+(made FF instead of 00) by the CMA instruction (2F) before
+the RET (C9) return instruction is executed.  These last
+two instructions will normally not need to be modified.
+

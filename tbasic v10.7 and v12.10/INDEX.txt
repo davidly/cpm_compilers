@@ -1,0 +1,222 @@
+INDEX
+
+INDEX
+
+ABS  4-1
+alphanumeric  B-1
+Altair BASIC  1
+AND  6-1, B-2
+angles  1-1
+append
+   from cassette  3-1
+   in edit mode  2-2
+ASC  4-1
+ASSIGN  3-1
+ATN  4-1
+BASIC texts  K
+BGET  3-1
+BLOAD  3-1
+BPUT  3-1
+brackets  1-1
+branch  3-3
+BSAVE  3-1
+bugs  I
+BYE  2-1
+CALL  4-1
+cassette  E-1
+CHANGE  2-1
+change  2-2
+CHANNEL  3-1
+CHECK  3-1
+CHR$  4-1
+CLEAR  2-1
+CLOSE  3-2
+colon  1-1, 2-1
+commands  2-1,2
+comparisons  L
+constant  B-1
+CONT  2-1
+control characters  1-1, B-1
+COS  4-1
+DATA  3-2,5
+DEF  3-2
+definitions  B
+delete characters  2-2
+DELETE lines  2-1
+DO  5-1
+DIM  3-2
+Direct Mode  1-1
+DISK  5-1
+DROP  3-2
+EDIT  2-2
+Edit Mode  1-1, 2-2
+ELSE  3-3
+END  3-2, 2-1
+ENTER  2-1
+Entry Mode  1-1, 2-1
+EOF  4-1
+ERASE  3-2
+error codes  A
+examples
+   program  G
+   run  F
+execution  2-2
+EXP  4-1
+expression
+   definition  B-1
+   list  B-1
+   logical  B-2
+   string  B-1
+false  6-2
+FILE  5-2
+FILEXISTS  4-1
+FOR  3-2,4
+FRE  10
+formats
+   cassette tape  J
+   internal  D
+functions
+   built-in  4-1,2,3,4
+   special  5-1,2
+   user-defined   3-2
+GET  3-2
+GOPROC  3-3
+GOSUB  3-3
+GOTO  3-3
+HEX  4-1
+HEX$  4-2
+IF  3-3
+INP  4-2
+INPUT  3-3
+input  3-1,3,4, 4-2, E
+output  3-1,4,5, E
+insert
+   characters  2-2
+   lines  2-1
+INT  4-2
+internal formats  D
+intrinsic functions  4-1,2,3,4
+KILL  3-3
+KIND  E-2
+LEFT$  4-2
+LEN  4-2
+LET  3-3
+letter  B-1
+limitations  I
+line descriptors  1-2
+LIST  2-1
+LOAD  3-4
+loading BASIC  J
+LOC  4-2
+LOG  4-2
+logical
+   device  3-1,2, E-2
+   operations  3-3, 6-2
+   operators  6-2, B-2
+loop  3-2,4
+machine language
+   input/output  3-4, 4-2, E
+   memory access  3-4, 4-2, 4-3
+   subroutines  4-1,4
+MATCH  4-2
+memory usage  C
+MID$  4-2
+Modes of Operation  1-1
+MOVEBOF  3-4
+MOVEEOF  3-4
+multiple statements  1-1
+NEW  2-2
+NEXT  3-4
+NOT  6-2, B-2
+numeral  B-1
+numeric constant  B-1
+numeric expression  B-1
+OCT  4-3
+OCT$  4-3
+ON  3-4
+operators
+   arithmetic  6-1
+   string  6-1
+   logical  6-2
+OR  6-2, B-2
+OUT  3-4
+peculiarities  I
+PEEK  4-3
+physical device  3-1,2, E-2
+pointer
+   edit  2-2
+   internal  D
+POKE  3-4
+POS  4-3
+power  4-1, 6-1
+PRINT  3-4
+PROCEDURE  3-5
+program examples  G
+publications  K
+PUT  3-5
+question mark  2-1, 3-4
+random
+   files  5-2
+   numbers  4-3
+READ  3-5,1
+RECEIVE  3-5,4
+RECORD  5-2
+REM  3-5
+reserved words  H
+RESET  3-5
+RESTORE  3-5,1
+return from edit mode  2-2
+RETURN  3-5,3
+RIGHT$  4-3
+RND  4-3
+rubout  1-1, 2-2
+RUN  2-2
+Run Mode  1-1
+sample runs  F
+SAVE  3-5
+SEARCH  4-3
+search  2-2,  4-2
+semicolon  3-3,4
+SGN  4-3
+SIN  4-3
+SPACE$  4-3
+SPC  4-3
+special functions  5-1
+SQR  4-4
+statements  3-1,2,3,4,5
+STEP  3-2
+STOP  3-5, 2-1
+STR$  4-4
+string
+   commands  2-2
+   definition  B-1
+   functions  4-1,2,3,4
+   internal format  D
+   operators  6-1
+   statements  3-2,3,4,5
+   subroutine  3-3,5
+SYMBOL  2-2
+tab  1-1
+TAB  4-4
+TAN  4-4
+THEN  3-3
+TO  3-2
+TRMNL  E-2
+true  6-2
+TYPE  5-2
+user defined
+   functions  3-2
+   subroutines  4-1,4
+USR  4-4
+VAL  4-4
+variable
+   assignment  3-1,3,5
+   definition  B-1
+   list  B-2
+   local  3-5
+   location  2-2, 4-2
+   name  B-1
+   representation  D  
+WAIT  3-5
+WIDTH  3-6
+

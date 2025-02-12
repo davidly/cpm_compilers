@@ -1,0 +1,65 @@
+* HEX$(<numeric expression>)
+Returns the hexadecimal string representation of the decimal
+value of <numeric expression> with no leading zeroes.
+Examples:    HEX$(ADR+OFFSET)    HEX$(N)    HEX$(99)
+
+INP(<numeric expression>)
+Performs a read from the machine input port <numeric expression>.
+Returns the value of the machine input port <numeric expression>.
+
+INT(<numeric expression>)
+Returns the largest integer which is less than or equal to
+<numeric expression>.  Examples:  INT(-3.5)  INT(0)  INT(3.14159)
+
+LEFT$(<string expression>,<numeric expression>)
+Returns the leftmost <numeric expression> characters of 
+<string expression>.  Examples:  LEFT$(ANS$,3)    LEFT$(A$+B$,N-M)
+
+LEN(<string expression>)
+Returns the length of <string expression>.
+Examples:  LEN(A$+B$)    LEN(ALPHABET$)    LEN("ABC"+STRING$)
+
+* LOC(<variable name>)
+Returns the decimal address of the location in memory
+of the variable's value.  Useful for passing addresses
+to routines which are accessed via the CALL function.
+Examples:  LOC(ARRAY$(N))   LOC(N)   LOC(A$)
+
+LOG(<numeric expression>)
+Returns the natural logarithm (base e) of <numeric expression>.
+Examples:  LOG(1)    LOG(X^2 +Y/5)    LOG(.5*SIN(X+Y))
+
+* MATCH(<string expression>,<string expression>,numeric expression>)
+Returns the position of the first occurence of the first string
+expression in the second string expression, starting with the
+character position indicated by the numeric expression.  A
+zero will be returned if no match is found.  The following pattern
+matching features are implemented:
+
+	1)  A pound sign(#) will match any digit (0-9).
+	2)  An exclamation mark (!) will match any upper
+	or lower case letter.
+	3)  A question mark (?) will match any character.
+Examples:  MATCH("DEF","ABCDEFGHIJ",1)   (returns 4)
+	   MATCH(PATTERN$,OBJECT$,START)
+
+MID$(<string expression>,<numeric expression>[,<numeric expression>])
+Without the optional second numeric expression, returns rightmost
+characters of <string expression> starting with the first
+<numeric expression>.  With the second numeric expression, returns
+a string whose length is determined by the second numeric expression,
+starting with the character of <string expression> whose position
+is determined by the first numeric expression.
+Examples:  MID$(A$,5)    MID$(STRING$,POSITION,LENGTH)
+
+
+
+
+
+
+			   4-2
+
+
+
+
+

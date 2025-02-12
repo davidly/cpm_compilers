@@ -1,0 +1,77 @@
+TARBELL BASIC  Table of Contents		January 16, 1979
+
+Page	Description
+
+1   Introduction:
+
+1-1	Introduction & Modes of Operation
+1-2	Line Descriptors & Differences
+
+2   Commands:
+
+2-1	BYE, CHANGE, CLEAR, CONT, DELETE, ENTER, LIST
+2-2	NEW, RUN, SYMBOL, EDIT
+
+3   Statements:
+
+3-1	APPEND, ASSIGN, BGET, BLOAD, BPUT, BSAVE, CHANNEL, CHECK
+3-2	CLOSE, DATA, DEF, DIM, DROP, END, ERASE, FOR, GET
+3-3	GOPROC, GOSUB, GOTO, IF, INPUT, KILL, LET
+3-4	LOAD, MOVEBOF, MOVEEOF, NEXT, ON GOSUB, ON GOTO, OPEN, OUT, POKE, PRINT
+3-5	PROCEDURE, PUT, READ, RECEIVE, REM, RESET, RESTORE, RETURN, SAVE
+3-6	STOP, WAIT, WIDTH
+
+4   Intrinsic Functions:
+
+4-1	ABS, ASC, ATN, CALL, CHR$, COS, EOF, EXP, FILEXISTS, FRE, HEX
+4-2	HEX$, INP, INT, LEFT$, LEN, LOC, LOG, MATCH, MID$
+4-3	OCT, OCT$, PEEK, POS, RIGHT$, RND, SEARCH, SGN, SIN, SPACE$, SPC
+4-4	SQR, STR$, TAB, TAN, USR, VAL
+
+5   Special Functions:
+
+5-1	Introduction, DISK, DO
+5-2	FILE, RECORD, TYPE, Random file notes
+
+6   Operators:
+
+6-1	Arithmetic & String
+6-2	Logical
+
+    Appendixes:
+
+A	Error Code Explanations
+B	Definitions of Terms
+C	Memory Usage
+D	Internal Formats
+E	Input/Ouput Section
+F	Sample Run
+G	Program Example
+H	Reserved Words
+I	Known Bugs, Limitations, & Peculiarities
+J	How to Load BASIC
+K	Related Publications
+L	Comparison to other BASIC's
+
+	Index
+
+	Copyright (c) 1979 Tarbell Electronics
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
