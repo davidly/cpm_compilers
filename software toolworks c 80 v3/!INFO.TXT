@@ -1,2 +1,0 @@
-The Software toolworks
-C80 compiler V3.1 4/11/84
