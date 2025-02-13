@@ -1,0 +1,12 @@
+ERA A:PASCAL.PCO
+ERA A:PRUN.COM
+ERA A:PASLIB.PCO
+ERA A:TESTP.PAS
+ERA A:TESTP.PCO
+PIP A:PASCAL.PCO=B:PASCAL.PCO[v]
+PIP A:PRUN.COM=B:PRUN.COM[v]
+PIP A:PASLIB.PCO=B:PASLIB.PCO[v]
+PIP A:TESTP.PAS=B:TESTP.PAS[v]
+PRUN PASCAL TESTP.PAS,L=CONSOLE:
+PRUN TESTP
+

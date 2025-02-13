@@ -1,0 +1,14 @@
+Copyright (c) 1979 by Sorcim. All rights reserved.
+No part of the "PASCAL/M Software System" covered by this License Agreement
+may be reproduced, transmitted, transcribed, stored in a retrieval system,
+or translated into any language or computer language, in any form,
+or by any means, electronic, mechanical, magnetic, optical, chemical,
+manual, or otherwise, without the prior written permission of
+SORCIM, 2273 Calle De Luna, Santa Clara  CA  95050.
+
+The files on this disk are as follows:
+PASCAL.pco = Pascal compiler.
+  PRUN.com = Pascal P-code interpreter.
+PASLIB.pco = Pascal library.
+ TESTP.pas = Pascal test program source code.
+

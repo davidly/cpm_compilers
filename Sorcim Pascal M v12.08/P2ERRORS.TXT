@@ -1,0 +1,53 @@
+1 : Arrays of TEXT not allowed
+2 :
+3 : undefined <identifier>
+4 : FOR variable must be an integer
+5 : Cannot READ an ARRAY
+6 :
+7 : result var must be local/global
+8 :
+9 :
+10: ARRAY on left of := must be subscripted
+11: cannot assign a string to a single char
+12: S Y M B O L    T A B L E    O V E R F L O W
+13: duplicate symbol
+14: type of argument does not match declaration
+15: number of parameters does not match declaration
+16: type conflict of operands
+17: cannot load array onto stack
+18: too many parameters
+19: TRUE or FALSE expected
+20: cannot use constant on left of :=
+21: BEGIN/END expected in <block>
+22: Hex integer must be > 0 digits
+23: arrays must be of same length
+24: 
+25: user defined type expected
+26: arrays can be passed as VAR parameters only
+27: <simpletype> error
+28: case variable must be non-real
+29: improperly declared enumerated type
+30: enumerated type expected
+31: subrange must be a..b where a < b
+32: cannot read variable of this type
+33: cannon determine size of procedure and/or function
+34:
+35: undeclared label referenced
+36: target of GOTO is outside of current block
+37:
+38:
+39:
+40: <type identifier> expected
+41: <type identifier> expected for pointer type
+42: <constant> expected
+43: <integer constant> expected
+44: variable is not of pointer type
+45: use of pointer field without ^ must be last field
+46: field does not exist
+47: not enough subscripts
+48: too many subscripts
+99: Compiler internal error (pass1 generated bad data)
+
+
+[ last revised on Feb 14,1980 by MGL ]
+
