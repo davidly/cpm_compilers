@@ -1,0 +1,464 @@
+About SBASIC
+Creating SBASIC programs
+A short course in compiling
+Keywords
+Declaring variables
+Arithmetic and Logical Operators
+Declaring and calling procedures
+Declaring and calling functions
+Program control statements
+I/O statements
+Built-in functions
+Compiler directives
+Error codes
+: About SBASIC
+
+SBASIC is a native-code compiler for Z80-based computers using the CP/M
+operating system.  It implements an ALGOL-like "structured" dialect of
+the BASIC programming language and produces stand-alone .COM files.
+
+SBASIC supports local variables; recursion; statement grouping with 
+BEGIN ... END; looping with FOR ... NEXT, WHILE ... DO, and REPEAT ...
+UNTIL; multi-way decision-making with CASE; and user-defined procedures 
+and functions.  Line numbers are optional unless the line is the target 
+of a GOTO or GOSUB statement.
+
+: Creating SBASIC programs
+
+SBASIC programs may be created using any text editor that produces straight
+ASCII files without embedded control characters and without high bits set.
+The filename must have the extension .BAS, and the last line of the source
+file must be terminated with a carriage-return and line feed.  In general,
+SBASIC is not case sensitive either with respect to its own keywords or to
+user-defined names (variables, procedures, and functions)  Thus, "string",
+"STRING", and "String" are identical.  However, hexidecimal values must be
+specified using upper case: thus, "0DH" and not "0dh".  Also, file names 
+given as arguments to CREATE, OPEN, RENAME, and DELETE should be upper 
+case.
+
+: A short course in compiling
+
+When the compiler (SBASIC.COM) is invoked, the name of the source file is
+specified on the command line without the .BAS extension.  Instead, the
+filename is followed by a dot and 3 letters that specify the drives for 
+the source, object, and listing file, as follows:
+
+                      /---> source file drive (a to p)
+                     //---> object file drive (a to p, or z to omit)
+                    ///---> listing file drive (a to p, x for console,
+   A>sbasic myprog.xxx                          y for printer, or z to omit)
+
+It is also possible to specify the drive of the source file in the
+normal manner without any extension, in which case the object file will
+go on the same drive and the listing file will be displayed on the
+console, e.g.,
+
+   A>sbasic b:myprog
+
+The support files OVERLAYB.COM, BASICLIB.REL and USERLIB.REL must be on the
+logged-in drive while compiling.
+
+: SBASIC Keywords
+
+$CONSTANT       $INCLUDE        $LINES          $LIST           $LOADPT
+$PAGE           $STACK          $TRACE          ABS             AND
+ASC             ASCII           ATN             BASE            BASED
+BEGIN           CALL            CASE            CHAIN           CHR
+CHR$            CLOSE           COM             COMMENT         COMMON
+CONSOLE         COS             CREATE          DATA            DELETE
+DIM             DIMENSION       DO              ECHO            ELSE
+END             EQV             EXECUTE         EXP             FCB
+FCB$            FFIX            FILES           FINT            FIXED
+FOR             FRE             FUNCTIONS       GO              GOSUB
+GOTO            HEX$            IF              IMP             INITIALIZE
+INP             INPUT           INPUT1          INPUT2          INPUT3
+INPUT4          INSTR           INT             LEFT            LEFT$
+LEN             LET             LOCATE          LOCATION        LOG
+LPRINTER        MID             MID$            NEXT            NOT
+NUM$            OF              ON              OPEN		OR
+OUT             PEEK            POKE            POS		PRINT
+PROCEDURE       READ            REM             REMARK		RENAME
+REPEAT          RESTORE         RET             RETURN		RIGHT
+RIGHT$          RND             SGN             SIN		SIZE
+SPACE$          SPC             SQR             STEP		STOP
+STR$            STRING          STRING$         SUB		TAB
+TAN             TEXT            THEN            TO		UNTIL
+VAL             VAR             VARIABLE        WHILE		WRITE
+XLATE           XOR
+
+Note: the SBASIC manual suggests that there is a built-in function called
+LOG10 (in some editions of the manual, misprinted as LOGIC). However, the
+function is not actually implemented.
+: Declaring variables
+
+All variables must be declared in SBASIC.  Variables are of six types:
+
+    CHAR (or BYTE)              FIXED
+    STRING                      REAL
+    INTEGER                     REAL.DOUBLE
+
+Simple variables may be declared using the VAR, COMMON, and BASED kewyords.
+Arrays are declared using the DIM keyword and, if applicable, the COMMON
+or BASE keyword. The maximum length of a string variable may be specified
+as part of the declaration; if omitted, the default length is 80.
+
+Examples follow:
+
+   VAR INFILE = STRING:30
+   VAR X, Y, Z = INTEGER
+   VAR RATE = REAL
+
+   BASED IOBYTE = BYTE
+   COMMON ERROR_NUMBER = INTEGER
+
+   DIM REAL TEMPERATURES(20)
+   DIM INTEGER MATRIX(4,4)
+   DIM STRING:20 LASTNAMES(100)
+   DIM BASE BYTE DISK_PARAMETERS(16)
+   DIM COMMON INTEGER HISCORES(10)
+
+Simple variables declared with VAR are placed in the data segment of the
+compiled code.  Variables declared using the COMMON statement are placed
+in a special data segment that will be preserved during program chaining.
+Variables declared using the BASED statement are positioned at run-time
+using the BASE statement to specify the address, e.g.,
+
+   BASE IOBYTE AT 0003H
+
+Arrays are dynamically created at run-time and do not occupy space in the
+compiled code unless they are declared as COMMON.  Arrays declared as BASE
+are positioned at run-time using the LOCATE statement.
+
+CHAR or BYTE variables occupy 1 byte.  Character constants may be specified
+using single quotes, e.g., 'A', or in decimal or hexidecimal form, e.g., 64
+or 40H.
+
+INTEGER variables occupy 2 bytes and may take signed decimal values from
+-32768 to +32767 or unsigned hexadecimal values from 0000H to FFFFH.
+
+FIXED variables occupy 6 bytes and can represent a sign and 11 digits in
+packed BCD form, with 3 digits to the right of the decimal point. The
+maximum value that can be represented is 99,999,999.995.
+
+REAL variables occupy 4 bytes and can represent floating point values up
+to 6 digits. Constants may be expressed as, e.g., 3.14159 or 3.14159E+1. 
+
+REAL.DOUBLE variables occupy 7 bytes and can represent floating point values
+up to 14 digits.
+
+: Arithmetic and logical operators
+
+SBASIC supports the following operators:
+
+    ^ (or **)           exponentiation
+    +, -                absolute value and unary negation
+    +, -                addition and substraction
+    *, /                multiplication and division
+    <> (or #)           not equal
+    =                   equals
+    >                   greater than
+    <                   lesser than
+    >=                  greater than or equals
+    <=                  less than or equals
+    NOT, AND, OR,
+    XOR, IMP and EQV    logical operators
+
+For integers, -1 is evaluated as true and 0 as false.
+For fixed, real and real.double, 0 is false and any non-zero value is true.
+For characters, 'T','t','Y', and 'y' are true; any other value is false.
+For strings, only the first character is compared.
+
+: Declaring and calling procedures
+
+An example of a procedure declaration is as follows:
+
+    PROCEDURE WARNING(VALUE=INTEGER; MESSAGE=STRING)
+        PRINT MESSAGE; VALUE
+    END
+
+The procedure is called simply by invoking its name and arguments (if any),
+separated by commas and without using parentheses, e.g.,
+
+    WARNING "Value is out of range: ", x
+
+All arguments are passed by value.  Procedures may be defined within another
+procedure or within a function and may themselves contain procedure and
+function declarations.  Precedures may call themselves.
+
+: Declaring and calling functions
+
+An example of a function declaration is as follows:
+
+    FUNCTION SUM(X, Y = INTEGER) = INTEGER
+        VAR Z = INTEGER
+        Z = X + Y
+    END = Z
+
+The function is called simply by invoking its name, followed by its
+arguments in parentheses, e.g.,
+
+    PRINT SUM(78,56)
+
+All arguments are passed by value.  Functions may be defined within other
+functions and may call themselves.
+
+: Program control statements
+
+GOTO     transfers control to the indicated line number, e.g.,
+         GOTO 200 or GOTO 99end
+GOSUB    transfers control to the statement with the specified
+         line number, e.g., GOSUB 300 or GOSUB 0calc.  The subroutine
+         must be terminated with a RETURN statement, which will
+         transfer control to the statement following the GOSUB
+         statement.
+ON...GOTO
+         branch to one of several statements, depending on the value of
+         the integer expression following ON, e.g.,
+              ON X GOTO 1000, 2000, 3000
+         will branch to line numbers 1000, 2000, or 3000 depending on
+         whether the value of X is 1, 2, or 3
+ON...GOSUB
+         transfer to one of several subroutines, depending on the value
+         of the integer expression following ON.  When the subroutne is
+         complete, a RETURN statement will transfer control to the
+         statement immediately following the ON...GOSUB statement
+ON ERROR GOTO
+         transfer control to the specified line number if a fatal
+         error occurs.
+REPEAT...UNTIL
+         loop until the specified logical test is satisfied
+         syntax is REPEAT statement UNTIL expression
+         statement can be a compound statement using BEGIN and END
+WHILE...DO
+         loop while a specified logical test is true
+         syntax is WHILE expression DO statement
+         statement can be a compound statment using BEGIN and END
+IF...THEN...ELSE
+         execute a statment if the specified condition is satisfied, or,
+         optionally, an alternate statement if the condition is not
+         satisfied.
+         syntax is IF condition THEN statement [ELSE statement2]
+         either statement may be a compound statement using BEGIN and END
+FOR...TO...STEP
+         repeat execution of statement until the counting variable
+         exceeds the value of limit.
+         syntax is 
+              FOR variable = expression TO limit [STEP expression2]
+              NEXT [variable]
+         if STEP is omitted, the variable inreases by 1 each iteration
+         of the loop
+CHAIN    transfer control to another SBASIC program.
+         syntax is CHAIN "filename"
+EXECUTE  transfer control to a .COM file
+         syntax is EXECUTE "filename" [,"command line"]
+         "command line" will be executed *after* the .COM file returns control
+         to the operating system as though it were a line in a CP/M SUBMIT file
+
+: SBASIC input/output (I/O) statements
+
+SBASIC I/O statements are used to obtain data from a device (such as the
+keyboard or a modem) or file and to send data to a device or file.  Devices
+or files are normally designated by a number known as the file channel,
+although the channel need not be explicitly specified if input is from the 
+keyboard or output is to the console display, as these are the default.
+
+Device channels for PRINT and INPUT statements
+         Channel #              Input Device          Output Device
+         0                      Console               Console
+         1                      dummy                 List
+         2                      dummy                 Punch
+         3                      Reader                dummy
+         4                      Console Status        dummy
+         5                      Keyin                 dummy
+INPUT	syntax is INPUT [#channel]["prompt"{;,}] variable,...
+	if a semicolon follows the prompt, input will be accepted
+	immediately following the prompt, while a comma will cause
+	input to be accepted at the next 14-character tab position
+	If only one variable is given and it is type STRING, everything 
+	typed until the <RETURN> or <ENTER> key is pressed (including 
+	commas and quotes) will be assigned to the variable.
+	If only one variable is given and it is type CHAR, only a single 
+	key press is required (i.e., the user need not press <RETURN> or 
+	<ENTER>.
+INPUT1	Same as INPUT, except cursor does not advance to next line
+INPUT2	Same as INPUT, except a question mark is not printed 
+INPUT3	Same as INPUT, except a question mark is not printed and cursor 
+	does not advance to next line
+PRINT	syntax is PRINT [#channel][data{;,}][data...{;,}]
+        a semicolon between data items causes them to be printed
+        one immediately following the other, while a comma causes
+        them to be displayed in columns 14 characters apart.
+        a semicolon following the last data items causes the 
+        cursor to remain at the position immediately following the
+        last character printed, while omission of such punctuation
+        causes the cursor to move to the next line.
+CONSOLE makes the console the default destination of all subsequent
+	PRINT statements
+LPRINTER makes the printer the default destination of all subsequent
+	 PRINT statements
+TEXT    multiline equivalent of the PRINT statement
+        syntax is TEXT channel,delimiter text delimiter{;,}
+        delimiter can be any character that is not in the text, such
+        as %, &, \, or "
+        note that the channel number is not preceded by a # character
+        a terminal semicolon or comma operates just as in the PRINT
+        statement
+PRINT USING
+         formatted print statment
+         syntax is PRINT USING "format string" [#channel]; data...
+         following formatting characters are recognized:
+         .    decimal point
+         ,    inset comma ever three digits
+         #    one digit of numeric output
+         ^    exponential format
+         **   fill field with leading asterisks
+         $$   place floating dollar sign at beginning of number
+         !    first character of string
+         &    entire string
+         /    beginning and end of string field
+         +    display sign of number whether positive or negative
+         -    disply sign of number only if negative
+         \    treat next character literally
+
+CREATE   create a directory entry for the specified file name, e.g.,
+              CREATE "DATAFILE.DAT"
+DELETE   erase the file having the specified name, e.g.,
+              DELETE "DATAFILE.DAT"
+RENAME   change the name of an existing file, e.g.,
+              RENAME "OLDDATA.DAT" TO "NEWDATA.DAT"
+INITIALIZE
+         reset all disks to read/write status
+         allows writing to disk after a disk change
+FILES    declare file channels
+         syntax is FILES {S,SA,R,or RA}(size), ...
+         R indicates a random access file, S a sequential access
+         file. An A added to the S or R means that the file is an ASCII
+         rather than binary file.  For a random access file, size is the 
+         number of bytes per record (with multiples of 128 bytes being most
+         efficient), while for sequential access files, size is the
+         buffer size in 128-byte sectors. The first file declared
+         will be channel 0, the next channel 1, etc.  To preserve
+         device channels with the same number, D (for "dummy")
+         can be used. Thus, to declare two sequential access
+         disk files with 4-sector buffers while preserving
+         device channels 0 and 1 (the console and printer), use
+              FILES D, D, S(4), S(4)
+OPEN     assign a disk file to a file channel (note: the channel
+         must have been previously declared with the FILES statement
+         syntax:  OPEN #channel; "filename"
+CLOSE    close a previously-opened disk file
+         systax:  CLOSE #channel
+WRITE    write data to a disk file (note that the PRINT statement
+         can be used instead to write ASCII (i.e., text) data to
+         a sequential access file)
+         syntax: WRITE #channel; expression,...    (sequential file)
+                 WRITE #channel,record; expression,... (random file)
+READ     read data from a disk file (the INPUT statement can be
+         used instead to read ASCII (i.e., text) data from a 
+         sequential access file)
+         syntax: READ #channel; variable,...     (sequential file)
+                 READ #channel,record; variable,...  (random file)
+          
+: Built-in functions
+
+ABS(real expression) - return absolute value of expression
+ASC(string) - return ASCII value of first character in string
+ASCII(string) - same as ASC
+ATN(real expression) - return angle (in radians) whose tangent is expression
+CHR(integer expression) - return character having specified value
+CHR$(integer expression) - same as CHR
+COS(radians) - return cosine of specified angle
+EXP(real expression) - return e (2.71828) to the specified power
+FCB$(filename) - return string properly formatted for a CP/M FCB
+FCB(filename) - same as FCB$
+FFIX(fixed value) - integer part of FIXED type value
+FINT(fixed value) - greatest integer not greater than FIXED type value
+FIX(real expression) - integer part of expression
+FRE(0 or 1) - if 0, amount of free memory, otherwise blocks used on
+    current drive
+HEX$(numeric expression) - string of hexidecimal representaton of expression
+INP(integer expression) - return value at port specified by expression
+INSTR(n,string1,string2) - position of string2 within string1 beginning at
+    position n; returns 0 if not found
+INT(real expression) - greatest integer not greater than expression
+LEFT$(string,n) - leftmost n characters in string
+LEN(string) - length of string
+LOG(real expression) - natural logarithm of expression
+MID$(string,i,n) - substring of n characters in string beginning at i
+NUM$(real expression) - string representation of expression
+PEEK(address) - byte value at address in memory
+POS(integer expression) - if expression is positive, returns print position on
+    corresponding output channel; if negative, returns current line count for
+    that channel. (To determine line count for console, specify 255 rather 
+    than "-0").  Print position and line positions are reset by CR and FF, 
+    respectively.
+RIGHT$(string,n) - rightmost n characters of string
+RIGHT(string,n) - returns characters beginning at n through end of string 
+    (note that this is *not* the same as RIGHT$)
+RND(real expression) - random number between 0 and 1 if expression <> 0, 
+    last random number if expression = 0 
+SGN(numeric expression) - 1 if positive, -1 if negative, 0 if zero
+SIN(radians) - return sine of specified angle
+SIZE(filename) - return size of disk file in blocks; filename may include 
+    wildcards
+SPACE$(integer expression) - string of specified number of spaces
+SPC(integer expression) - same as SPACE$
+SQR(real expression) - square root of expression
+STR$(numeric expression) - same as NUM$
+STRING$(n,c) - string of length n composed of characters having value c;
+    note that c can be either a character or integer constant, e.g.,
+    STRING$(20,'-') and STRING(20,45) both print 20 dashes
+STRING(n,c) - same as STRING$
+TAB(integer expression) - string of spaces sufficient to move print head to 
+    position specified by expression
+TAN(radians) - return tangent of specified angle
+VAL(string) - return numeric value of string argument
+XLATE(string1,string2) - replace each character in string1 by character
+    in string2 based on ASCII values (i.e., string2 is a translation
+    table).
+
+: Compiler directives
+$LINES        suppresses line number generation during compilation;
+              this speeds up program execution, at the cost of
+              meaningful error messages, and should be used only
+              after the program is fully debugged
+$PAGE         advance listing to a new page
+$TRACE        enable program tracing in which the current line
+              being executed is displaced on the console; can be
+              turned on and off with Control-T
+$CONSTANT     give a meaningful name to an integer constant, e.g.,
+                  $CONSTANT MAX=100
+$INCLUDE      inserts the contents of another SBASIC source file or
+              of a module within that file.
+              syntax is $INCLUDE filename [module name]
+              note that filename should not be enclosed in quotes and
+              is assumed to have .BAS extension
+$MODULE       mark start of named module in library source file, e.g.
+                  $MODULE ALLCAPS
+              the module name may be the same as an existing function,
+              procedure, or variable
+$END.MODULE   mark end of named module in library source file
+$STACK        set runtime stack location, e.g., $STACK DE00H
+$LOADPT       change location of compiled code from 100H to another location
+              in memory, e.g., $LOADPT DE00H
+
+: Error codes
+
+01    LOG <= 0				16    READ on unopened file
+02    CHAIN/EXECUTE open		17    Fixed division by zero
+03    Sequential-type file not found	18    Overflow/Underflow
+04    Random-type file not found	19    Out of string data
+05    Sequential-type file close	20    Out of numeric data
+06    Random-type file read		21    Real division by zero
+07    Extending file			22    Real.double division by zero
+08    End of disk data			23    Subscript out of bounds
+09    Random record			24    String input
+10    Random-type file not open		28    Number too large/small
+11    No more directory space		29    Insufficient input
+12    Read/write past end of record	31    Too many characters; max is 255
+13    Sequential-type write		33    Out of memory
+14    WRITE on unopened file		37    Bad channel number
+15    Read past end of file		38    Input file read
+
+The error code is placed in memory at location 0103H.
+
