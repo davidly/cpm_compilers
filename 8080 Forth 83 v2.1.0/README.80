@@ -1,0 +1,406 @@
+.PO 3
+
+	WELCOME TO FORTH  
+
+     Thió   ió  á  publiã  domaiî  system¬   anä  maù  bå  freelù 
+distributeä anä copied¬  aó lonç aó thå authoró arå giveî  crediô 
+anä  nï copyrighô noticå ió placeä upoî it®  Iæ wå catcè  someonå 
+sellinç thió systeí aó theiò owî proprietarù product¬  witè theiò 
+copyrighô noticå ¬ wå wilì dï ouò besô tï makå theí regreô iô foò 
+thå  resô  oæ theiò lives®  Yoõ havå beeî  warned!¡ 	
+
+     Thió  Fortè  useó thå fileó oæ thå  hosô  operatinç  system® 
+Althougè  thió reduceó performance¬  iô ió mucè morå portablå anä 
+morå convenienô foò novices®  Thå uså oæ fileó wilì bå  describeä 
+later.
+
+     Thió  disë containó somå Huffmaî encodeä files®  Theù  allo÷ 
+thå  systeí  tï fiô oî onå floppù disk®   Youò firsô tasë  ió  tï 
+expanä  theí  intï thå sourcå fileó foò thå system®  Thå  Huffmaî 
+fileó anä theiò expansionó areº 
+
+M80.HUF        -->       META80.BLK
+K80.HUF        -->       KERNEL80.BLK 
+E80.HUF        -->       EXTEND80.BLK
+C80.HUF        -->       CPU8080.BLK
+
+UT.HUF         -->       UTILITY.BLK
+HF.HUF         -->       HUFFMAN.BLK
+CK.HUF         -->       CLOCK.BLK
+FX.HUF         -->       F83-FIXS.TXT
+
+Iî additioî therå arå á fe÷ noî-compresseä files®   Theså arå thå 
+following:
+
+README.80     This file which you are hopefully reading.
+RUNME.COM     Thå filå thaô yoõ wilì ruî tï creatå thå BLË files.
+EXPAND80.BLK  The file used to expand the HUF files.
+
+     Iî  ordeò  tï recoveò thå actuaì sourcå  code¬  simplù  typå 
+RUNMÅ  anä  follo÷  thå  directions®    Iæ  alì  goeó  well¬  thå 
+correspondinç  BLË fileó wilì bå created®   Yoõ shoulä oæ  courså 
+makå  backuğ  copieó oæ thå expandeä sourcå codå aó  sooî  aó  iô 
+exists®   Wå apologizå foò thå timå thå expansioî takes¬ buô sucè 
+ió life®   Yoõ arå no÷ iî á positioî tï modifù anä regeneratå thå 
+system.
+
+     Tï  dï  so¬  yoõ shoulä puô META80.BLË anä  KERNEL80.BLË  oî 
+drivå B:¬ anä puô F83.COM oî drivå A:® Makå surå therå ió rooí oî 
+Aº  foò thå ne÷ KERNEL.COM¬  theî loç ontï drivå Bº  anä typå thå 
+following:
+
+B>A:F8³ META80.BLË ¨ ruî F8³ oî META80.BLË )
+OË ¨ loadó metá compileò anä generateó KERNEL.COM )
+BYÅ ¨ returî tï CP/Í )
+
+     No÷ yoõ havå á ne÷ KERNEL.COM oî Aº anä yoõ arå readù tï adä Šthå selecteä extensionó anä makå á ne÷ F83.COM ¨ yoõ diä bacë  uğ 
+thå  olä onå didn'ô you?)®  Puô  EXTEND80.BLK¬  CPU8080.BLK¬  anä 
+UTILITY.BLK on A: with KERNEL.COM and type the following:
+
+A>KERNEL EXTEND80.BLË ¨ ruî KERNEL80 oî EXTEND80.BLË )
+OK ¨ loadó alì extensionó anä createó ne÷ versioî oæ F83.COM )
+BYÅ ¨ returî tï CP/Í )
+
+Yoõ  caî havå á printouô oæ theså instructionó bù usinç Controì Ğ 
+anä enterinç TYPÅ README.80
+
+     Iî  whaô  followó  thå <CR¾ symboì representó  thå  carriagå 
+returî  keù  oî  youò terminal®  Tï enteò  Fortè  froí  thå  CP/Í 
+environment¬  inserô  thå  disë containinç thå F83.COM filå  intï 
+drivå Á oæ youò computer¬  (afteò bootinç iô oæ course© anä  typå 
+F83<CR>
+
+     Forth will reply with:
+
+8080 Forth 83 Model 2.0.0
+Modified 01Apr84
+
+     Fortè  ió abouô teî yearó olä no÷ (iî 1983© buô somå oæ  thå 
+featureó  oæ F8³ arå relativelù ne÷ tï thió Publiã  Domaiî  Fortè 
+Model.
+  
+     Thå VIE× commanä ió onå oæ thå best®  VIE× <word¾ <CR¾  wilì 
+finä  thå screeî thaô containó thå codå foò thå <word>¬  provideä 
+thaô  thå  filå thaô containó <word¾ ió oî thå  currentlù  loggeä 
+disë  drive®  Iæ yoõ caî fiô alì oæ thå sourcå codå oî  á  singlå 
+drive¬  VIE× workó great¬  anä takeó carå oæ openinç thå filå anä 
+displayinç  thå screeî foò you®   Á recenô additioî tï thå systeí 
+ió thå worä FIØ whicè combineó thå functioî oæ VIE× witè thaô  oæ 
+thå  editor®   Tï uså iô typå FIØ <word¾ <CR¾ anä thå screeî upoî 
+whicè thaô worä resideó wilì bå madå availablå foò editing¬  witè 
+thå editinç cursoò placeä followinç thå firsô occurancå oæ <word¾ 
+on that screen.  
+
+     Wå  havå  alsï  trieä tï makå extensivå uså  oæ  thå  shado÷ 
+screeî  concept®  Iî thió regard¬  thå worä Á moveó yoõ froí  thå 
+currenô  screeî  tï  itó associateä  shado÷  screen®  Thå  SHADO× 
+vocabularù  containó  á  buncè  oæ  wordó  thaô  arå  helpfuì  iî 
+maintaininç  shado÷ screens®  COPÙ allowó yoõ tï copù noô onlù  á 
+screen¬  buô alsï itó associateä shadow®  SHO× allowó yoõ tï lisô 
+eacè  sourcå screeî acrosó froí itó shado÷ wheî yoõ wanô tï prinô 
+them®  Finallù  CONVEÙ allowó yoõ tï movå groupó oæ  screenó  anä 
+theiò  associateä  shadows®  Tï seå whaô wordó arå iî thå  SHADO× 
+vocabularù simplù typå SHADO× WORDS<CR>
+
+     Therå  ió  alsï  á decompileò  presenô  whicè  reverseó  thå 
+compilinç  process¬  producinç sourcå codå froí objecô code®  Thå 
+useò  interfacå tï iô ió thå worä SEÅ <name¾ wherå <name¾ ió  thå 
+namå oæ á Fortè worä yoõ wisè tï decompile® Whilå thå informatioî 
+SEÅ giveó yoõ ió noô aó completå aó thaô giveî bù VIEW¬  á  leasô 
+iô ió alwayó available¬ anä noô dependenô upoî whetheò oò noô thå Šcorrecô filå ió presenô oî thå currentlù loggeä disë drive® Foò á 
+reaì  experiencå  trù decompilinç thå wordó STATUS¬  whicè  ió  á 
+DEFERreä  word¬   iå  aî  executioî  vector®   SEÅ  calló  itselæ 
+recursivelù iî thió caså anä trackó dowî thå definition® Thió caî 
+bå quitå handy.
+
+     Tï  seå á lisô oæ thå wordó thaô arå iî thå dictionarù  typå 
+WORDS® Yoõ wilì seå lotó oæ words® Eacè ió á commanä anä eacè caî 
+bå VIEWed®  WORDÓ wilì stoğ iæ yoõ hiô anù key®  Yoõ caî looë  aô 
+thå worä SHO× bù typinç VIE× SHOW®  Assuminç alì ió welì yoõ wilì 
+seå  á Fortè screeî containinç thå definitioî oæ SHO× alonç  witè 
+somå otheò words® Typå Á Ì (cr© anä yoõ wilì bå rewardeä witè thå 
+Shado÷ screeî thaô goeó witè it® Á Ì (cr© wilì Alternatå Lisô yoõ 
+bacë tï thå originaì screeî oæ code®  Looë aô iô anä wheî yoõ seå 
+á worä thaô doesn'ô seeí fullù selæ evident¬ VIE× iô anä reaä thå 
+shado÷  screen®  Thå  worä SHO× anä itó sourcå codå thaô wå  havå 
+beeî viewing¬  ió á commanä thaô printó ouô threå sourcå  screenó 
+alonç  witè  threå shadowó foò á totaì oæ siø screenó  peò  page® 
+Therå  arå  twï  versionó  oæ SHOW®  Thå vocabularù  yoõ  arå  iî 
+determineó  ho÷  SHO× wilì prinô out®  Iæ yoõ arå iî  thå  SHADO× 
+vocabulary¬  siø screenó oæ codå anä shadowó wilì print®  Iæ  yoõ 
+arå iî FORTÈ ¶ screenó oæ codå wilì bå printed.
+
+     No÷ foò somå morå commands®  Î ió nexô screeî anä Ì ió list® 
+Î Ì listó thå nexô screeî anä Â Ì listó thå nexô screeî  back®  Î 
+EÄ wilì ediô thå nexô screeî etc® No÷ letó printouô á fe÷ screenó 
+thaô  wilì  detaiì  somå oæ thå editoò commands®  Mosô  arå  froí 
+Startinç Fortè buô somå arå ne÷ ones.
+
+Type this: EDITOR VIEW JOIN<CR>
+
+     Yoõ arå lookinç aô á screeî oæ editinç commands®  Letó gï tï 
+thå shado÷ witè thå Á Ì commanä anä dï somå exploring®  Whilå  wå 
+arå  iî  thå  shadowó letó looë aô thå nexô fivå  oò  siø  shado÷ 
+screenó  thaô  shoulä bå editoò words®  Uså Î L®  Iæ yoõ  havå  á 
+printeò  yoõ  maù prinô theså screenó no÷ aó follows®  Typå  VIE× 
+WIPÅ  foò example®  Iæ wipå ió thå firsô oæ ¶ screenó  oæ  editoò 
+wordó remembeò thå screeî number®  Iæ foò instancå iô waó 8° theî 
+typå 8° 8µ SHADO× SHOW<CR>
+
+     No÷  á  brieæ worä abouô ouò masó  storagå  interface®   Ouò 
+Fortè  8³ systeí runó aó á guesô undeò á hosô system'ó  operatinç 
+system®   Becauså  oæ  this¬  wå uså thå host'ó  filå  systeí  tï 
+contaiî  ouò screeî files®   Screenó arå implementeä aó 1Ë blockó 
+withiî  á random accesó file®   Screenó arå stilì treateä  aó  1¶ 
+lineó  oæ 6´ characteró wheî editing¬  witè nï embeddeä  carriagå 
+returnó oò linå feeds®   Iî ordeò tï accesó á screeî filå iô musô 
+firsô bå opened®   Thió caî bå donå iî twï ways®  Thå mosô commoî 
+ió  tï  specifù thå namå oæ thå screeî filå oî thå executå  line®  
+Thuó  iæ yoõ wanteä tï opeî MY.BLË yoõ coulä firå uğ  Fortè  witè 
+the following:
+
+A>F83 MY.BLK<CR>
+.paŠOncå  yoõ arå iî Forth¬  yoõ caî opeî otheò fileó witè thå  Fortè 
+worä OPEÎ <name¾ wherå <name¾ ió thå namå oæ thå filå yoõ wisè tï 
+open®   OPEÎ ió á defininç word¬  anä createó á dictionarù  entrù 
+usinç thå filå name®   Oncå á filå ió openeä BLOCË referenceó arå 
+relativå  tï thå beginninç oæ thå currentlù opeî file®   Afteò  á 
+filå  haó beeî openeä witè OPEN¬  iô maù bå reopeneä bù executinç 
+thå  filå  name®   Thió ió verù fast¬  sincå onlù  á  pointeò  ió 
+changeä  iî  memory®   Onå note¬  blocë ° ió stilì treateä  aó  á 
+special case, and hence can't be loaded.
+
+                         FORTH EXAMPLES
+
+     Wå  woulä  likå tï answeò somå oæ thå mosô frequentlù  askeä 
+questionó  abouô thå F8³ systeí aô thió point®   Thå besô waù  tï 
+gaiî familiaritù witè thå systeí ió tï firå iô uğ anä trù ouô thå 
+followinç examples®   Wå wilì indicatå thå texô thaô yoõ typå  iî 
+aó uppeò caså text®   Thå texô iî parentheseó arå ouò commentó oî 
+what is going on.  The <CR> indicates carriage return, as usual.
+
+F83<CR> ( fire up forth from the CP/M environment )
+8080 Forth 83 Model 2.0.0 ( Forth's reply and )
+Modified 01Apr84          ( sign on message )
+WORDS<CR>
+empty mark hello ....
+10 CREATE-FILE SAMPLE.BLK<CR> ( Creates a file called SAMPLE.BLK )
+                              ( which is 10 screens big. )
+1 LIST<CR>
+Scr# 1
+  0
+  1
+  2      ( This will be a blank screen )
+  ...
+ 15
+
+( Now we will edit screen 1 with the default dumb terminal )
+( editor which is pre-installed for you.  Your first task is )
+( to install the cursor addressing routines to make the editor )
+( more convenient to use )
+
+1 EDIT<CR>
+Enter your id: ..........   
+   ( Your id is a 10 character string that will automatically )
+   ( be placed in the upper right hand corner of line 0 of the )
+   ( current screen you are editing if you modify that screen )
+   ( I usually enter the date and my initials as follows: )
+10MAR84HHL<CR>
+   ( The screen will be blanked and listed, you should have )
+   ¨ á resulô similaò tï ± LISÔ above¬  buô witè thå linå ) 
+   ( number also appearing on the right hand side of the screen )
+
+   ( Now we will enter the source code necessary to install )
+   ( the cursor routine drivers for an ADM-3A terminal )
+.paŠ0 NEW<CR> 
+   ( This allows us to enter multiple lines of text.  The text )
+   ( input is terminated with a null line.  After each line is )
+   ( entered, it is redisplayed for you )
+\ CURSOR ROUTINES FOR AN ADM-3A TERMINAL<CR>
+   ( it is best to use line 0 for a comment )
+EDITOR DEFINITIONS<CR> 
+   ( This will add the following definitions to the editor )
+: ADM-AT<CR>
+   27 EMIT  ASCII = EMIT   32 + EMIT   32 + EMIT  ;<CR>
+: ADM-DARK<CR>
+   CONTROL Z EMIT   ;<CR>
+: ADM-3A<CR>
+   ['] .ALL      IS  .SCREEN <CR>
+   ['] ADM-AT    IS  AT <CR>
+   ['] ADM-DARK  IS  DARK <CR>
+   ['] NOOP      IS  -LINE <CR>
+   ['] (BLOT)    IS  BLOT ; <CR>
+ADM-3A <CR>
+<CR>
+DONE<CR>
+1 modified
+   ¨ Typinç thaô lasô <CR¾ wilì returî yoõ tï Forth® The DONE )
+   ( command will write the text you entered to the disk, and )
+   ( exit from the editing environment )
+   ( To install the ADM-3A drivers you need now just type: )
+1 LOAD<CR>
+   ( Now the editor will work the way it was intended to )
+   ( with the current screen image always displayed at the )
+   ( top of the screen, and the line you are entering at the )
+   ( bottom of the screen.  To make sure type: )
+1 EDIT<CR>
+   ( The screen should be blanked, and the text you just )
+   ( entered will be displayed at the top of the screen. )
+   ( The current line will be displayed at the bottom of the )
+   ( screen with a ^ pointing to the current editing cursor )
+   ( position.  The terminal's cursor will be below the ) 
+   ( line, and ready for an editing command. )
+DONE<CR>
+1 Unmodified
+   ( Will again leave the editor and return to Forth )
+   ( Now we will save the system and leave Forth )
+SAVE-SYSTEM F.COM<CR>
+   ( That will save the current system as a file called )
+   ( F.COM on the currently logged drive. )
+BYE<CR>
+   ( This exits Forth and returns to CP/M.  Now if you use )
+   ( F.COM instead of F83.COM you will have your terminal )
+   ( routines installed at boot up time. )
+.paŠ     Notå  thaô  thå  abovå routineó arå designeä foò  aî  ADM-3Á 
+terminal¬  anä  wilì noô worë iæ youò terminaì ió noô aî  ADM-3A®  
+Yoõ  wilì  havå tï consulô youò terminaì manuaì foò  thå  correcô 
+escapå  sequenceó  requireä iî ordeò tï positioî thå  cursoò  anä 
+implemenô thå otheò speciaì functionó required®   Á betteò waù tï 
+dï  thå  abovå  ió tï recompilå  thå  entirå  system¬  witè  youò 
+terminaì  routineó  installeä aó thå defaulô insteaä oæ thå  DUMÂ 
+terminaì  routineó  supplieä  witè  thå  system®    Iî  ordeò  tï 
+accomplisè thió yoõ shoulä copù thå screeî yoõ jusô entereä  intï 
+thå UTILITY.BLË filå anä recompilå thå systeí aó describeä above®  
+Thå  followinç  illustrateó ho÷ tï dï this¬  usinç thå  multifilå 
+utility words implemented in F83.
+
+F83 UTILITY.BLK<CR>
+   ( files up F83 and opens UTILITY.BLK as the default file.  )
+   ¨ Makå surå thaô UTILITY.BLË ió oî thå currentlù loggeä )
+   ( drive )
+   ( Now find a blank or irelevant screen at the end of the )
+   ( editors set of screens, on top of which we are going to )
+   ( put the screen we just entered.  Suppose it is screen )
+   ( number 32.  You should now type: )
+FROM SAMPLE.BLK 1 32 COPY<CR>
+   ( This will copy screen 1 from SAMPLE.BLK to screen 32 of )
+   ( the current file.  Note that SAMPLE.BLK must also be on )
+   ( the currently logged drive. )
+   ( You can now recompile the high level portion of the )
+   ( by leaving Forth and typeing the following: )
+BYE<CR>   ( leave Forth )
+KERNEL EXTEND80.BLK<CR>
+START<CR>
+   ( Of course all of the necessary files should be present )
+   ( on the currently logged drive in order for this to work )
+
+
+     Iæ  yoõ  arå ne÷ tï Fortè youò besô beô ió tï  purchaså  thå 
+booë  STARTINÇ  FORTÈ  bù LEÏ BRODIE®  Iô costó  abouô  seventeeî 
+dollaró  anä ió availablå aô mosô largå booë stores®  Oî pagå  8´ 
+yoõ wilì finä thå commandó foò thå linå editor®  Anotheò valuablå 
+referencå ió thå ne÷ booë bù MARTIN TRACY calleä FORTH TOOLS®  Iô 
+ió  availablå froí MicroMotion¬  1207· Wilshirå Blvd®  Suitå 506¬ 
+Wesô Loó Angeles¬  CÁ 90025®   Thå pricå foò thå booë ió  $20.00®  
+Thå F8³ modeì followó botè thå booë anä thå Fortè 8³ standard® 
+
+     Thå Fortè Interesô Grouğ ¨ FIÇ © haó chapteró iî manù areas® 
+Iî  thå  Saî  Franciscï Baù Area¬  meetingó arå helä oî  thå  4tè 
+Saturdaù oæ eacè month¬  currentlù aô Chaboô Collegå iî  Hayward¬ 
+CA®  Calì  thå  FIÇ  hoô  linå iæ yoõ wisè tï  doublå  checë  thå 
+locatioî pè 962-865³ oò thå FIÇ Treå BBÓ (30° baud© aô 538-3580.
+
+
+Henry Laxen                                  Mike Perry
+1259 Cornell Avenue                          1125 Bancroft Way
+Berkeley, CA 94706                           Berkeley, CA 94702
+.paŠ
+             System Memory Map  
+     Thå  memorù mağ wilì varù somewhaô witè CPU¬  anä  operatinç 
+system¬  anä  options®  Foò CP/Í oî thå 808° witè 64Ë oæ  memory¬ 
+witè fouò blocë bufferó anä alì utilities¬  iô ió aó  followsº  ¨ 
+alì addresseó iî hexadecimal)
+
+     0100      Jump to cold start
+     0104      Jump to warm start
+     0108 ----
+
+               Dictionary with all utilities loaded.
+
+     5E75 ---- HERE
+
+               Free space.
+
+     D10E ---- SP0, TIB
+
+               | Text Input Buffer
+               V
+                            ^
+               Return Stack |
+
+     D1D6 ---- RP0, >BUFFERS
+
+               Block Buffer Pointer Table
+
+     D200 ---- FIRST
+
+               Block Buffers
+
+     E200 ---- LIMIT
+
+
+.PAŠ             Standard System Documentation Requirement
+
+1.  The  system  dictionary space is CPU  dependant  and  can  be 
+determined by typeing HERE U. <CR>
+
+2. The application dictionary space is also CPU dependant and  is 
+the  difference  between  the  top  of  the  dictionary  and  the 
+beginning of the parameter stack.  The location of the  parameter 
+stack  varies depending on the amount of memory available to  the 
+machine.   The application dictionary space can be determined  by 
+typing SP@ HERE - U. <CR>
+
+3. The data stack space is the same as the dictionary space.
+
+4.  The return stack space was arbitrarily set at 256 bytes.   It 
+can be altered by remeta-compiling the system.
+
+5.  No  mass  storage block ranges are reserved  by  the  system, 
+other than the contents of the files that are distributed.
+
+6. The user has available to him blocks 0 thru 65534.  Note  that 
+block  0  may  not be used for loading.  Block  number  65535  is 
+reserved to indicate the buffer is missing.
+
+7. Any ascii terminal should work with this system.  If the  user 
+has  a  cursor  addressable terminal, the editor  can  be  easily 
+modified to take advantage of the terminal's characteristics.
+
+8. System action taken upon error conditions:
+
+     ' <name> ['] <name>  not found results in ? error message
+     
+     */ */MOD / /MOD MOD UM/MOD  all division by 0 errors  result      
+     in a 0 quotient
+
+     : in the case of an error, a ? error message will be printed
+
+     DO if a nesting error occurs, the system will crash. (if you 
+     are lucky)
+
+     EXECUTE  if  addr is not a compilation address,  the  system 
+     will crash. see DO
+
+     EXIT if the top of the return stack does not contain a valid 
+     return point, the system will crash.  see DO
+
+     FORGET <name>  if <name> is not found, a ? error message  is 
+     printed.   If the compilation vocabulary is  forgotten,  the 
+     system will crash. see DO
+
+     FORTH-83  if the error condition occurs,  that this is not a  
+     standard  system,  I don't want to hear about it and I  hope 
+     the system not only crashes, but burns.
+
+     LOAD if u is zero, the system will crash.  see DOŠ
