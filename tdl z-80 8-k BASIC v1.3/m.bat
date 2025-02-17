@@ -1,1 +1,1 @@
-ntvcm -c -n -p sbasic <%1.txt
+ntvcm -c -p sbasic <%1.txt
