@@ -20,9 +20,8 @@ proc options(main);
         pieceBlank by 0,
         DefaultIterations by 1;
 
-    dcl board(9) fixed binary(7);
-    dcl movecount fixed binary;
-    dcl ( i, iterations ) fixed binary;
+    dcl board(9) binary(7);
+    dcl ( movecount, i, iterations ) fixed;
 
     iterations = readcommandtail();
     if 0 = iterations then
@@ -40,17 +39,17 @@ proc options(main);
     stop;
 
 findsolution: proc( move );
-    dcl move fixed binary(7);
-    dcl res fixed binary(7);
+    dcl move binary(7);
+    dcl res binary(7);
 
     board( move ) = pieceX;
     res = minmax( ScoreMin, ScoreMax, 0, move );
     board( move ) = pieceBlank;
 end findsolution;
 
-minmax: proc( alpha, beta, depth, move ) returns ( fixed binary(7) ) recursive;
-    dcl (alpha, beta, depth, move) fixed binary(7);
-    dcl (value, score, pieceMove, p, m) fixed binary(7);
+minmax: proc( alpha, beta, depth, move ) returns ( binary(7) ) recursive;
+    dcl (alpha, beta, depth, move) binary(7);
+    dcl (value, score, pieceMove, p) binary(7);
 
     /*
     put skip list( '{', board(0), board(1), board(2), board(3), board(4), board(5),
@@ -81,11 +80,11 @@ minmax: proc( alpha, beta, depth, move ) returns ( fixed binary(7) ) recursive;
         pieceMove = pieceO;
     end;
 
-    do m = 0 to 8;
-        if pieceBlank = board( m ) then do;
-            board( m ) = pieceMove;
-            score = minmax( alpha, beta, depth + 1, m );
-            board( m ) = pieceBlank;
+    do p = 0 to 8;
+        if pieceBlank = board( p ) then do;
+            board( p ) = pieceMove;
+            score = minmax( alpha, beta, depth + 1, p );
+            board( p ) = pieceBlank;
     
             if pieceX = pieceMove then do;
                 /* put skip list ( 'odd depth, score: ', score ); */
@@ -113,8 +112,8 @@ minmax: proc( alpha, beta, depth, move ) returns ( fixed binary(7) ) recursive;
     return ( value );
 end minmax;
 
-winner: proc returns ( fixed binary(7) );
-    dcl p fixed binary(7);
+winner: proc returns ( binary(7) );
+    dcl p binary(7);
 
     p = board( 0 );
     if pieceBlank ^= p then do;
@@ -143,9 +142,9 @@ winner: proc returns ( fixed binary(7) );
     return ( pieceBlank );
 end winner;
 
-winner2: proc( m ) returns ( fixed binary(7) );
-    dcl m fixed binary(7);
-    dcl x fixed binary(7);
+winner2: proc( m ) returns ( binary(7) );
+    dcl m binary(7);
+    dcl x binary(7);
     
     x = board( m );
 
@@ -197,10 +196,10 @@ winner2: proc( m ) returns ( fixed binary(7) );
     return ( pieceBlank );
 end winner2;
 
-readcommandtail: proc returns ( fixed binary );
+readcommandtail: proc returns ( fixed );
     dcl memptr pointer;
     dcl memory (0:256) bit(8) based( memptr );
-    dcl r fixed binary;
+    dcl r fixed;
     dcl ( ch, tailLen, x ) fixed binary(7);
 
     tailLen = memory( 128 );
