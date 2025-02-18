@@ -1,31 +1,12 @@
-/*
-   This version builds with old compilers including:
-       Aztec C 1.06 for 8080 & Z80 on CP/M.
-       Microsoft C Compiler V1.04 for 8086 on DOS. (This is Lattice C)
-       Microsoft C Compiler V2.03 for 8086 on DOS. (Still Lattice C)
-       Microsoft C Compiler V3.00 for 8086 on DOS.
-       QuickC 1.0
-       Turbo C 2.0
-   The syntax is old and reminds me of 7th grade summer vacation.
-   Much of this code is awkward to satisfy the lowest common denominator of many compilers.
-   unsigned long isn't supported in many older compilers, so long is used instead.
-   Early DOS and CP/M require register variabes to be int, not char or other types.
-   The perf improvement of using register-int instead of stack-char is worth it.
-*/
-
-#define LINT_ARGS
-
 #define true 1
 #define false 0
 
-#define ABPrune true         /* alpha beta pruning */
-#define WinLosePrune true    /* stop early on win/lose */
 #define ScoreWin 6
 #define ScoreTie 5
 #define ScoreLose  4
 #define ScoreMax 9
 #define ScoreMin 2
-#define DefaultIterations 10
+#define DefaultIterations 1
 
 #define PieceX 1
 #define PieceO 2
@@ -33,9 +14,8 @@
 
 #define ttype char
 
-int g_Iterations;
-int g_moves;
 ttype g_board[ 9 ];
+int g_moves;
 
 ttype winner2( move ) ttype move;
 {
@@ -168,17 +148,126 @@ ttype LookForWinner()
     return PieceBlank;
 } /*LookForWinner*/
 
+ttype pos0func()
+{
+    char x;
+    x = g_board[0];
+    
+    if ( ( x == g_board[1] && x == g_board[2] ) ||
+         ( x == g_board[3] && x == g_board[6] ) ||
+         ( x == g_board[4] && x == g_board[8] ) )
+        return x;
+    return PieceBlank;
+}
+
+ttype pos1func()
+{
+    char x;
+    x = g_board[1];
+    
+    if ( ( x == g_board[0] && x == g_board[2] ) ||
+         ( x == g_board[4] && x == g_board[7] ) )
+        return x;
+    return PieceBlank;
+} 
+
+ttype pos2func()
+{
+    char x;
+    x = g_board[2];
+    
+    if ( ( x == g_board[0] && x == g_board[1] ) ||
+         ( x == g_board[5] && x == g_board[8] ) ||
+         ( x == g_board[4] && x == g_board[6] ) )
+        return x;
+    return PieceBlank;
+} 
+
+ttype pos3func()
+{
+    char x;
+    x = g_board[3];
+    
+    if ( ( x == g_board[4] && x == g_board[5] ) ||
+         ( x == g_board[0] && x == g_board[6] ) )
+        return x;
+    return PieceBlank;
+} 
+
+ttype pos4func()
+{
+    char x;
+    x = g_board[4];
+    
+    if ( ( x == g_board[0] && x == g_board[8] ) ||
+         ( x == g_board[2] && x == g_board[6] ) ||
+         ( x == g_board[1] && x == g_board[7] ) ||
+         ( x == g_board[3] && x == g_board[5] ) )
+        return x;
+    return PieceBlank;
+} 
+
+ttype pos5func()
+{
+    char x;
+    x = g_board[5];
+    
+    if ( ( x == g_board[3] && x == g_board[4] ) ||
+         ( x == g_board[2] && x == g_board[8] ) )
+        return x;
+    return PieceBlank;
+} 
+
+ttype pos6func()
+{
+    char x;
+    x = g_board[6];
+    
+    if ( ( x == g_board[7] && x == g_board[8] ) ||
+         ( x == g_board[0] && x == g_board[3] ) ||
+         ( x == g_board[4] && x == g_board[2] ) )
+        return x;
+    return PieceBlank;
+} 
+
+ttype pos7func()
+{
+    char x;
+    x = g_board[7];
+    
+    if ( ( x == g_board[6] && x == g_board[8] ) ||
+         ( x == g_board[1] && x == g_board[4] ) )
+        return x;
+    return PieceBlank;
+} 
+
+ttype pos8func()
+{
+    char x;
+    x = g_board[8];
+    
+    if ( ( x == g_board[6] && x == g_board[7] ) ||
+         ( x == g_board[2] && x == g_board[5] ) ||
+         ( x == g_board[0] && x == g_board[4] ) )
+        return x;
+    return PieceBlank;
+} 
+
+int * winner_functions[9];
+
 ttype MinMax( alpha, beta, depth, move ) ttype alpha; ttype beta; ttype depth; ttype move;
 {
     ttype pieceMove, score;   /* better perf with char than int. out of registers so use stack */
     int p, value;    /* better perf with these as an int on Z80, 8080, and 8086 */
+    ttype (*winfunc)();
 
     g_moves++;
 
     if ( depth >= 4 )
     {
-        p = winner2( move );
-        /* p = LookForWinner(); */
+        /* winner_functions is faster than winner2() and LookForWinner() */
+        winfunc = winner_functions[ move ];
+        p = ( * winfunc )();
 
         if ( PieceBlank != p )
         {
@@ -249,37 +338,43 @@ ttype MinMax( alpha, beta, depth, move ) ttype alpha; ttype beta; ttype depth; t
 
 int FindSolution( position ) ttype position;
 {
-    int i;
-
-    for ( i = 0; i < 9; i++ )
-        g_board[ i ] = PieceBlank;
-
     g_board[ position ] = PieceX;
-
-    for ( i = 0; i < g_Iterations; i++ )
-    {
-        g_moves = 0;
-        MinMax( ScoreMin, ScoreMax, 0, position );
-    }
-
-    return g_moves;
+    MinMax( ScoreMin, ScoreMax, 0, position );
+    g_board[ position ] = PieceBlank;
 } /*FindSolution*/
 
 int main( argc, argv ) int argc; char * argv[];
 {
-    int total_moves;
-    g_Iterations = DefaultIterations;
+    int i, iterations;
+
+    for ( i = 0; i < 9; i++ )
+        g_board[ i ] = PieceBlank;
+
+    winner_functions[ 0 ] = &pos0func;
+    winner_functions[ 1 ] = &pos1func;
+    winner_functions[ 2 ] = &pos2func;
+    winner_functions[ 3 ] = &pos3func;
+    winner_functions[ 4 ] = &pos4func;
+    winner_functions[ 5 ] = &pos5func;
+    winner_functions[ 6 ] = &pos6func;
+    winner_functions[ 7 ] = &pos7func;
+    winner_functions[ 8 ] = &pos8func;
 
     if ( 2 == argc )
-        sscanf( argv[ 1 ], "%d", &g_Iterations ); /* no atoi in MS C 1.0 */
+        sscanf( argv[ 1 ], "%d", &iterations ); /* no atoi in MS C 1.0 */
+    else
+        iterations = 10;
 
-    printf( "iteration count: %d\n", g_Iterations );
+    for ( i = 0; i < iterations; i++ )
+    {
+        g_moves = 0;
+        FindSolution( 0 );
+        FindSolution( 1 );
+        FindSolution( 4 );
+    }
 
-    total_moves = FindSolution( 0 );
-    total_moves += FindSolution( 1 );
-    total_moves += FindSolution( 4 );
-
-    printf( "move count:      %d\n", total_moves ); /* 6493 */
+    printf( "move count:      %d\n", g_moves ); /* 6493 */
+    printf( "iteration count: %d\n", iterations );
     return 0;
 } /*main*/
 
