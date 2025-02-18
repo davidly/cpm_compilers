@@ -1,18 +1,9 @@
 begin
 
-integer function remainder( y, z );
-    integer y, z;
-begin
-    integer result;
-
-    result := y / z;
-    remainder := y - ( z * result );
-end;
-
 procedure main;
 begin
     integer array a[0:200];
-    integer high, n, x;
+    integer high, n, x, d;
 
     high := 200;
     x := 0;
@@ -30,8 +21,9 @@ begin
         n := high;
         high := high - 1;
         while 0 <> n do begin
-            a[ n ] := remainder( x, n );
-            x := 10 * a[ n - 1 ] + x / n;
+            d := x / n;
+            a[ n ] := x - ( d * n );
+            x := 10 * a[ n - 1 ] + d;
             n := n - 1;
         end;
         writeon( x );
