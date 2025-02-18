@@ -14,9 +14,7 @@
 235 N% = HIGH%
 240 IF N% = 0 GOTO 300
 250 A%[ N% ] = X% MOD N%
-255 rem PRINT "a[n-1]"; A%[ N% - 1 ]
 260 X% = ( 10 * A%[ N% - 1 ] ) + ( X% \ N% )
-265 rem PRINT "x: "; X%, "n: "; N%
 270 N% = N% - 1
 280 GOTO 240
 300 IF X% >= 10 GOTO 330
