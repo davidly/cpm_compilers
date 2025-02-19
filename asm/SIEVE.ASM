@@ -8,14 +8,14 @@
 ;        #define TRUE 1
 ;        #define FALSE 0
 ;        #define SIZE 8190
-;        
+;
 ;        char flags[SIZE+1];
-;        
+;
 ;        int main()
 ;                {
 ;                int i,k;
 ;                int prime,count,iter;
-;        
+;
 ;                for (iter = 1; iter <= 10; iter++) {    /* do program 10 times */
 ;                        count = 0;                      /* initialize prime counter */
 ;                        for (i = 0; i <= SIZE; i++)     /* set all flags true */
@@ -42,10 +42,10 @@ PRSTR equ 9
 
 ; app constants
 
-true   equ 1
-false  equ 0
-loops  equ 10
-size   equ 8190                     ; lots of assumptions about this size below / can't easily change it
+true  equ 1
+false equ 0
+loops equ 10
+size  equ 8190                      ; lots of assumptions about this size below / can't easily change it
 
 sizep1hi equ ( size + 1 ) SHR 8     ; size plus 1 high
 sizep1lo equ ( size + 1 ) AND 0ffh  ; size plus 1 low
@@ -71,7 +71,7 @@ org     100h
 
   fillagain:
         push       h                ; write 16 bytes of true
-        push       h                
+        push       h
         push       h
         push       h
         push       h
@@ -88,59 +88,53 @@ org     100h
 
         ; iterate through array entries and count primes
 
-        lxi        b, afterFlags    ; handy place for this constant
-        lxi        d, 0             ; d is "i" in the outer for loop
+        lxi        b, 0             ; b is "i" in the outer for loop
 
   nextprime:                        ; for (i = 0; i <= SIZE; i++) {
         xra        a
         lxi        h, flags
-        dad        d
-        cmp        m                ; if (flags[i]) 
-        jz         flagisoff
+        dad        b
+  npshortcut:
+        cmp        m                ; if (flags[i])
+        jnz        flagison
+        inx        b
+        mvi        a, 20h
+        cmp        b
+        jz         checknextiter
+        inx        h
+        xra        a
+        jmp        npshortcut
 
-        push       d                ; save "i" incrementing towards SIZE in outer for loop
-        shld       PKFLAGS          ; temporarily save & ( flags[ k ] )
-                                   
-        lxi        h, 3             ; compute prime, which is added to k each inner loop
-        dad        d                ; prime = i + i + 3
-        dad        d
+  flagison:
         xchg
-        lhld       PKFLAGS
+        lxi        h, 3             ; compute prime, which is added to k each inner loop from d
+        dad        b                ; prime = i + i + 3
+        dad        b
+        xchg
 
         ; check if pointer to after last item in flags < pointer to k'th element in flags (hl)
-        ; then exit k loop. both values are guaranteed to be positive numbers given where the app is loaded by cp/m.
         ; this is duplicate code to that in kloop, but it avoids an extra instruction in the loop.
 
+        mvi        a, 22h           ; 22h - 23h will set the carry bit
         dad        d                ; k += prime
-        mov        a, l
-        sub        c                ; c has ( afterFlags AND 0ffh ) because sub is faster than sui.
-        mov        a, h
-        sbb        b                ; b has ( afterFlags SHR 8 ) because sbb is faster than sbi.
-        jnc        inccount
+        cmp        h
+        jc         inccount
 
   kloop:                            ; hl = pointer to k'th element in flags. dc = prime
         mvi        m, 0             ; flags[ k ] = false
         dad        d                ; k += prime
-        mov        a, l
-        sub        c                ; bc has afterFlags; see if we've moved there or beyond
-        mov        a, h
-        sbb        b
-        jc         kloop
+        cmp        h
+        jnc        kloop
 
-  inccount:                         
+  inccount:
         lhld       COUNT            ; count++
         inx        h
         shld       COUNT
 
-        pop        d                ; restore "i" in outer for loop
-
   flagisoff:                        ; check if outer loop is done
-        inx        d
-        mvi        a, sizep1hi
-        cmp        d                ; the high byte will differ almost always. 2x as fast as lxi h -size + dad d + jnc
-        jnz        nextprime
-        mvi        a, sizep1lo
-        cmp        e
+        inx        b
+        mvi        a, 20h           ; past 8192 byes?
+        cmp        b
         jnz        nextprime
 
   checknextiter:                    ; are we done iterating loops times?
@@ -221,7 +215,7 @@ PUTHL:                              ; print the signed 16-bit number in HL
         lxi     d, -1               ; DE = quotient. There is no 16-bit subtraction,
   DGTDIV:
         dad     b                   ; so we just add a negative value,
-        inx     d                   
+        inx     d
         jc      DGTDIV              ; while that overflows.
         mvi     a, '0'+10           ; The loop runs once too much so we're 10 out
         add     l                   ; The remainder (minus 10) is in L
@@ -236,23 +230,26 @@ PUTHL:                              ; print the signed 16-bit number in HL
         mvi     c, PRSTR            ; Prepare to call CP/M and print the string
         pop     d                   ; Put the string pointer from the stack in DE
         lda     NEGF                ; See if the number was supposed to be negative
-        inr     a                   
+        inr     a
         jnz     bdos                ; If not, print the string we have and return
         dcx     d                   ; But if so, we need to add a minus in front
-        mvi     a, '-'              
-        stax    d                   
+        mvi     a, '-'
+        stax    d
         jmp     bdos                ; And only then print the string. bdos will return to caller
 
-PKFLAGS:    dw      0               ; address of flags[ k ]
 COUNT:      dw      0               ; count in C code
 ITER:       dw      0               ; iter in C code
 SaveSP:     dw      0               ; save/restore SP
 NEGF:       db      0               ; Space for negative flag
-            db      '-00000'            
+            db      '-00000'
 NUM:        db      '$'             ; Space for number. cp/m strings end with a dollar sign
 CRLF:       db      13,10,0
 STRPRIMES:  db     ' primes.', 13, 10, 0
 
+
+; make flags start at 300h end at 2300h so the inner loop can be faster; one compare not two
+
+org 2300h-8192
 flags:      ds      size + 1        ; 8191 bytes
 afterflags: db      69h             ; wasted byte so initialization of array is faster
 afterarray:                         ; flags + 8192. 8k array
