@@ -1,0 +1,51 @@
+
+--> FILE:  ARCTAN  .PAS		CRC = 77 D7
+
+--> FILE:  CONVERTM.IN2		CRC = AE 6A
+
+--> FILE:  CONVERTM.INT		CRC = 8D 5C
+
+--> FILE:  CONVERTM.PAS		CRC = FF EF
+
+--> FILE:  COS     .PAS		CRC = D5 57
+
+--> FILE:  CRTMAP  .PAS		CRC = 6B 23
+
+--> FILE:  CUSTOMIZ.INT		CRC = 40 F7
+
+--> FILE:  DEBUG   .INT		CRC = 33 86
+
+--> FILE:  ERASE   .INT		CRC = EE FC
+
+--> FILE:  EXEC    .COM		CRC = DA 81
+
+--> FILE:  EXP     .PAS		CRC = AA D5
+
+--> FILE:  INDEX0  .INT		CRC = C5 5B
+
+--> FILE:  INDEX1  .INT		CRC = A0 4B
+
+--> FILE:  INDEX2  .INT		CRC = CA 21
+
+--> FILE:  JRTPAS3 .COM		CRC = 44 2E
+
+--> FILE:  PASCAL  .LIB		CRC = 6A 34
+
+--> FILE:  PASCAL0 .INT		CRC = C5 5F
+
+--> FILE:  PASCAL1 .INT		CRC = DA CC
+
+--> FILE:  PASCAL2 .INT		CRC = 9C 31
+
+--> FILE:  PASCAL3 .INT		CRC = A6 AD
+
+--> FILE:  PASCAL4 .INT		CRC = B4 66
+
+--> FILE:  CRCKLIST.CRC		CRC = 26 CB
+
+--> FILE:  DISK    .DOC		CRC = 40 71
+
+--> FILE:  -FOG/EX1.008		CRC = 00 00
+
+ ---------------------> SUM OF CRCS = B9 A9
+

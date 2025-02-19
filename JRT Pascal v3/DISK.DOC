@@ -1,0 +1,56 @@
+                                -FOG/EX1.008
+                             DISK DOCUMENTATION
+
+This  disk  is  part two of a three-disk  set,  -FOG/EX1.007  through  .009, 
+containing the JRT Pascal language compiler,  version 3.0.   This system has 
+been released into the public domain during January 1984.
+
+Complete documentation (i.e. the manual) may be found on -FOG/EX1.007.
+
+This disk contains the following files:
+  
+JRT Pascal compiler:
+  JRTPAS3.COM
+  PASCAL0.INT
+  PASCAL1.INT
+  PASCAL2.INT
+  PASCAL3.INT
+  PASCAL4.INT
+  PASCAL.LIB
+
+Run-time environment:
+  EXEC.COM
+
+External functions:
+  ARCTAN.PAS
+  COS.PAS
+  EXP.PAS
+
+CRT Mapping utility:
+  CRTMAP.PAS
+
+System customization program:
+  CUSTOMIZ.INT
+
+Indexed file processing procedures:
+  INDEX0.INT
+  INDEX1.INT
+  INDEX2.INT
+
+Dynamic trace control external procedure:
+  DEBUG.INT
+
+Utilities to convert Microsoft modules:
+  CONVERTM.INT
+  CONVERTM.IN2
+  CONVERTM.PAS
+
+Additional external procedure: 
+  ERASE.INT
+
+See -FOG/EX1.009 for the remaining Pascal files.
+
+                                 Jim Switz
+                          FOG Executive Librarian
+                              30 January 1984
+
