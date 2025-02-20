@@ -18,7 +18,11 @@
 
 #define ttype int
 
-ttype winner2( move, board ) ttype move; ttype * board;
+/* note odd initializer syntax. without initializers, the symbols are unresolved */
+ttype board[ 9 ] {0};
+int moves {0};
+
+ttype winner2( move ) ttype move;
 {
     int x;  /* faster than ttype x on the stack */
 
@@ -107,7 +111,7 @@ ttype winner2( move, board ) ttype move; ttype * board;
     return PieceBlank;
 } /*winner2*/
 
-ttype LookForWinner( board ) int * board;
+ttype LookForWinner()
 {
     int p;
     p = board[0]; /* faster as int than ttype on 8086 and Z80 */
@@ -149,19 +153,19 @@ ttype LookForWinner( board ) int * board;
     return PieceBlank;
 } /*LookForWinner*/
 
-ttype MinMax( alpha, beta, depth, move, moves, board )
-    ttype alpha; ttype beta; ttype depth; ttype move; int * moves; int *board;
+ttype MinMax( alpha, beta, depth, move )
+    ttype alpha; ttype beta; ttype depth; ttype move;
 {
     ttype pieceMove, score;   /* better perf with char than int. out of registers so use stack */
     int p, value;    /* better perf with these as an int on Z80, 8080, and 8086 */
 
-    (*moves)++;
+    moves++;
 
     if ( depth >= 4 )
     {
-        p = winner2( move, board );
+        p = winner2( move );
 /*
-        p = LookForWinner( board );
+        p = LookForWinner();
 */
 
         if ( PieceBlank != p )
@@ -192,7 +196,7 @@ ttype MinMax( alpha, beta, depth, move, moves, board )
         if ( PieceBlank == board[ p ] )
         {
             board[p] = pieceMove;
-            score = MinMax( alpha, beta, depth + 1, p, moves, board );
+            score = MinMax( alpha, beta, depth + 1, p );
             board[p] = PieceBlank;
 
             if ( depth & 1 ) 
@@ -233,8 +237,7 @@ ttype MinMax( alpha, beta, depth, move, moves, board )
 
 int FindSolution( position ) ttype position;
 {
-    int i, moves;
-    ttype board[ 9 ];
+    int i;
 
     for ( i = 0; i < 9; i++ )
         board[ i ] = PieceBlank;
@@ -244,7 +247,7 @@ int FindSolution( position ) ttype position;
     for ( i = 0; i < DefaultIterations; i++ )
     {
         moves = 0;
-        MinMax( ScoreMin, ScoreMax, 0, position, &moves, board );
+        MinMax( ScoreMin, ScoreMax, 0, position );
     }
 
     return moves;
@@ -261,12 +264,12 @@ int strlen( p ) char * p;
     return l;
 }
 
-int reverse( p ) char * p;
+int reverse( p, len ) char * p; int len;
 {
     int r, l;
     char t;
 
-    r = strlen( p );
+    r = len;
     if ( 0 == r )
         return 0;
 
@@ -284,29 +287,33 @@ int reverse( p ) char * p;
     return 0;
 }
 
-int itoa( p, i ) char * p; int i;
+int utoa( p, i ) char * p; int i;
 {
-    int x, len;
-
-    if ( 0 == i )
-    {
-        p[0] = '0';
-        p[1] = 0;
-        return 1;
-    }
+    int digit, len;
 
     len = 0;
-    while ( 0 != i )
+    do
     {
-        x = i % 10;
-        p[ len ] = '0' + x;
+        if ( i >= 10 )
+        {
+            digit = i % 10;
+            i /= 10;
+        }
+        else
+        {
+            digit = i;
+            i = 0;
+        }
+
+        p[ len ] = '0' + digit;
         len++;
-        i /= 10;
-    }
+    } while ( 0 != i );
 
     p[ len ] = 0;
 
-    reverse( p );
+    if ( len > 1 )
+        reverse( p, len );
+
     return len;
 }
 
@@ -326,15 +333,13 @@ int main( argc, argv ) int argc; char * argv[];
     moves += FindSolution( 1 );
     moves += FindSolution( 4 );
 
-    write( 0, "hello from ttt!\n", 16 );
-
     putstring( "moves: " );
-    len = itoa( acmoves, moves );
+    len = utoa( acmoves, moves );
     putstring( acmoves );
     putstring( "\n" );
 
     putstring( "iterations: " );
-    len = itoa( acmoves, DefaultIterations );
+    len = utoa( acmoves, DefaultIterations );
     putstring( acmoves );
     putstring( "\n" );
 /*

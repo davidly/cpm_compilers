@@ -1,5 +1,10 @@
 /*  sieve.c */
 
+/*
+    this is overall 25% faster for Whitesmith, but it's not the benchmark.
+    #define FAST_WHITESMITH
+*/
+
 /* Eratosthenes Sieve Prime Number Program in C from Byte Jan 1983
    to compare the speed. */
 
@@ -7,23 +12,12 @@
 #define FALSE 0
 #define SIZE 8190
 
-int strlen( p ) char * p;
-{
-    int l;
-    l = 0;
-
-    while ( 0 != p[l] )
-        l++;
-
-    return l;
-}
-
-int reverse( p ) char * p;
+int reverse( p, len ) char * p; int len;
 {
     int r, l;
     char t;
 
-    r = strlen( p );
+    r = len;
     if ( 0 == r )
         return 0;
 
@@ -41,39 +35,49 @@ int reverse( p ) char * p;
     return 0;
 }
 
-int itoa( p, i ) char * p; int i;
+int utoa( p, i ) char * p; int i;
 {
-    int x, len;
-
-    if ( 0 == i )
-    {
-        p[0] = '0';
-        p[1] = 0;
-        return 1;
-    }
+    int digit, len;
 
     len = 0;
-    while ( 0 != i )
+    do
     {
-        x = i % 10;
-        p[ len ] = '0' + x;
+        if ( i >= 10 )
+        {
+            digit = i % 10;
+            i /= 10;
+        }
+        else
+        {
+            digit = i;
+            i = 0;
+        }
+
+        p[ len ] = '0' + digit;
         len++;
-        i /= 10;
-    }
+    } while ( 0 != i );
 
     p[ len ] = 0;
 
-    reverse( p );
+    if ( len > 1 )
+        reverse( p, len );
+
     return len;
 }
 
 int main()
         {
-        int i, k, l;
-        int prime,count,iter;
+#ifdef FAST_WHITESMITH
+        static int i, k;
+        static int prime, count, iter;
+        static char account[ 10 ];
+        static char flags[ SIZE + 1 ];
+#else
+        int i, k;
+        int prime, count, iter;
         char account[ 10 ];
-
-        char flags[SIZE+1];
+        char flags[ SIZE + 1 ];
+#endif
 
         for (iter = 1; iter <= 10; iter++) {    /* do program 10 times */
                 count = 0;                      /* initialize prime counter */
@@ -88,8 +92,8 @@ int main()
                                 }
                         }
                 }
-        l = itoa( account, count );
-        write( 0, account, l );
+        i = utoa( account, count );
+        write( 0, account, i );
         write( 0, " primes.\n", 9); 
         return 0;
         }
