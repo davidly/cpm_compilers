@@ -106,7 +106,7 @@ org     100h
         dad        h
         dad        h                ; after this hl is 8 * de
         dad        d
-        dad        d		    ; hl = 10 * a[ n - 1 ]
+        dad        d                ; hl = 10 * a[ n - 1 ]
         pop        d                ; restore the result of the division
         dad        d                ; add the two parts together. x (aka hl) := (mul result + div result)
 
@@ -186,7 +186,6 @@ udiv:
         ora     d
         jnz     udiv$notzero
         lxi     h, 0
-        lxi     d, 0
         ret
   udiv$notzero:
         push    b
