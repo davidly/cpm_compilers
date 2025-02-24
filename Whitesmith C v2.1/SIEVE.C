@@ -11,6 +11,7 @@
 #define TRUE 1
 #define FALSE 0
 #define SIZE 8190
+#define SIZEP1 8191
 
 int reverse( p, len ) char * p; int len;
 {
@@ -65,18 +66,18 @@ int utoa( p, i ) char * p; int i;
     return len;
 }
 
+char flags[ SIZEP1 ] {0};
+
 int main()
         {
 #ifdef FAST_WHITESMITH
         static int i, k;
         static int prime, count, iter;
         static char account[ 10 ];
-        static char flags[ SIZE + 1 ];
 #else
         int i, k;
         int prime, count, iter;
         char account[ 10 ];
-        char flags[ SIZE + 1 ];
 #endif
 
         for (iter = 1; iter <= 10; iter++) {    /* do program 10 times */
