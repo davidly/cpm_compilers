@@ -76,24 +76,24 @@ org     100h
         dcx        h
         mvi        m, 0
 
-        ; register c is n. register b is high. register de is x at the start of each inner loop
+        ; register b is both "high" and "n". register de is x at the start of each inner loop
 
         mvi        b, DIGITS
 
   outerloop:
-        dcr        b                ; high := high - 1;
-        mov        c, b             ; n := high;
+        dcr        b                ; high := high - 1; n := high;
+        push       b                ; save b/high on the stack
         lxi        d, 0             ; x := 0;
         mov        h, d
 
   innerloop:
-        mov        l, c             ; h will be 0 because of the line above or because of a prior division
+        mov        l, b             ; h will be 0 because of the line above or because of a prior division
         call       udiv             ; de / hl. computes both ( x MOD n ) and ( x DIV n )
-        push       h                ; save result hl of the division on the stack
+        mov        c, l             ; save result of the division in c
         mov        a, e             ; remainder in de is guaranteed to fit in one byte
 
         lxi        h, array
-        mov        e, c             ; d is already 0 from the division above
+        mov        e, b             ; d is already 0 from the division above
         dad        d                ; make hl point to a[ n ]
         mov        m, a             ; a[ n ] := x MOD n;
 
@@ -101,22 +101,25 @@ org     100h
         mov        e, m             ; put a[ n - 1 ] in de. d is still 0 from above
 
         xchg
-        dad        h                ; double hl
+        dad        h                ; double hl ( a[ n - 1 ] )
         mov        d, h             ; save the 2x amount
         mov        e, l
         dad        h                ; now it's 4x
         dad        h                ; now it's 8x
         dad        d                ; now it's 10x
-        pop        d                ; restore the result of the division
+
+        mvi        d, 0
+        mov        e, c             ; load the result of the division into de
         dad        d                ; add the two parts together. x (aka hl) := (mul result + div result)
 
         xchg                        ; de should have x at the start of each loop. h is now 0. l is div result
-        dcr        c                ; n := n - 1;
+        dcr        b                ; n := n - 1;
         jnz        innerloop        ; if n isn't 0 then loop again
 
         call       DisplayUnsigned  ; show the next digit(s) of e
 
         mvi        a, 9
+        pop        b		    ; restore high
         cmp        b                ; while high > 9 do begin (re-written as a do until loop)
         jnz        outerloop
 
