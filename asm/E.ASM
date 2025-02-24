@@ -84,10 +84,10 @@ org     100h
         dcr        b                ; high := high - 1;
         mov        c, b             ; n := high;
         lxi        d, 0             ; x := 0;
+        mov        h, d
 
   innerloop:
-        mvi        h, 0
-        mov        l, c
+        mov        l, c             ; h will be 0 because of the line above or because of a prior division
         call       udiv             ; de / hl. computes both ( x MOD n ) and ( x DIV n )
         push       h                ; save result hl of the division on the stack
         mov        a, e             ; remainder in de is guaranteed to fit in one byte
@@ -100,17 +100,17 @@ org     100h
         dcx        h                ; make hl point to a[ n - 1 ]
         mov        e, m             ; put a[ n - 1 ] in de. d is still 0 from above
 
-        mov        h, d             ; move de to hl
-        mov        l, e
-        dad        h                ; multiply hl by 10 via doubling 3 times then adding de twice
-        dad        h
-        dad        h                ; after this hl is 8 * de
-        dad        d
-        dad        d                ; hl = 10 * a[ n - 1 ]
+        xchg
+        dad        h                ; double hl
+        mov        d, h             ; save the 2x amount
+        mov        e, l
+        dad        h                ; now it's 4x
+        dad        h                ; now it's 8x
+        dad        d                ; now it's 10x
         pop        d                ; restore the result of the division
         dad        d                ; add the two parts together. x (aka hl) := (mul result + div result)
 
-        xchg
+        xchg                        ; de should have x at the start of each loop. h is now 0. l is div result
         dcr        c                ; n := n - 1;
         jnz        innerloop        ; if n isn't 0 then loop again
 
@@ -181,32 +181,33 @@ PrintUnsigned:                      ; print the unsigned 16-bit number in HL
         jmp     bdos                ; And only then print the string. bdos will return to caller
 
 ; unsigned divide de by hl, result in hl. remainder in de. divide by 0 not checked.
+; future optimization: keep doubling denominator until it's > than numerator, go back one, then iterative subtraction
 udiv:
         mov     a, e
         ora     d
-        jnz     udiv$notzero
+        jnz     udiv$notzero        ; if de is 0 then just return 0s
         lxi     h, 0
         ret
   udiv$notzero:
-        push    b
-        xchg
+        push    b                   ; don't trash bc
+        xchg                        ; swap de and hl
         lxi     b, 0
   udiv$loop:
-        mov     a, l
+        mov     a, l                ; keep subtracting de from hl until it goes below 0
         sub     e
         mov     l, a
         mov     a, h
         sbb     d
         mov     h, a
         jc      udiv$done
-        inx     b
+        inx     b                   ; b records the # of subtracts
         jmp     udiv$loop
   udiv$done:
-        dad     d
+        dad     d                   ; add back once to compute the remainder
         xchg                        ; remainder in de
         mov     l, c
         mov     h, b
-        pop     b
+        pop     b                   ; restore original bc
         ret
 
             db      '00000'
@@ -216,7 +217,6 @@ STRDONE:    db      'done.', 13, 10, 0
 ARRAY:      ds      DIGITS
 
 end
-
 
 ; unused code
 IF 0

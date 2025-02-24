@@ -57,7 +57,7 @@ org     100h
         shld       COUNT
 
         ; set all array entries to true:  for (i = 0; i <= SIZE; i++) flags[i] = TRUE;
-        ; using sp for 2-byte writes is much faster than a loop of writing bytes
+        ; using sp for 2-byte writes is much faster than a loop of writing bytes.
         ; expand the array size to a power of 2 for performance.
 
         lxi        h, 0
@@ -98,7 +98,7 @@ org     100h
         cmp        m                ; if (flags[i])
         jnz        flagison
         inx        b
-        mvi        a, 20h
+        mvi        a, 20h	    ; past 8192 bytes?
         cmp        b
         jz         checknextiter
         inx        h
