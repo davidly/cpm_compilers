@@ -1,0 +1,21 @@
+msize	equ	64		; adjust per installed system memory
+
+; configuration parameters for BIOS
+bioslen	equ	0d00h		; adjust as bios changes are made (if necessary)
+nhdisks	equ	2		; total number of hard disks (set to 0
+				;   if no hard disks desired)
+needZ80	equ	0		; 0 = 8080 is ok, 1 = Z80 is needed
+patchOS	equ	1		; 0 = do not patch CCP and BODS
+				; 1 = patch orignal CCP and original BDOS
+
+; common definitions and derived values - no change should be necessary below
+ccplen	equ	0800h		; cp/m constant
+bdoslen	equ	0e00h		; cp/m constant
+
+; cp/m image size (rounded up to next 1k boundary)
+cpmlen	equ	(ccplen + bdoslen + bioslen + 03ffh) / 0400h
+
+ccpph	equ	(msize - cpmlen) * 1024		; ccp start address
+bdosph	equ	ccpph + ccplen			; bdos start address
+biosph	equ	ccpph + ccplen + bdoslen	; bios start address
+

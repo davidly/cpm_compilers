@@ -1,0 +1,766 @@
+GKSL.WS4
+--------
+
+- "Systems Languages: Management's Key to Controlled Software Evolution"
+   Gary Kildall
+   Proceedings of the 1974 western electronics show and convention (WESCON),
+   September 1974 ("1974 WESCON Technical Papers", Volume 18, Session 19/2)
+
+(Retyped by Emmanuel ROCHE.)
+
+
+Abstract
+--------
+
+Current industry trends forecast widespread use of microcomputers to  simplify 
+the design, development, and manufacture of many digital electronics products. 
+The  effects  of microcomputer software design upon the  production  cycle  is 
+presented,  emphasizing  the necessity for  well-organized  software  systems. 
+High-level   systems   languages  are  introduced  as  an  aid   in   software 
+organization, using Intel's PL/M as a specific example.
+
+
+Introduction
+------------
+
+The general availability of the low-cost microcomputer, or "CPU on a chip", is 
+undoubtedly  the greatest single breakthrough in digital design technology  in 
+this  decade. Although relatively inexpensive general-purpose  computers  have 
+been packaged as end-user oriented minicomputers for several years, it is  now 
+economically  feasible  to design-in a microcomputer set into the heart  of  a 
+digital system produced in large quantities. Though only recently  introduced, 
+microcomputers  have  been applied to a wide spectrum of  digital  processing, 
+from simple device controllers through sophisticated word-processing  systems. 
+In  fact, the ability to treat a microprocessor as simply  another  relatively 
+inexpensive  component  has  led to simplification  of  many  current  product 
+designs,  and opened the door to a vast array of digital applications  limited 
+only by one's imagination.
+
+Simply  stated,  the  microcomputer  allows  us  to  economically   substitute 
+programming  for  wiring. Although there are tremendous  savings  in  software 
+development when compared with hardware breadboarding, there are also inherent 
+difficulties in controlling the evolution of a software-based product. Control 
+over software evolution becomes especially important in the more comprehensive 
+microcomputer  applications, such as small business systems. The purpose  here 
+is  to  identify and investigate some of these difficulties from  the  project 
+manager's  viewpoint. The notion of a "systems language" is introduced  as  an 
+aid  to  control of software evolution  in  high-quantity  microcomputer-based 
+products  where a significant software investment is involved. As  a  specific 
+example, Intel's high-level systems language, called PL/M, is presented.
+
+The  general  product  evolution  cycle  is  discussed  first,  in  order   to 
+characterize the effects of software development upon this cycle.
+
+
+Product evolution
+-----------------
+
+The wealth of new digital applications, when coupled with rapid  technological 
+change,  place  severe  demands upon the project manager. A  product  must  be 
+planned  with change in mind, in order to extend its sales window  beyond  the 
+next unpredictable technological breakthrough. In fact, product evolution  can 
+be considered the cyclic process of change involving the product definition in 
+order to adapt to the environment. The product environment, in turn,  involves 
+such factors as market trends, customer requirements, competitor reaction, and 
+new technology. It is obvious that the adaptability of a product to a changing 
+environment  directly determines its survival in the marketplace. The  product 
+evolution  cycle is shown graphically in Figure 1, distinguishing the 2  major 
+branches  of engineering and manufacturing, and marketing. The advent  of  the 
+LSI microprocessor is an example of a technological advancement which  affects 
+the  product evolution cycle. Random logic or custom chip fabrication can  now 
+be  economically  replaced by any of a number of low-cost  ROM-driven  digital 
+processors  which  can perform complicated logic, arithmetic,  and  sequencing 
+operations. As a result, the microprocessor can provide central and peripheral 
+control  and  processing in many designs, greatly reducing time  and  cost  in 
+product specification, development, and production.
+
+                                    |
+                                    V
+        +--------------------> Formulation <--------------------+
+        |                           |                           |
+        |                 +---------+--------+                  |
+        |                 |                  |                  |
+        |                 V                  |                  |
+        +-----> Internal specification       |                  |
+        |                 |                  V                  |
+        |                 |        External documentation <-----+
+        |                 V                  |                  |
+        +-----> Design, Check-out            V                  |
+        |               |              Marketing strategy <-----+
+        |               V                         |             |
+        +-----> Manufacturing                     |             |
+        |             |                           |             |
+        |             +--> Sales, Distribution <--+             |
+        |                           |                           |
+        |                           V                           |
+        +--<--------------- Customer response --------------->--+
+
+        Figure 1. The product evolution cycle
+
+The effects of microcomputer use on the marketing cycle have been investigated 
+elsewhere   [Ref.1],  and  thus  the  discussion  turns  to  engineering   and 
+manufacturing  aspects. Referring to Figure 1, product  specification  efforts 
+are  reduced,  since  operation  of a device can  be  specified  in  terms  of 
+conceptually   simpler  computer  programs,  rather  than  complicated   logic 
+diagrams. Further, the circuitry necessary for interfacing with the electronic 
+environment is generally reduced to specification of simple modular units.
+
+Design,  development, and check-out efforts are reduced in a number  of  ways. 
+First, the flexibility inherent in programming allows principal algorithms  to 
+be  written, tested, and reprogrammed in a relatively short period, using  the 
+software  development tools which are available from the  major  microcomputer 
+manufacturers.  This flexibility allows the designer to develop programs in  a 
+software  "test bed", roughly equivalent to a hardware breadboard for  circuit 
+testing.  Subroutines communicate with a standard device, such as a  teletype, 
+where data is manually entered, representing information which would  normally 
+be  expected  from  the corresponding circuitry.  This  technique  allows  the 
+principal  control functions to be developed and independently checked  before 
+system  integration.  In  addition, the forced modularity  of  the  peripheral 
+circuitry   implies  that  each  individual  module  can  also  be   designed, 
+breadboarded, and tested independently.
+
+System  integration  is  thus simplified, since  each  hardware  and  software 
+subsystem has been verified. The simulating subroutines and simulated  devices 
+are individually replaced by their corresponding actual circuitry and drivers, 
+thus isolating system design errors at each step of the integration.
+
+Finally,  manufacturing is simplified, since standard  microprocessor  modules 
+can  either  be  purchased from OEM suppliers, or  developed  in-house.  These 
+standard modules generally involve fewer parts than corresponding random logic 
+designs,  thus reducing both PC (ROCHE> Note that Gary Kildall uses  the  term 
+"PC" 7 years (!) before the birth of the "IBM Clown"...) board layout  efforts 
+and  costs  for board production and testing. Given  that  the  microprocessor 
+modules  are properly checked-out, the transition from software  prototype  to 
+production  software is immediate. Further, production changes  often  involve 
+software  modifications  which  affect ROM  contents,  rather  than  requiring 
+assembly alterations.
+
+Thus,  the  use of microcomputers and their  associated  software  development 
+tools  can significantly reduce the time and costs for the  first  engineering 
+and manufacturing cycle of an electronic product.
+
+Consider  now  the  cyclic evolution of a microcomputer-based  product  as  it 
+adapts  to  market  pressures. Clearly, the adaptability  of  the  product  is 
+directly governed by the adaptability of its software system. That is to  say, 
+since  most  modifications are accomplished through program changes,  one  can 
+consider  the product's evolution in terms of the evolution of its  associated 
+software.  Changes  may  arise in a number of ways,  including  requests  from 
+customers  for  increased facilities, alterations required  by  design  errors 
+detected  through  field use, or modifications caused by  cost  advantages  in 
+using newly available hardware devices or software techniques. Thus,  software 
+evolution must be a major concern of the project manager: with proper control, 
+each  cyclic regeneration of software systems improves upon  its  predecessor. 
+Loss of control over software evolution results in a maze of  over-specialized 
+algorithms and data structures which hinder successive product cycles, to  the 
+point  where entire systems must be re-developed. Factors  affecting  software 
+evolution are presented in the paragraphs which follow.
+
+
+Software evolution
+------------------
+
+Similar  to  product  evolution, the evolution of a  software  system  can  be 
+considered  the cyclic process of change in program design and expression,  in 
+order  to adapt to the changing product definition. The 3 factors  which  most 
+affect software adaptability are listed below.
+
+     1) Maintainability  is  a  mesure of the ease  with  which  a  particular 
+        program can be corrected when an error is found in the product.
+
+     2) Expandability  determines the effort required to add new  features  or 
+        subsystems as the product definition changes.
+
+     3) Portability  among  programmers, machine  designs,  and  manufacturers 
+        determines  the  extent  to which a software  system  depends  upon  a 
+        particular software or hardware designer and design philosophy.
+
+Maintainability, expandability, and portability of software directly determine 
+time and cost for program regeneration. Programs are developed only once,  but 
+are maintained throughout their lifetime. Thus, the ease of program correction 
+is  a  major concern in the overall software evolution cycle. Second,  as  new 
+features  or capabilities are added to the product,  corresponding  extensions 
+are necessary to the programs. Programs written with expansion as a  principal 
+design  goal  adapt easily, while those which are not  cause  excessive  delay 
+during  redesign.  When  time  constraints prevent  proper  redesign  of  non-
+expandable  programs, the resulting "interim" software is  often  undependable 
+and  cannot  be  properly  maintained,  thus  adversely  affecting  subsequent 
+evolution.  Finally,  unlike  random logic designs,  software  systems  easily 
+become  dependent upon a particular programmer, or upon a  particular  machine 
+architecture  or  manufacturer. In most cases, if the  project  manager  finds 
+advantages  in  changing any of these variables, the software must  be  mainly 
+reconstructed,  often  obviating those advantages. In fact,  in  this  rapidly 
+moving industry, the ease with which programs can be effectively moved between 
+machines  of differing design, while being readily understood by a  number  of 
+different  programmers,  may be the most important single influence  upon  the 
+software evolution cycle.
+
+Clearly,   there  are  many  aspects  of  software  design   which   determine 
+maintainability,  expandability, and portability, and a complete treatment  of 
+all  factors  is  beyond the scope of this paper. The  reader  is  encouraged, 
+however,  to refer to notes on structured programming [Ref.2 and 3],  software 
+engineering  [Ref.4],  and  programming  management  [Ref.5]  for   additional 
+details.  One important, but intangible, factor is the  training,  experience, 
+and  problem  insight of the project programmers. Even  the  most  experienced 
+programmer, however, depends upon the programming tools that are available  to 
+express  his or her solution. As a result, these tools have a profound  effect 
+upon the adaptability of the product's software.
+
+
+Programming tools
+-----------------
+
+The  discussion  of  software  evolution  now  focuses  upon  the  degree   of 
+adaptability   obtained   from  the  various   approaches   to   microcomputer 
+programming.  In  particular,  a  programming  language  is  the  programmer's 
+principal means of expressing the algorithms and data structures which perform 
+the   specified  product  function.  There  are  4  basic  methods   used   in 
+microcomputer software development for expressing programs: machine  language, 
+assembly   language,   macro  assembly  language,  and   high-level   language 
+programming. These 4 methods are briefly reviewed below for completeness.
+
+1)  Machine  language  programming uses the bit  patterns  recognized  by  the 
+microprocessor  as  a  means for expressing programs.  All  program  and  data 
+locations are referenced by their absolute addresses in memory.
+
+2)  Assembly  language programming is one step removed from  a  machine  level 
+expression  of a program. It allows the programmer to use symbolic  names  for 
+each  of the processor's operation codes, and automatically  translates  these 
+codes  to the proper bit patterns for microcomputer execution. The  programmer 
+references  program  and  data addresses by  freely-assigned  symbolic  names, 
+rather  than absolute addresses. In all cases, however, there is a  one-to-one 
+correspondence between symbolic instructions written by the programmer and the 
+translated  machine  level  instructions. Thus, an assembly  language  can  be 
+considered a convenient means of expressing machine level instructions. Figure 
+2  shows  a sample assembly language program, and  the  corresponding  machine 
+level  code  for  an Intel 8080 microcomputer [Ref.6]. Note  that  the  memory 
+locations and machine operation codes are given as hexadecimal values in  this 
+figure.
+
+ +------------- Location
+ |    +-------- Machine language
+ |    |         Assembly language and comments
+ |    |         |
+ V    V         V
+                ; Sample assembly language program
+                ; for the Intel 8080 microcomputer.
+                ;
+                ; Compare the values of X and Y,
+                ; store the larger value into Z.
+                ;
+                ;--------------------------------
+ 0100                   ORG     0100H           ; Start program code at 0100H
+                ;--------------------------------
+                ;
+ 0100 211301            LXI     H,y             ; Address Y
+ 0103 7E                MOV     A,M             ; Load
+ 0104 EB                XCHG                    ; Exchange DE,HL
+ 0105 211201            LXI     H,x             ; Address X
+ 0108 BE                CMP     M               ; Compare memory
+                ;
+                ; Carry is set if X > Y
+                ;
+ 0109 DA0D01            JC      setc            ; Jump if no Carry
+                ;
+                ; X is less or equal
+                ;
+ 010C EB                XCHG                    ; Exchange DE,HL
+                ;
+ 010D 7E        setc:   MOV     A,M             ; Load X or Y
+ 010E 321401            STA     z               ; Store
+                ;
+                ;--------------------------------
+ 0111 76                HLT                     ; Halt processor
+                ;--------------------------------
+                ; Variable definitions.
+                ;
+ 0112 00        x       DB      0
+ 0113 00        y       DB      0
+ 0114 00        z       DB      0
+                ;
+                ;--------------------------------
+ 0115                   END     0100H
+
+        Figure 2. Machine language and assembly language programs for the
+          Intel 8080 microcomputer.
+
+3) Macro assembly language is similar to assembly language coding, except that 
+the  programmer is allowed to define and use macros. A macro is  a  predefined 
+group of assembly language statements which is given a macro name. Each use of 
+the  macro name causes the predefined instructions or data definitions  to  be 
+directly  substituted  for  the name. Thus, for example,  the  programmer  can 
+effectively   "invent"  new  machine  operations  as  necessary  for   concise 
+expression of a particular problem. Additional facilities, such as conditional 
+assembly  and  assembly-time expression evaluation, are usually present  in  a 
+macro  assembly  language,  which make it considerably more  flexible  than  a 
+simple assembly language.
+
+4)  High-level language programming is one step further removed from  assembly 
+language  programming.  Normally, the notation used in a  high-level  language 
+more closely resembles common mathematical symbolism, rather than relying upon 
+complicated sequences of machine instructions to perform a specific  function. 
+For example, the hih-level statement
+
+        IF x > y THEN z = x; ELSE z = y
+
+is  read as follows: "if the value of X is greater than the value of  Y,  then 
+store X's value into Z; otherwise, store Y's value into Z". The effect is that 
+Z's  new  value  is  the  larger of X and  Y.  Each  high-level  statement  is 
+translated into a sequence of machine level instructions by a compiler for the 
+language. The statement given above is translated into the equivalent  machine 
+code  shown  in Figure 2 by Intel's PL/M compiler for the  8080  microcomputer 
+[Ref.7]. In general, a high-level language provides primitive operations, data 
+types,  and control structures which are appropriate for  expressing  programs 
+within  a  particular  problem environment. Thus,  a  high-level  language  is 
+reasonably  independent of a particular machine design and, instead, tends  to 
+depend  upon the type of problem being solved. These concepts are examined  in 
+later sections.
+
+How do these various language levels affect software evolution? First, machine 
+level coding is generally considered inappropriate for even moderate projects, 
+due  to the non-symbolic nature of the resulting programs.  Assembly  language 
+programming,  with  or  without macro capabilities,  may  be  appropriate  for 
+moderately-sized  programs. However, the adaptability of the final product  is 
+highly dependent upon the coding practices of the project programmers, as well 
+as  the  coding  standards  set forth and enforced  by  the  project  manager. 
+Portability   between  programmers  is  relatively  difficult,   and   depends 
+principally  upon the quality of the program's documentation, rather than  the 
+programs   themselves.  Portability  from  machine  to  machine  is   severely 
+restricted,   and  is  usually  accomplished  only  at  the  option   of   the 
+manufacturer.   Assembly   language   programs  written   for   Intel's   8008 
+microcomputer,   for  example,  can  be  re-assembled  for  their   new   8080 
+microcomputer  with only minor changes in the original program.  Although  the 
+resulting programs benefit from the increased speed of the new processor, they 
+must  be rewritten to take advantage of the 8080's expanded  instruction  set. 
+High-level  languages,  however,  currently  provide  the  highest  degree  of 
+maintainability,  expandability, and portability of any of  these  programming 
+tools.  In  fact,  a specific class of high-level  languages,  called  systems 
+languages,  are considered the most appropriate tool for controlling  software 
+evolution.
+
+
+Systems languages
+-----------------
+
+As  stated  previously, a high-level language is relatively independent  of  a 
+particular  machine  architecture,  and is primarily  intended  to  provide  a 
+concise means for expressing programs in a particular problem environment. The 
+BASIC and FORTRAN programming languages, for example, are high-level languages 
+which assume a scientific computation problem environment. The actual  machine 
+on which a BASIC or FORTRAN program executes should have little effect on  the 
+resulting output.
+
+A  high-level  systems  language is more specialized,  since  it  assumes  the 
+problem  environment  is  the  control of a particular  machine  or  class  of 
+machines.  Thus, the goals are somewhat different than those of a  pure  high-
+level  language: a high-level systems language must be relatively  independent 
+of the exact computer, while providing the necessary control structures,  data 
+types, and basic operations for clear and concise expression of systems for  a 
+particular  type  of computer. It follows that such a  systems  language  must 
+allow  complete  control  of all machine functions, and,  at  the  same  time, 
+eliminate  the  needless  trivialities of assembly language.  In  addition,  a 
+systems  language must also be structured in such a way that it can be  easily 
+translated to efficient machine language programs for the target machine. Each 
+operation  in  the systems language has a direct counterpart in  the  machine, 
+resulting in little or no run-time support software.
+
+The  primitive operations and data types for a microcomputer systems  language 
+are  fairly  simple. Bit-level data occur frequently when  communicating  with 
+peripheral circuitry, such as the status information received from an input or 
+output  device.  Thus,  bit-level  data types  must  be  present,  along  with 
+corresponding   shifting,  masking,  and  bit-testing  operations.   Character 
+handling   is  also  an  important  function  in  word-processing   and   data 
+communication applications. As a result, string data types should be  allowed, 
+with facilities for comparing strings, selection of substrings, and conversion 
+between other data types. Fundamental arithmetic processing is also necessary, 
+but  the  data types may depend heavily upon the  microcomputer  architecture. 
+Based  upon current offerings, the useful arithmetic data types include  4-bit 
+decimal (BCD) operands, and 8-, 16-, and 32-bit fixed-point binary quantities, 
+along   with  the  usual  arithmetic  and  relational   operations.   Finally, 
+communication  primitives  must be provided for environmental  monitoring  and 
+control.
+
+Given  that  a  particular microcomputer can support these  functions,  it  is 
+certainly  the  case that the operations and data types can be included  in  a 
+macro  assembly  language for the processor. In a systems  language,  however, 
+these  facilities  are  imbedded in a convenient  expressional  notation,  and 
+enhanced by comprehensive data definition and program control facilities. That 
+is  to  say,  along  with the necessary basic  functions,  the  programmer  is 
+provided with language statements which allow program expression in a readable 
+or "well-structured" [Ref.8] form. These structures normally include a natural 
+notation for statement grouping, conditional branching, and iteration or  loop 
+control.  Furthermore,  subroutine definition,  parameter  specification,  and 
+subroutine   invocation  mechanisms  are  normally  provided.  As  a   result, 
+subroutine linkage standards are enforced, modular programming is  encouraged, 
+and construction of comprehensive subroutine libraries becomes practical.  The 
+PL/M microcomputer systems language presented in the following section is used 
+to illustrate these capabilities.
+
+
+A case in point
+---------------
+
+Intel's PL/M high-level language provides an example of a systems language for 
+programming  their  8-bit  microcomputers. The  statement  structure  of  PL/M 
+resembles  IBM's PL/1 programming language and, in fact, was derived from  XPL 
+which  is  a dialect of PL/1. The similarity, however,  is  only  superficial; 
+differences in control structures, operations, and data types make PL/1 useful 
+for  general applications programming, while those of XPL make it  appropriate 
+for  compiler  implementation.  PL/M was designed with the  special  needs  of 
+microcomputer  systems in mind, as given in the previous section, and thus  is 
+neither a subset nor superset of these languages. The important point is  that 
+PL/M  belongs to the general family of "PL languages", and thus  a  programmer 
+who is familiar with one of these languages finds it relatively easy to  learn 
+any  of the others. Figure 3 contains a listing of a PL/M program  similar  to 
+one proposed by Popper [Ref.9] for comparing high-level and assembly  language 
+microcomputer programming. Although Popper gives a complete description of the 
+program in his notes, the overall structure is presented as an example of PL/M 
+program organization.
+
+/* Quicksort procedure
+
+This PL/M procedure sorts an array into ascending order
+using the QUICKSORT algorithm. Included in this listing
+is the procedure, QUICKSORT, and a test driver program
+to demonstrate the calling sequence. Note that the
+procedure is written with an assumption that the number
+of elements to be sorted is less than or equal to 256
+(low,high,uptr,dptr,lstack,hstack,array$size,a1,
+and a2 are byte variables) and that the precision of
+the array elements is 8 bits (list,temp, and ref are
+byte variables). These restrictions may be lifted by
+changing the declarations. Note also that the
+working arrays (lstack and hstack) are dimensioned
+by stack$size, where
+
+   stack$size >= log2 (array$size)
+
+*/
+
+quicksort:
+  PROCEDURE (array, array$size);
+    DECLARE stack$size LITERALLY '10';
+    DECLARE array ADDRESS;
+    DECLARE array$size BYTE;
+    DECLARE list BASED array BYTE;
+    DECLARE lstack (stack$size) BYTE, hstack (stack$size) BYTE;
+    DECLARE top BYTE;
+    DECLARE (low, dptr, uptr, high) BYTE;
+    DECLARE (ref, temp) BYTE;
+
+    push:
+      PROCEDURE (a1, a2);
+        DECLARE (a1, a2) BYTE;
+
+        lstack (top) = a1;
+        hstack (top) = a2;
+        top = top + 1;
+      END push;
+
+    /* Main program */
+
+    top = 0;
+    CALL push (0, array$size);
+    DO WHILE top <> 0;
+       top = top - 1;
+       IF (dptr := (low  := lstack (top)))
+       <> (uptr := (high := hstack (top))) THEN
+       DO ;
+          ref = list (low);
+    down:
+          DO WHILE list (dptr) <= ref AND high > dptr;
+             dptr = dptr + 1;
+          END;
+          DO WHILE list (uptr) >= ref AND low < uptr;
+             uptr = uptr - 1;
+          END;
+          IF dptr < uptr THEN
+          DO ;
+             temp = list (uptr);
+             list (uptr) = list (dptr);
+             list (dptr) = temp;
+             dptr = dptr + 1;
+             uptr = uptr - 1;
+             GO TO down;
+          END;
+          IF uptr > low THEN
+          DO ;
+             list (low) = list (uptr);
+             list (uptr) = ref;
+             uptr = uptr - 1;
+          END;
+          CALL push (low,  uptr);
+          CALL push (dptr, high);
+       END;
+    END;
+  END quicksort;
+
+/* Begin test driver */
+
+DECLARE test$array (16) BYTE INITIAL
+  (0,15,1,14,2,13,3,12,4,11,5,10,6,9,7,8);
+
+  CALL quicksort (.test$array, last (test$array));
+
+EOF
+
+        Figure 3. A QUICKSORT program in PL/M
+
+As described in the program "comment" at the start of Figure 3, the subroutine 
+QUICKSORT  is  used  to  sort a list of  numbers  into  ascending  order.  The 
+subroutine  begins  with a number of declarations which define  variables  and 
+macros  used  within  the QUICKSORT subroutine. These  declarations  are  then 
+followed by a nested subroutine, called PUSH, which performs a function  local 
+to  QUICKSORT. The remainder of the QUICKSORT subroutine then manipulates  the 
+locally-defined  variables,  along  with  a list  of  numbers  passed  to  the 
+subroutine, to produce a list in sorted order.
+
+Following  the  end  of the QUICKSORT subroutine, a list  of  test  values  is 
+defined, called TEST$ARRAY. This test list is then passed to QUICKSORT in  the 
+CALL  statement  near the end of the program, to verify that  QUICKSORT  works 
+correctly. The program is terminated by the symbol EOF.
+
+The  PL/M  compiler  is  then used to  translate  this  program  into  machine 
+language.  The resulting machine language can be loaded into the memory of  an 
+Intel 8-bit microcomputer, and executed. There is no output operation shown in 
+this  example,  and  thus  the resulting sorted list is  simply  left  in  the 
+machine's  memory. In fact, the QUICKSORT subroutine would normally  become  a 
+distinct  software  module  in a microcomputer application, such  as  a  small 
+inventory  control system, and hence the program in Figure 3 is simply a  test 
+of  the  module. The overall organization of the PL/M programming  system  has 
+been  presented  in some detail elsewhere [Ref.10], along with  operating  and 
+debugging practices.
+
+How does PL/M affect adaptability of software systems? First, the high  degree 
+of  self-documentation  found  in  high-level  language  programming   greatly 
+enhances  maintainability, expandability, and portability  among  programmers. 
+This  fact has been shown many times over in large-scale computer  programming 
+using  PL languages, and easily carries over to microcomputer  programming  in 
+PL/M. Portability between machines has been demonstrated by Intel in their  8-
+bit processor line. Specifically, Intel offers a PL/M compiler for both  their 
+8008   and   newer  8080  microcomputer  which  allow   strict   upward   PL/M 
+compatibility.  That  is  to  say,  although  8080  PL/M  provides  additional 
+programming  features,  any  PL/M  program written for the  8008  CPU  can  be 
+recompiled for the 8080 CPU without modification. The only difference is  that 
+the  resulting 8080 machine level program requires less storage, and  executes 
+faster. Furthermore, Intel's long term commitment to PL/M means that customers 
+can  expect  their  programs to execute on  future  processors,  while  taking 
+advantage of each new machine design.
+
+Portability among manufacturers is more difficult in PL/M, but not impossible. 
+First,  the  8-  and 16-bit class of microcomputer appears  to  be  a  popular 
+architecture.  Thus,  PL/M programs could execute  on  another  manufacturer's 
+machine  if  a  PL/M  compiler for that  particular  machine  were  available. 
+Construction  of a compiler is generally considered a formidable  task.  PL/M, 
+however,  is  a  small language with simple grammar  rules,  simple  statement 
+execution  rules, and no run-time support requirements. Given that  a  company 
+has  a  significant investment in software, a specialized  compiler  for  PL/M 
+could be developed in-house for nearly any manufacturer's microcomputer. Using 
+well-known  automatic compiler generation techniques [Ref.11],  a  specialized 
+PL/M  compiler of this sort would require only a few man-months of  effort  to 
+write,  debug, and document. This approach not only allows  portability  among 
+manufacturers, but also solves the second source problem to some degree.
+
+Thus,  given that a high-level language exists for a  particular  application, 
+one cannot argue its merit as an aid in developing adaptable software.
+
+
+The efficiency question
+-----------------------
+
+High-level  languages have traditionally been under attack for their  relative 
+inefficiency  when  compared to tightly-coded assembly language  programs.  As 
+stated  by Weinberg [Ref.12] "when we ask for efficiency, we are often  asking 
+for  tight coding that will be difficult to modify. In terms  of  higher-level 
+languages, we often descend to the (assembly) language level to make a program 
+more efficient. This loses at least one of the benefits of having the  program 
+in the higher-level language -- that of transportability between machines.  In 
+fact, it has the effect of freezing us to a machine or implementation that, we 
+have  admitted by our very act, is unsatisfactory. However, the same  managers 
+who scream for efficiency are the ones who tear their hair when told the  cost 
+of modifications". Weinberg's comments are especially true in the  large-scale 
+computer community. When discussing microcomputer systems, however, one  might 
+argue that the relative inefficiencies of high-level language programming  are 
+intolerable, due to the added cost of memory in large quantity production.
+
+Concentrating only on the question of efficiency for a moment, one should note 
+that it is impossible to categorically state that all high-level languages are 
+necessarily  inefficient.  Efficiency  depends upon at least  2  factors:  the 
+proximity  of  the  language to the target machine, and  the  quality  of  the 
+compiler which performs the translation to machine language. In fact, this  is 
+a  principal  point: a high-level systems language is closely related  to  the 
+architecture  of the machines it is to control, which leads to "good"  machine 
+level programs. Statements in PL/M, for example, translate into short  machine 
+instruction sequences, since PL/M statements reflect the machine architecture. 
+Conversely,  FORTRAN language statements are difficult to process on  a  small 
+machine,  and  would  produce long sequences of  machine  instructions.  As  a 
+result,  systems languages are potentially the most efficient subclass of  the 
+high-level languages.
+
+The quality of the high-level language translator can be measured in terms  of 
+the  degree  of "program optimization" that it performs. That is  to  say,  an 
+optimizing  compiler  is one which analyzes the program structure  to  produce 
+machine level code which best uses the target machine's resources.  Optimizing 
+compilers  are themselves evolutionary, and are generally improved over  time. 
+Several  versions of Intel's PL/M compiler have been released since its  first 
+introduction  in June of 1973. Each version has additional program  optimizing 
+features which reduce the amount of generated machine language. As an example, 
+consider  the  QUICKSORT subroutine shown in Figure 3, which was  proposed  by 
+Popper  [Ref.9]  as an indication of relative inefficiency.  Popper  gives  an 
+equivalent  QUICKSORT  subroutine  using Intel  8008  assembly  language.  The 
+assembly  language  version is highly 8008 machine-dependent, resulting  in  a 
+tightly-coded  215 statement program. Table 1 shows a comparison of  the  PL/M 
+and assembly language versions of QUICKSORT, giving the relative  inefficiency 
+of PL/M as the measure
+
+        Mp - Ma
+        -------
+          Ma
+
+where  Mp  and Ma represent the memory requirements of the PL/M  and  assembly 
+language versions, respectively.
+
+Table 1. QUICKSORT comparison
+
+Translator        Program size    Relative
+                   (in bytes)   inefficiency
+--------------    ------------  ------------
+8008 assembler         300           -
+8008 PL/M Ver1         426          42%
+8008 PL/M Ver3         391          30%
+8008 PL/M Ver3
+(subscript optim.)     336          12%
+8080 PL/M Ver1         330          10%
+
+Note: Program size based upon body of QUICKSORT procedure.
+
+The  June  1973 release of PL/M produced 42% more program storage,  while  the 
+February  1974  release  produced  30%  more  instructions.  Because  of   the 
+relatively  small program size, and the large number of  subscripted  variable 
+references, this particular program can be considered a "worst case" for PL/M. 
+Thus,  Table  1  also  shows the result of  compilation  with  the  8008  PL/M 
+subscript optimization options enabled. These options allow the PL/M  compiler 
+to  insert  short subroutines for subscript computations, rather  than  inline 
+code, which both decreases the memory requirements and increases the execution 
+speed. Using these options, the relative inefficiency is reduced to 12%.  Note 
+also that the first version of the 8080 PL/M compiler, released in March 1974, 
+produced only 10% more machine instructions.
+
+(ROCHE> PL/M dates:
+
+8008 PL/M Version 1: June     1973
+8008 PL/M Version 2: ?        1973
+8008 PL/M Version 3: February 1974
+8080 PL/M Version 1: March    1974)
+
+There  are several points to consider in this comparison. First, it  is  clear 
+that the assembly language version could be completely rewritten for the  8080 
+CPU, further reducing memory requirements. This, however, is the entire point: 
+given  the 2 original programs, one in PL/M, the other in  assembly  language, 
+the PL/M program improves without alteration as new new compilers and  machine 
+designs   are  introduced,  while  the  assembly  language  version   requires 
+reprogramming  to  adapt.  Further, the experience  a  manufacturer  gains  in 
+processing the high-level language can be used in designing future  processors 
+which more effectively execute these programs.
+
+It  must  also  be  noted that the relative  inefficiency  measure  cannot  be 
+considered  an  absolute  comparison. The numbers  vary  widely  with  program 
+complexity,   programming  style,  and  programmer  experience.  Due  to   the 
+complexity   of  large  programs,  it  quite  often  happens   that   relative 
+inefficiency becomes negative. That is to say, experience has shown that,  for 
+programs  larger  than 1000-2000 bytes, the PL/M  compiler  actually  produces 
+better  machine  level  programs  that hand-coded  versions.  This  effect  is 
+principally  due  to  the fact that the compiler  more  readily  accounts  for 
+machine  resources,  where  assembly  language  coding  becomes  confused  and 
+disorganized.
+
+In  fact, the entire discussion of relative inefficiency may be a moot  point, 
+given  the  current and projected costs for memory. In quantity, 2K  by  8-bit 
+ROM's  are  currently  available  for less than  $15  apiece,  and  hence  the 
+incremental difference in production cost is hardly appreciable when  compared 
+to the adaptability of the product.
+
+
+Summary
+-------
+
+Current microcomputer designs and applications merely predict their  promising 
+future. However, due to a microcomputer-based product's heavy dependence  upon 
+software  systems,  the major hurdle in the near future will  be  in  software 
+design  methodology.  Never  before has software  design  been  as  important: 
+reliability  and correctness of programs directly determines the quality of  a 
+product  manufactured  in the thousands. As customers, we must  encourage  the 
+industry  to  offer  and support the tools  necessary  for  effective  program 
+development and adaptability.
+
+One tool, high-level systems languages, has been shown to be a viable approach 
+to microcomputer systems development. When coupled with proper management  and 
+programmer  experience,  high-level  systems languages provide  the  means  to 
+produce quality software systems for supporting a constantly evolving  product 
+definition.
+
+
+References
+----------
+
+1
+"Processors and profits: how microprocessors boost them"
+ Davidow, W.
+"Electronics", July 11, 1974
+
+2
+"Structured Programming"
+ Dahl, O. et al.
+ Academic Press, 1972
+
+3
+"A brief look at structured programming and top-down program design"
+ Yourdon, E.
+"Modern Data", June, 1974
+
+4
+"Software Engineering Techniques"
+ Buxton, J. (Editor)
+ Nato Science Committee, OTAN/NATO, 1110 Bruxelles, Belgium, April 1970
+
+5
+"Managing a programming project"
+ Metzger, P.
+ Prentice-Hall, 1973
+
+6
+"8080 Assembly Language Programming Manual"
+ Intel Corp.
+
+7
+"A Guide to PL/M Programming"
+ Intel Corp.
+
+8
+"The Elements of Programming Style"
+ Kernighan, B. et al.
+ McGraw-Hill, 1974
+
+9
+"Advanced Microcomputer Software Techniques"
+ Popper, C.
+ National Electronics Conference,
+ Professional Growth in Engineering Seminar, 1974
+
+10
+"High-level language simplifies microcomputer programming"
+ Kildall, G.
+"Electronics", June 27, 1974
+
+11
+"A Compiler Generator"
+ McKeeman, W. et al.
+ Prentice-Hall, 1970
+
+12
+"???"
+ Weinberg
+ ???
+
+
+EOF
+

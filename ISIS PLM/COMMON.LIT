@@ -1,0 +1,30 @@
+$nolist
+/*
+    Common Literals
+*/
+
+  declare true literally '0FFFFH';
+  declare false literally '0';
+  declare forever literally 'while true';
+  declare boolean literally 'byte';
+
+  declare enter$region literally
+    'disable';
+
+  exitr:
+    procedure external;
+    end exitr;
+
+  declare exit$region literally
+    'call exitr';
+
+  declare restarts literally
+    '0C7C7H,0C7C7H,0C7C7H,0C7C7H,
+     0C7C7H,0C7C7H,0C7C7H,0C7C7H,
+     0C7C7H,0C7C7H,0C7C7H,0C7C7H,
+     0C7C7H,0C7C7H,0C7C7H,0C7C7H,
+     0C7C7H,0C7C7H,0C7C7H,0C7C7H,
+     0C7C7H,0C7C7H,0C7C7H';
+
+$list
+

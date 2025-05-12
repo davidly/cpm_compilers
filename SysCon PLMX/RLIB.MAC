@@ -1,0 +1,1020 @@
+; RLIB.MAC	(= Run-time LIBrary...)
+; --------
+;
+; CP/M 1.4 -- RLIB of PLMX
+;
+; Disassembled by:
+;
+; Mr Emmanuel ROCHE
+; Chemin de Boisrond
+; 17430 Tonnay-Charente
+; FRANCE
+;
+;--------------------------------
+;	ORG	0000H		; Standard CP/M RELocatable file
+;--------------------------------
+; Page Zero locations used.
+;
+Reboot	EQU	0000H		; Warm Boot
+CPMADR	EQU	0006H		; Address of BDOS in TPA
+;
+;--------------------------------
+; I *THINK* that BP stands for "Built-in Procedure".
+;--------------------------------
+bp90@:
+	DCX	H
+bp92@:
+	MOV	A,H
+	CMA
+	MOV	H,A
+	MOV	A,L
+	CMA
+	MOV	L,A
+	RET
+
+bp91@:
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	JMP	bp90@
+
+bp93@:
+	MOV	E,M
+	INX	H
+	MOV	D,M
+	XCHG
+	JMP	bp92@
+
+;--------------------------------Šbp09@:
+	MOV	H,B
+	MOV	L,C
+?J0118:	DAD	H
+	DCR	E
+	JNZ	?J0118
+	MOV	A,L
+	RET
+
+bp94@:
+	CALL	bp09@
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp11@:
+	POP	H
+	XTHL
+?J0127:	MOV	A,L
+	ORA	H
+	RZ
+	LDAX	B
+	STAX	D
+	INX	D
+	INX	B
+	DCX	H
+	JMP	?J0127
+
+;--------------------------------
+bp13@:
+	ORA	A
+?J0133:	MOV	A,C
+	RAL
+	MOV	C,A
+	MOV	A,B
+	RAL
+	MOV	B,A
+	PUSH	PSW
+	DCR	E
+	JZ	?J0142
+	POP	PSW
+	JMP	?J0133
+
+?J0142:	POP	PSW
+	MOV	L,C
+	MOV	H,B
+	RET
+
+bp96@:Š	ORA	A
+?J0147:	MOV	A,C
+	RAL
+	MOV	C,A
+	PUSH	PSW
+	DCR	E
+	JZ	?J0153
+	POP	PSW
+	JMP	?J0147
+
+?J0153:	POP	PSW
+	MOV	A,C
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp14@:
+	ORA	A
+?J015A:	MOV	A,B
+	RAR
+	MOV	B,A
+	MOV	A,C
+	RAR
+	MOV	C,A
+	PUSH	PSW
+	DCR	E
+	JZ	?J0169
+	POP	PSW
+	JMP	?J015A
+
+; What difference with ?J0142 ???
+
+?J0169:	POP	PSW
+	MOV	L,C
+	MOV	H,B
+	RET
+
+bp95@:
+	ORA	A
+?J016E:	MOV	A,C
+	RAR
+	MOV	C,A
+	PUSH	PSW
+	DCR	E
+	JZ	?J017A
+	POP	PSW
+	JMP	?J016E
+;Š?J017A:	POP	PSW
+	MOV	A,C
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp55@:
+	XCHG
+	MOV	L,A
+	MVI	H,00H
+	XCHG
+	CALL	bp87@
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp12@:
+	MOV	A,B
+	ORA	C
+	RZ
+	MVI	D,0AH		; 10
+?J018F:	JMP	?J0192
+
+; Yes, you are not dreaming...
+; The above line jumps to... next line...
+
+?J0192:	DCR	D
+	JNZ	?J018F
+	DCX	B
+	JMP	bp12@
+
+; ??? (Was probably the RET of above code.)
+
+	RET
+
+;--------------------------------
+; Jump table. (Why here?)
+
+bp57@:
+	JMP	bp41@
+
+bp58@:
+	JMP	bp42@
+
+bp59@:
+	JMP	bp43@
+
+bp60@:Š	JMP	bp44@
+
+bp61@:
+	JMP	bp45@
+
+;--------------------------------
+init@:
+	XCHG
+	LHLD	CPMADR
+	SPHL
+	XCHG
+	PCHL
+
+exit@:
+	DI
+	JMP	Reboot
+
+;--------------------------------
+bp79@:
+	MOV	A,E
+	SUB	L
+	MOV	L,A
+	MOV	A,D
+	SBB	H
+	MOV	H,A
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp10@:
+	MOV	H,B
+	MOV	L,C
+?J01BF:	ORA	A
+	MOV	A,H
+	RAR
+	MOV	H,A
+	MOV	A,L
+	RAR
+	MOV	L,A
+	DCR	E
+	JNZ	?J01BF
+	RET
+
+;--------------------------------
+bp15@:
+	MOV	A,C
+	DAA
+	MOV	L,A
+	MVI	H,00HŠ	RET
+
+;--------------------------------
+bp16@:
+	JC	?J01D9
+	MVI	A,00H
+	JMP	?J01DB
+
+?J01D9:	MVI	A,0FFH
+?J01DB:	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp17@:
+	JZ	?J01E7
+	MVI	A,00H
+	JMP	?J01E9
+
+?J01E7:	MVI	A,0FFH
+?J01E9:	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp18@:
+	JM	?J01F5
+	MVI	A,00H
+	JMP	?J01F7
+
+?J01F5:	MVI	A,0FFH
+?J01F7:	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp19@:
+	JPE	?J0203
+	MVI	A,00H
+	JMP	?J0205
+
+?J0203:	MVI	A,0FFH
+?J0205:	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp25@:
+	ADD	LŠ	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp26@:
+	ORA	L
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp27@:
+	ANA	L
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp28@:
+	XRA	L
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp29@:
+	ADC	L
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp30@:
+	SBB	L
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp31@:
+	SUB	L
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp32@:
+	SUB	LŠ	SUI	01H		; 1
+	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+; Out of sequence® TWICÅ thå samå code...
+;--------------------------------
+bp67@:
+	MOV	C,A
+	MOV	A,L
+	SUB	C
+	MOV	L,A
+	MOV	A,H
+	SBI	00H
+	ORA	L
+	SUI	01H		; 1
+	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp33@:
+	SUB	L
+	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp34@:
+	MOV	H,A
+	MOV	A,L
+	SUB	H
+	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp35@:
+	SUB	L
+	SUI	01H		; 1
+	SBB	A
+	CMA
+	MOV	L,AŠ	MVI	H,00H
+	RET
+
+;--------------------------------
+bp36@:
+	MOV	H,A
+	MOV	A,L
+	SUB	H
+	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp37@:
+	SUB	L
+	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp38@:
+	MOV	E,L
+	MVI	D,00H
+	MOV	L,A
+	MVI	H,00H
+	CALL	bp86@
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp39@:
+	MOV	E,L
+	MVI	D,00H
+	MOV	L,A
+	MVI	H,00H
+	XCHG
+	CALL	bp87@
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp40@:
+	MOV	E,L
+	MVI	D,00H
+	MOV	L,AŠ	MVI	H,00H
+	XCHG
+	CALL	bp88@
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp41@:
+	ADD	L
+	MOV	L,A
+	MOV	A,H
+	ACI	00H
+	MOV	H,A
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp42@:
+	ORA	L
+	MOV	L,A
+	RET
+
+;--------------------------------
+bp43@:
+	ANA	L
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp44@:
+	XRA	L
+	MOV	L,A
+	RET
+
+;--------------------------------
+bp45@:
+	ADC	L
+	MOV	L,A
+	MOV	A,H
+	ACI	00H
+	MOV	H,A
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp46@:
+	SBB	L
+	MOV	L,AŠ	MVI	A,00H
+	SBB	H
+	MOV	H,A
+	MOV	A,L
+	RET
+
+;--------------------------------
+; BP47@ is after BP56@...
+;--------------------------------
+bp48@:
+	SUB	L
+	MOV	L,A
+	MVI	A,00H
+	SBB	H
+	ORA	L
+	SUI	01H		; 1
+	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp49@:
+	SUB	L
+	MOV	L,A
+	MVI	A,00H
+	SBB	H
+	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp50@:
+	SUB	L
+	MOV	L,A
+	MVI	A,00H
+	SBB	H
+	CMC
+	JNC	?M02D6
+	ORA	L
+	JZ	?M02D6
+	STC
+?M02D6:	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------Šbp51@:
+	SUB	L
+	MOV	L,A
+	MVI	A,00H
+	SBB	H
+	MOV	H,A
+	ORA	L
+	SUI	01H		; 1
+	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp52@:
+	SUB	L
+	MOV	L,A
+	MVI	A,00H
+	SBB	H
+	CMC
+	JNC	?M02F8
+	ORA	L
+	JZ	?M02F8
+	STC
+?M02F8:	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp53@:
+	SUB	L
+	MOV	L,A
+	MVI	A,00H
+	SBB	H
+	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp54@:
+	XCHG
+	MOV	L,A
+	MVI	H,00H
+	CALL	bp86@Š	MOV	A,L
+	RET
+
+;--------------------------------
+; BP55@ is at the beginning...
+;--------------------------------
+bp56@:
+	XCHG
+	MOV	L,A
+	MVI	H,00H
+	XCHG
+	CALL	bp88@
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp47@:
+	SUB	L
+	MOV	L,A
+	MVI	A,00H
+	SBB	H
+	MOV	H,A
+	MOV	A,L
+	RET
+
+;--------------------------------
+; Jump from BP56@ to BP62@...
+;--------------------------------
+bp62@:
+	MOV	C,A
+	MOV	A,L
+	SBB	C
+	MOV	L,A
+	MOV	A,H
+	SBI	00H
+	MOV	H,A
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp63@:
+	MOV	C,A
+	MOV	A,L
+	SUB	C
+	MOV	L,A
+	MOV	A,H
+	SBI	00H
+	MOV	H,A
+	MOV	A,LŠ	RET
+
+;--------------------------------
+bp64@:
+	MOV	C,A
+	MOV	A,L
+	SUB	C
+	MOV	L,A
+	MOV	A,H
+	SBI	00H
+	ORA	L
+	SUI	01H		; 1
+	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp65@:
+	MOV	C,A
+	MOV	A,L
+	SUB	C
+	MOV	A,H
+	SBI	00H
+	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp66@:
+	MOV	C,A
+	MOV	A,L
+	SUB	C
+	MOV	L,A
+	MOV	A,H
+	SBI	00H
+	CMC
+	JNC	?M0362
+	ORA	L
+	JZ	?M0362
+	STC
+?M0362:	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+; TWICE??Š; (BP67@ is between BP32@ and BP33@...)
+; (and this is the same code...)
+; bp67@:
+	MOV	C,A
+	MOV	A,L
+	SUB	C
+	MOV	L,A
+	MOV	A,H
+	SBI	00H
+	ORA	L
+	SUI	01H		; 1
+	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp68@:
+	MOV	C,A
+	MOV	A,L
+	SUB	C
+	MOV	L,A
+	MOV	A,H
+	SBI	00H
+	CMC
+	JNC	?M0387
+	ORA	L
+	JZ	?M0387
+	STC
+?M0387:	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp69@:
+	MOV	C,A
+	MOV	A,L
+	SUB	C
+	MOV	A,H
+	SBI	00H
+	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------Šbp70@:
+	MOV	E,A
+	MVI	D,00H
+	CALL	bp86@
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp71@:
+	MOV	E,A
+	MVI	D,00H
+	XCHG
+	CALL	bp87@
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp72@:
+	MOV	E,A
+	MVI	D,00H
+	XCHG
+	CALL	bp88@
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp73@:
+	DAD	D
+	MOV	A,L
+	RET
+
+bp74@:
+	MOV	A,H
+	ORA	D
+	MOV	H,A
+	MOV	A,L
+	ORA	E
+	MOV	L,A
+	RET
+
+;--------------------------------
+bp75@:
+	MOV	A,H
+	ANA	D
+	MOV	H,A
+	MOV	A,L
+	ANA	E
+	MOV	L,A
+	RETŠ
+bp76@:
+	MOV	A,H
+	XRA	D
+	MOV	H,A
+	MOV	A,L
+	XRA	E
+	MOV	L,A
+	RET
+
+bp77@:
+	MOV	A,L
+	ADC	E
+	MOV	L,A
+	MOV	A,H
+	ADC	D
+	MOV	H,A
+	MOV	A,L
+	RET
+
+bp78@:
+	MOV	A,E
+	SBB	L
+	MOV	L,A
+	MOV	A,D
+	SBB	H
+	MOV	H,A
+	MOV	A,L
+	RET
+
+;--------------------------------
+; BP79@ is at the beginning...
+;--------------------------------
+bp80@:
+	MOV	A,E
+	SUB	L
+	MOV	L,A
+	MOV	A,D
+	SBB	H
+	ORA	L
+	SUI	01H		; 1
+	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp81@:
+	MOV	A,EŠ	SUB	L
+	MOV	L,A
+	MOV	A,D
+	SBB	H
+	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp82@:
+	MOV	A,E
+	SUB	L
+	MOV	L,A
+	MOV	A,D
+	SBB	H
+	CMC
+	JNC	?M0400
+	ORA	L
+	JZ	?M0400
+	STC
+?M0400:	SBB	A
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp83@:
+	MOV	A,E
+	SUB	L
+	MOV	L,A
+	MOV	A,D
+	SBB	H
+	ORA	L
+	SUI	01H		; 1
+	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp84@:
+	MOV	A,E
+	SUB	L
+	MOV	L,A
+	MOV	A,D
+	SBB	H
+	CMCŠ	JNC	?M0421
+	ORA	L
+	JZ	?M0421
+	STC
+?M0421:	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp85@:
+	MOV	A,E
+	SUB	L
+	MOV	L,A
+	MOV	A,D
+	SBB	H
+	SBB	A
+	CMA
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp86@:
+	MOV	B,H
+	MOV	C,L
+	LXI	H,0000H
+	MVI	A,0F0H
+?J0439:	PUSH	PSW
+	DAD	H
+	MOV	A,E
+	RAL
+	MOV	E,A
+	MOV	A,D
+	RAL
+	MOV	D,A
+	JNC	?M0449
+	DAD	B
+	JNC	?M0449
+	INX	D
+?M0449:	POP	PSW
+	INR	A
+	JM	?J0439
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp87@:Š	XCHG
+	MOV	B,D
+	MOV	C,E
+	CALL	Co0461
+	XCHG
+	MOV	A,L
+	RET
+
+bp88@:
+	XCHG
+	MOV	B,D
+	MOV	C,E
+	CALL	Co0461
+	MOV	A,L
+	RET
+
+Co0461:	LXI	D,0000H
+	CALL	C$0487
+	XCHG
+	MVI	A,0F0H
+?J046A:	PUSH	PSW
+	DAD	H
+	RAR
+	XCHG
+	DAD	H
+	XCHG
+	JNC	?J0474
+	INX	H
+?J0474:	RAL
+	JC	?J047F
+	MOV	A,L
+	ADD	C
+	MOV	A,H
+	ADC	B
+	JNC	?J0481
+?J047F:	DAD	B
+	INX	D
+?J0481:	POP	PSW
+	INR	A
+	JM	?J046A
+	RET
+
+C$0487:	DCX	B
+	MOV	A,C
+	CMA
+	MOV	C,A
+	MOV	A,B
+	CMA
+	MOV	B,AŠ	RET
+
+;--------------------------------
+; Jump from BP88@ to BP04@...
+;--------------------------------
+bp04@:
+	MOV	A,C
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp05@:
+	MOV	A,B
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp06@:
+	MOV	H,B
+	MOV	L,C
+	MOV	A,L
+	RET
+
+;--------------------------------
+bp07@:
+	MOV	A,C
+?J049E:	RLC
+	DCR	E
+	JNZ	?J049E
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp08@:
+	MOV	A,C
+?J04A8:	RRC
+	DCR	E
+	JNZ	?J04A8
+	MOV	L,A
+	MVI	H,00H
+	RET
+
+;--------------------------------
+bp89@:
+	POP	D
+	DAD	HŠ	DAD	D
+	MOV	A,M
+	INX	H
+	MOV	H,M
+	MOV	L,A
+	PCHL
+
+;--------------------------------
+
+	END			; Standard CP/M RELocatable file
+

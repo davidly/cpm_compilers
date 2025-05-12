@@ -1,0 +1,13 @@
+attach b 4
+b:seteof $1.plm
+b:is14
+ERA $1.MOD
+era $1
+era $1.obj
+:f1:PLM80 $1.PLM debug PAGEWIDTH(80) $2
+:f1:link $1.obj,:f1:x0100,:f1:plm80.lib to $1.mod 
+:f1:locate $1.mod code(0100H) stacksize(100) map print($1.tra)
+:f1:cpm
+attach b 1
+e:objcpm $1
+

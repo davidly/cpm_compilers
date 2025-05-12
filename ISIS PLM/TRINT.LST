@@ -1,0 +1,39 @@
+
+
+
+:F2:ASM80 :F3:TRINT.SRC
+
+
+ISIS-II 8080/8085 MACRO ASSEMBLER, V2.0         MODULE   PAGE    1
+
+
+  LOC  OBJ         SEQ         SOURCE STATEMENT
+
+                      1 ;       PIP INTERFACE TO BDOS (CAN BE USED FOR OTHER TRANSIENTS)
+                      2         PUBLIC  BOOT,IOBYTE,BDISK,BDOS,MON1,MON2,MON3
+                      3         PUBLIC  MAXB,FCB,BUFF
+  0000                4 BOOT    EQU     0000H   ;WARM START
+  0003                5 IOBYTE  EQU     0003H   ;IO BYTE
+  0004                6 BDISK   EQU     0004H   ;BOOT DISK #
+  0005                7 BDOS    EQU     0005H   ;BDOS ENTRY
+  0005                8 MON1    EQU     0005H   ;BDOS ENTRY
+  0005                9 MON2    EQU     0005H   ;BDOS ENTRY
+  0005               10 MON3    EQU     0005H   ;BDOS ENTRY
+  0006               11 MAXB    EQU     0006H   ;MAX MEM BASE
+  005C               12 FCB     EQU     005CH   ;DEFAULT FCB
+  0080               13 BUFF    EQU     0080H   ;DEFAULT BUFFER
+                     14         END
+
+PUBLIC SYMBOLS
+BDISK  A 0004    BDOS   A 0005    BOOT   A 0000    BUFF   A 0080    FCB    A 005C    IOBYTE A 0003    MAXB   A 0006    
+MON1   A 0005    MON2   A 0005    MON3   A 0005    
+
+EXTERNAL SYMBOLS
+
+
+USER SYMBOLS
+BDISK  A 0004    BDOS   A 0005    BOOT   A 0000    BUFF   A 0080    FCB    A 005C    IOBYTE A 0003    MAXB   A 0006    
+MON1   A 0005    MON2   A 0005    MON3   A 0005    
+
+ASSEMBLY COMPLETE,  NO ERRORS
+
