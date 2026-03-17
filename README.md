@@ -42,11 +42,13 @@ To run the resulting apps, use NTVCM's -c flag to force console mode and -p flag
  
 The Borland Pascal and Modula-2 products don't support command-line builds, so you have to run the apps, load the source file, and build manually.
 
-The build scripts assume ntvcm is in your path. Linux systems generally have case-sensitive file systems and CP/M generally forces uppercase filenames. You're best off if you change all tool files, source files, and arguments to uppercase on Linux.
+The build scripts assume ntvcm is in your path. 
+
+Linux systems generally have case-sensitive file systems and CP/M generally forces uppercase filenames. You're best off if you change all tool files, source files, and arguments to uppercase on Linux.
 
 If you're running Linux or MacOS and see perplexing compilation errors or infinite loops in the compiler, it could be your source files don't have cr/lf line separators. Use unix2dos to add them; nearly all these compilers require them. Also, some compiler support/include text files require CR/LF; the BCPL compilers are good examples of this. If you clone this repo on non-Windows it's possible the CR characters were stripped and you need to add them back with unix2dos.
 
-Some compilers require a ^Z / 0x1a at the end of files. Since CP/M text files end in ^z/0x1a, unix2dos requires -f to force the conversion of what it thinks is a binary file. You may need to append a ^z manually to get some compilers to work.
+Some compilers require a ^Z / 0x1a at the end of files. Since CP/M text files end in ^z/0x1a, unix2dos requires -f to force the conversion of what it thinks is a binary file. You may need to append a ^z manually to get some compilers to work. Some compilers will go into an infinite loop looking for a ^z.
 
 The BA compiler is in the [tic-tac-toe and its applicability to nuclear war](https://github.com/davidly/ttt) repo. It generates code for 6502, 8080, 8086, x86, x64, 68000, arm32, arm64, and 64-bit RISC-V.
 
@@ -54,6 +56,7 @@ The Cowgol 0.6.1 compiler has not yet been tested with NTVCM and the benchmark a
 
 Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by [NTVCM](https://github.com/davidly/ntvcm/)
 
-<img width="972" height="1881" alt="table" src="https://github.com/user-attachments/assets/64212c6a-c707-4e4b-a0f9-e19e043753f0" />
+<img width="974" height="1919" alt="table" src="https://github.com/user-attachments/assets/bc97007d-acfe-4b3c-af6e-69da2e9faa85" />
+
 
 
