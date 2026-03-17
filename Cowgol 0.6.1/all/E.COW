@@ -1,0 +1,32 @@
+const SIZE := 200;
+
+sub e()
+    var bign: uint8 := SIZE;
+    var n: uint8;
+    var x: uint16 := 0;
+    var a: uint8[ SIZE ];
+
+    n := bign - 1;
+    while n > 0 loop
+        a[ n ] := 1;
+        n := n - 1;
+    end loop;
+    a[1] := 2;
+    a[0] := 0;
+
+    while bign > 9 loop
+        bign := bign - 1;
+        n := bign;
+        while n != 0 loop
+            a[ n ] := ( x % n as uint16 ) as uint8;
+            x := 10 as uint16 * a[ n - 1 ] as uint16 + x / n as uint16;
+            n := n - 1;
+        end loop;
+        print_i16( x );
+    end loop;
+
+    print( "\ndone\n" );
+end sub;
+
+e();
+

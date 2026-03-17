@@ -1,0 +1,201 @@
+# prove you can't win at tic-tac-toe if the opponent is competent. visiting 6493 board states is expected.
+
+const ScoreWin := 6;
+const ScoreTie := 5;
+const ScoreLose := 4;
+const ScoreMax := 9;
+const ScoreMin := 2;
+const DefaultIterations := 10;
+
+const PieceX := 1;
+const PieceO := 2;
+const PieceBlank := 0;
+
+var b: uint8[9];
+var sp: uint8[10];
+var sv: uint8[10];
+var sa: uint8[10];
+var sb: uint8[10];
+
+var move_count: uint16;
+
+sub Solve(alpha0: uint8, beta0: uint8): (result: uint8)
+    var stack: uint8 := 0;
+    var value: uint8 := 0;
+    var p: uint8;
+    var alpha: uint8 := alpha0;
+    var beta: uint8 := beta0;
+    var winner: uint8;
+
+    result := 0;
+
+main_loop:
+    move_count := move_count + 1;
+
+    if stack >= 4 then
+        winner := b[0];
+        if winner != PieceBlank then
+            if (winner == b[1]) and (winner == b[2]) then goto found_win; end if;
+            if (winner == b[3]) and (winner == b[6]) then goto found_win; end if;
+        end if;
+
+        winner := b[3];
+        if winner != PieceBlank then
+            if (winner == b[4]) and (winner == b[5]) then goto found_win; end if;
+        end if;
+
+        winner := b[6];
+        if winner != PieceBlank then
+            if (winner == b[7]) and (winner == b[8]) then goto found_win; end if;
+        end if;
+
+        winner := b[1];
+        if winner != PieceBlank then
+            if (winner == b[4]) and (winner == b[7]) then goto found_win; end if;
+        end if;
+
+        winner := b[2];
+        if winner != PieceBlank then
+            if (winner == b[5]) and (winner == b[8]) then goto found_win; end if;
+        end if;
+
+        winner := b[4];
+        if winner != PieceBlank then
+            if (winner == b[0]) and (winner == b[8]) then goto found_win; end if;
+            if (winner == b[2]) and (winner == b[6]) then goto found_win; end if;
+        end if;
+
+        if stack == 8 then
+            result := ScoreTie;
+            goto unwind;
+        end if;
+    end if;
+
+    if (stack & 1) != 0 then
+        value := ScoreMin;
+    else
+        value := ScoreMax;
+    end if;
+
+    p := 0;
+
+scan_moves:
+    if p >= 9 then
+        result := value;
+        goto return_up;
+    end if;
+
+    if b[p] != PieceBlank then
+        p := p + 1;
+        goto scan_moves;
+    end if;
+
+    if (stack & 1) != 0 then
+        b[p] := PieceX;
+    else
+        b[p] := PieceO;
+    end if;
+
+    sp[stack] := p;
+    sv[stack] := value;
+    sa[stack] := alpha;
+    sb[stack] := beta;
+    stack := stack + 1;
+    goto main_loop;
+
+found_win:
+    if winner == PieceX then
+        result := ScoreWin;
+    else
+        result := ScoreLose;
+    end if;
+    goto unwind;
+
+unwind:
+    stack := stack - 1;
+    p := sp[stack];
+    value := sv[stack];
+    alpha := sa[stack];
+    beta := sb[stack];
+    b[p] := PieceBlank;
+
+    if (stack & 1) == 0 then
+        if result == ScoreLose then
+            goto return_up;
+        end if;
+        if result < value then
+            value := result;
+        end if;
+        if value < beta then
+            beta := value;
+        end if;
+        if beta <= alpha then
+            goto finish_node;
+        end if;
+        p := p + 1;
+        goto scan_moves;
+    else
+        if result == ScoreWin then
+            goto return_up;
+        end if;
+        if result > value then
+            value := result;
+        end if;
+        if value > alpha then
+            alpha := value;
+        end if;
+        if alpha >= beta then
+            goto finish_node;
+        end if;
+        p := p + 1;
+        goto scan_moves;
+    end if;
+
+finish_node:
+    result := value;
+
+return_up:
+    if stack == 0 then
+        return;
+    end if;
+    goto unwind;
+end sub;
+
+sub Main()
+    var l: uint8 := 0;
+    var result: uint8;
+
+    b[0] := PieceBlank;
+    b[1] := PieceBlank;
+    b[2] := PieceBlank;
+    b[3] := PieceBlank;
+    b[4] := PieceBlank;
+    b[5] := PieceBlank;
+    b[6] := PieceBlank;
+    b[7] := PieceBlank;
+    b[8] := PieceBlank;
+
+    while l < DefaultIterations loop
+        move_count := 0;
+
+        b[0] := PieceX;
+        result := Solve(ScoreMin, ScoreMax);
+        b[0] := PieceBlank;
+
+        b[1] := PieceX;
+        result := Solve(ScoreMin, ScoreMax);
+        b[1] := PieceBlank;
+
+        b[4] := PieceX;
+        result := Solve(ScoreMin, ScoreMax);
+        b[4] := PieceBlank;
+
+        l := l + 1;
+    end loop;
+
+    print("final move count ");
+    print_i16(move_count);
+    print("\n");
+end sub;
+
+Main();
