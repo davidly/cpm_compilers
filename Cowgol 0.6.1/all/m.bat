@@ -7,7 +7,7 @@ if not exist "%~1.cow" GOTO usage
 
 ntvcm init
 rem note that tokenise fails if data past the soft eof is ^z. 0 works. hack is in ntvcm.
-ntvcm tokenise b:runtime0.cow b:runtime1.cow b:runtime2.cow %1.cow
+ntvcm tokenise runtime0.cow runtime1.cow runtime2.cow %1.cow
 
 ntvcm parser
 ntvcm typechck
