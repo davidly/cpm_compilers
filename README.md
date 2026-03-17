@@ -52,11 +52,9 @@ Some compilers require a ^Z / 0x1a at the end of files. Since CP/M text files en
 
 The BA compiler is in the [tic-tac-toe and its applicability to nuclear war](https://github.com/davidly/ttt) repo. It generates code for 6502, 8080, 8086, x86, x64, 68000, arm32, arm64, and 64-bit RISC-V.
 
-The Cowgol 0.6.1 compiler has not yet been tested with NTVCM and the benchmark and build scripts don't yet exist. If you have the interest have at it and send a pull request.
-
 Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by [NTVCM](https://github.com/davidly/ntvcm/)
 
-<img width="974" height="1919" alt="table" src="https://github.com/user-attachments/assets/bc97007d-acfe-4b3c-af6e-69da2e9faa85" />
+<img alt="table" src="images/table.jpg" />
 
 
 
