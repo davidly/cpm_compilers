@@ -12,15 +12,15 @@ const PieceO := 2;
 const PieceBlank := 0;
 
 var b: uint8[9];
-var sp: uint8[10];
-var sv: uint8[10];
-var sa: uint8[10];
-var sb: uint8[10];
+var sp: uint8[8]; # stacks to save variables for fake recursion
+var sv: uint8[8];
+var sa: uint8[8];
+var sb: uint8[8];
 
 var move_count: uint16;
 
 sub Solve(alpha0: uint8, beta0: uint8): (result: uint8)
-    var stack: uint8 := 0;
+    var depth: uint8 := 0;
     var value: uint8 := 0;
     var p: uint8;
     var alpha: uint8 := alpha0;
@@ -32,7 +32,7 @@ sub Solve(alpha0: uint8, beta0: uint8): (result: uint8)
 main_loop:
     move_count := move_count + 1;
 
-    if stack >= 4 then
+    if depth >= 4 then
         winner := b[0];
         if winner != PieceBlank then
             if (winner == b[1]) and (winner == b[2]) then goto found_win; end if;
@@ -65,13 +65,13 @@ main_loop:
             if (winner == b[2]) and (winner == b[6]) then goto found_win; end if;
         end if;
 
-        if stack == 8 then
+        if depth == 8 then
             result := ScoreTie;
             goto unwind;
         end if;
     end if;
 
-    if (stack & 1) != 0 then
+    if (depth & 1) != 0 then
         value := ScoreMin;
     else
         value := ScoreMax;
@@ -90,17 +90,17 @@ scan_moves:
         goto scan_moves;
     end if;
 
-    if (stack & 1) != 0 then
+    if (depth & 1) != 0 then
         b[p] := PieceX;
     else
         b[p] := PieceO;
     end if;
 
-    sp[stack] := p;
-    sv[stack] := value;
-    sa[stack] := alpha;
-    sb[stack] := beta;
-    stack := stack + 1;
+    sp[depth] := p;
+    sv[depth] := value;
+    sa[depth] := alpha;
+    sb[depth] := beta;
+    depth := depth + 1;
     goto main_loop;
 
 found_win:
@@ -112,14 +112,14 @@ found_win:
     goto unwind;
 
 unwind:
-    stack := stack - 1;
-    p := sp[stack];
-    value := sv[stack];
-    alpha := sa[stack];
-    beta := sb[stack];
+    depth := depth - 1;
+    p := sp[depth];
+    value := sv[depth];
+    alpha := sa[depth];
+    beta := sb[depth];
     b[p] := PieceBlank;
 
-    if (stack & 1) == 0 then
+    if (depth & 1) == 0 then
         if result == ScoreLose then
             goto return_up;
         end if;
@@ -155,7 +155,7 @@ finish_node:
     result := value;
 
 return_up:
-    if stack == 0 then
+    if depth == 0 then
         return;
     end if;
     goto unwind;
