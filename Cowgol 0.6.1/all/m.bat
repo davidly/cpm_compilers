@@ -12,7 +12,7 @@ ntvcm tokenise runtime0.cow runtime1.cow runtime2.cow %1.cow
 ntvcm parser
 ntvcm typechck
 
-del iops.dat
+del iops.dat  >nul 2>&1
 ren iopsout.dat iops.dat
 ntvcm backend
 
@@ -24,14 +24,16 @@ ntvcm blockify
 del iops.dat
 ren iopsout.dat iops.dat
 ntvcm codegen
+
 del iops.dat
 ren iopsout.dat iops.dat
 ntvcm placer
+
 del iops.dat
 ren iopsout.dat iops.dat
 ntvcm emitter
 
-del %1.com
+del %1.com  >nul 2>&1
 ren cow.com %1.com
 
 goto :eof
