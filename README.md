@@ -52,7 +52,7 @@ Some compilers require a ^Z / 0x1a at the end of files. Since CP/M text files en
 
 The BA compiler is in the [tic-tac-toe and its applicability to nuclear war](https://github.com/davidly/ttt) repo. It generates code for 6502, 8080, 8086, x86, x64, 68000, arm32, arm64, and 64-bit RISC-V.
 
-The [dcc](https://github.com/davidly/dcc) compiler runs on Linux, MacOS, and Windows. It generates a .mac file for m80 to assemble and l80 to link. It generates small, fast binaries.
+The [dcc](https://github.com/davidly/dcc) compiler runs on Linux, MacOS, and Windows. It turns C89 into a .mac file for m80 to assemble and l80 to link. It generates small, fast binaries.
 
 Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by [NTVCM](https://github.com/davidly/ntvcm/)
 
