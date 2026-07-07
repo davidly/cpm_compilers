@@ -39,7 +39,9 @@ To run the resulting apps, use NTVCM's -c flag to force console mode and -p flag
   * ntvcm -c -p sieve
   * ntvcm -c -p e
   * ntvcm -c -p ttt
- 
+
+Many other CP/M 2.2 emulators will work in place of NTVCM. The tools in this repo are a good test of CP/M 2.2 BDOS compatibility; some rely on surprising (to me) BDOS behaviors.
+
 The Borland Pascal and Modula-2 products don't support command-line builds, so you have to run the apps, load the source file, and build manually.
 
 The build scripts assume ntvcm is in your path. 
