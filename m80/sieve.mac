@@ -70,13 +70,30 @@ actualcode:
 
         ; set all array entries to true:  for (i = 0; i <= SIZE; i++) flags[i] = TRUE;
 
-        ld         hl, flags
-        ld         (hl), 1
-        ld         d, h
-        ld         e, l
-        inc        de
-        ld         bc, size+2
-        ldir
+        ld         hl, 0
+        add        hl, sp
+        ld         (SaveSP), hl
+        ld         hl, flags + size + 2
+        ld         sp, hl
+        ld         hl, 0101h
+        ld         bc, 0002h
+  fillagain:
+        push       hl
+        push       hl
+        push       hl
+        push       hl
+        push       hl
+        push       hl
+        push       hl
+        push       hl
+        dec        b
+        jp         nz, fillagain
+        dec        c
+        jp         nz, fillagain
+        ld         hl, (SaveSP)
+        ld         sp, hl
+        ld         hl, flags + size + 2   ; one guaranteed-true sentinel byte just past
+        ld         (hl), 1                 ; the array proper; kloop can never reach or clear it
 
         ; iterate through array entries and count primes
         ; register usage:
@@ -87,32 +104,31 @@ actualcode:
   nextprime:
         ld         hl, flags
         add        hl, bc
-        ld         d, b             ; save the current i in de
-        ld         e, c
-        ld         bc, 0            ; a value of 1 will be found, even if it's 1 byte past the end of the array
-        ld         a, 1
-        cpir
 
-        inc        bc               ; bc and hl are modified even if there is a match on the first byte
-        dec        hl
-        ex         de, hl           ; update bc to be the i. first save hl for later
-        sbc        hl, bc
-        ld         b, h
-        ld         c, l
-        ex         de, hl           ; restore hl -- & flags[ i ]
-
-        ld         a, 20h           ; did we go past the end of the array?
-        cp         b
-        jp         z, checknextiter
+  npshortcut:
+        ld         a, (hl)
+        or         a
+        jp         nz, flagison
+        inc        bc
+        inc        hl
+        jp         npshortcut
 
   flagison:
+        ld         a, 23h           ; did we reach the guaranteed-true sentinel just past the array?
+        cp         h
+        jp         nz, flaginbounds
+        ld         a, 0
+        cp         l
+        jp         z, checknextiter
+
+  flaginbounds:
         ex         de, hl
         ld         hl, 3
         add        hl, bc
         add        hl, bc
         ex         de, hl           ; de is prime
 
-        ld         a, 22h
+        ld         a, 22h           ; flags goes from 0x0300 to 0x22ff. 0x2300 means we're past the array
         add        hl, de
         cp         h
         jp         c, inccount
@@ -128,11 +144,9 @@ actualcode:
         inc        hl
         ld         (COUNT), hl
 
-  flagisoff:                        ; check if outer loop is done
+  flagisoff:                        ; loop back for the next candidate; the boundary is caught in flagison
         inc        bc
-        ld         a, 20h           ; past 8192 byes?
-        cp         b
-        jp         nz, nextprime
+        jp         nextprime
 
   checknextiter:                    ; are we done iterating loops times?
         ld         a, (ITER)
@@ -142,7 +156,7 @@ actualcode:
         jp         nz, iteragain
 
         ld         hl, (COUNT)      ; print the count of primes and the string
-        call       DisplayHL
+        call       PrintUnsigned
         ld         hl, STRPRIMES
         call       DisplayString
 
@@ -184,31 +198,16 @@ DisplayString:                      ; display null-terminated string pointed to 
         pop     hl
         ret
 
-NegateHL:                           ; negate hl via twos complement -- complement + 1
-        ld      a, h
-        cpl
-        ld      h, a
-        ld      a, l
-        cpl
-        ld      l, a
-        inc     hl
-        ret
-
-DisplayHL:
-        ld      a, h                ; Get the sign bit of the integer,
-        rla                         ; which is the top bit of the high byte
-        sbc     a, a                ; A=00 if positive, FF if negative
-        ld      (NEGF), a           ; Store it as the negative flag
-        call    nz, NegateHL        ; And if HL was negative, make it positive
+PrintUnsigned:                      ; print the unsigned 16-bit number in HL
         ld      de, NUM             ; Load pointer to end of number string
         push    de                  ; Onto the stack
         ld      bc, -10             ; Divide by ten (by trial subtraction)
-  DhlDigit:
+  PU$DIGIT:
         ld      de, -1              ; DE = quotient. There is no 16-bit subtraction,
-  DhlDigitDivide:
+  PU$DGTDIV:
         add     hl, bc              ; so we just add a negative value,
-        inc     de                   
-        jp      c, DhlDigitDivide   ; while that overflows.
+        inc     de
+        jp      c, PU$DGTDIV        ; while that overflows.
         ld      a, '0'+10           ; The loop runs once too much so we're 10 out
         add     a, l                ; The remainder (minus 10) is in L
         ex      (sp), hl            ; Swap HL with top of stack (i.e., the string pointer)
@@ -218,20 +217,16 @@ DisplayHL:
         ex      de, hl              ; Do all of this again with the quotient
         ld      a, h                ; If it is zero, we're done
         or      l
-        jp      nz, DhlDigit        ; But if not, there are more digits
+        jp      nz, PU$DIGIT        ; But if not, there are more digits
         ld      c, BdosPrintString  ; Prepare to call CP/M and print the string
-        pop     de                  ; Put the string pointer from the stack in DE
-        ld      a, (NEGF)           ; See if the number was supposed to be negative
-        inc     a                   
-        jp      nz, bdos            ; If not, print the string we have and return
-        dec     de                  ; But if so, we need to add a minus in front
-        ld      a, '-'              
-        ld      (de), a
+        pop     de
         jp      bdos                ; And only then print the string. bdos will return to caller
 
-org 2300h-8192
-        flags:      ds      size + 1
-        afterflags: db      69h             ; make it easy to find. will be 1 after initialization to terminate cpir
+        flags equ 2300h-8192
+        afterflags equ flags+size+2
+;org 2300h-8192
+;        flags:      ds      size + 1
+;        afterflags: db      69h             ; make it easy to find. will be 1 after initialization to terminate cpir
 
 end
 
