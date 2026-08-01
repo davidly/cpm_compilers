@@ -23,7 +23,7 @@ The benchmarks include:
   * sieve: The classic from BYTE Magazine that counts prime numbers. Measures array and loop performance.
   * e: Computes the irrational number e to 192 digits. Measures integer multiply/divide along with array and loop performance.
   * ttt: proves you can't win at tic-tac-toe if the opponent is competent. Measures function call and stack access along with array and loop performance.
-  * tm: test malloc. This calls malloc/calloc/free in the C runtime to measure performance. It's C-only and many compilers can't run it.
+  * tm: test malloc. This calls malloc/calloc/free/memset in the C runtime to measure performance. It's C-only and many compilers can't run it.
 
 To run the compilers on Windows, use the m.bat script in each folder. e.g.:
   * m sieve
@@ -54,7 +54,7 @@ Some compilers require a ^Z / 0x1a at the end of files. Since CP/M text files en
 
 The BA compiler is in the [tic-tac-toe and its applicability to nuclear war](https://github.com/davidly/ttt) repo. It generates code for 6502, 8080, 8086, x86, x64, 68000, arm32, arm64, and 64-bit RISC-V.
 
-The [dcc](https://github.com/davidly/dcc) compiler runs on Linux, MacOS, and Windows. It turns C89 into a .mac file for m80 to assemble and l80 to link. It generates small, fast binaries.
+The [dcc](https://github.com/davidly/dcc) C compiler (developed by me and Dave Glover) runs on Linux, MacOS, and Windows. It turns C89+ into a .mac file for m80 to assemble and l80 to link. It generates the smallest, fastest binaries of all the compilers. But it still can't beat good assembly :)
 
 Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by [NTVCM](https://github.com/davidly/ntvcm/)
 
