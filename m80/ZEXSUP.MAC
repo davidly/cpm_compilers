@@ -1,0 +1,1284 @@
+	title	'zexsup - Z80 exerciser supplement for opcodes zexall/zexdoc skip'
+
+; zexsup.mac - supplemental Z80 instruction exerciser.
+;
+; zexall/zexdoc (Frank Cringle's exerciser, as adapted by J.G.Harston) cover
+; nearly the whole Z80 instruction set with CRC-checked test vectors, but by
+; design or omission they never execute several groups of instructions as
+; the instruction under test:
+;
+;   - PUSH/POP (qq, IX, IY) and all EX forms (DE,HL / AF,AF' / EXX /
+;     (SP),HL / (SP),IX / (SP),IY) and LD SP,HL/IX/IY - used constantly as
+;     harness plumbing, but never themselves CRC-checked.
+;   - Conditional JP/JR/CALL/RET and DJNZ - same story: load-bearing for the
+;     harness's own control flow, never isolated and checked per condition
+;     code.
+;   - RETN/RETI - return-address correctness is checkable even though the
+;     IFF1/IFF2 interrupt state they also touch isn't observable from CP/M.
+;   - LD I,A / LD A,I - fully deterministic (I has no auto-increment).
+;   - The 6 undocumented duplicate NEG encodings (ED 4C/54/5C/64/6C/74/7C) -
+;     zexall's own "negop" test never varies its opcode bytes (verified by
+;     reading its increment/shift vectors), so only the canonical ED 44 is
+;     exercised.
+;
+; This file checks all of the above against expected values. For groups
+; whose *results* are inherently non-deterministic or hardware-dependent -
+; IN/OUT, block I/O, DI/EI/IM, and LD R,A/LD A,R (R auto-increments every
+; opcode fetch on real hardware, so its exact value isn't portable across
+; implementations/timings) - it still executes every opcode so a decode bug
+; or crash shows up, but does not assert a specific result.
+;
+; Deliberately NOT covered, for safety:
+;   - HALT: executing it stops the CPU until an interrupt arrives. CP/M
+;     programs don't enable interrupts, so on real hardware / emulators
+;     without a periodic timer tick this would hang forever. zexall itself
+;     explicitly avoids ever executing HALT (see its "pragmatically avoid
+;     halt instructions" comment) - this file follows the same precedent.
+;   - RST 0-7 target-address correctness: verifying the fixed jump target
+;     would mean patching CP/M's reserved zero page (0000h-003Fh), which
+;     isn't safe to do portably across real hardware and other emulators.
+;     RST's push-return-address+jump mechanism is otherwise identical to
+;     CALL, which *is* covered here.
+;
+; Assembled/linked with M80/L80 (or a compatible cross tool such as this
+; project's m80c/l80c). No macros are used: some M80-compatible tools in
+; this project's toolchain don't implement MACRO/ENDM, so every check is
+; written out as plain, explicit code.
+;
+; The undocumented duplicate NEG/IM encodings have no mnemonic in any
+; assembler (m80c, real M80, or otherwise) - they're always written as raw
+; bytes, so that's not a toolchain gap. m80c itself did have real gaps
+; that this file originally worked around with raw bytes too - EX (SP),IX/
+; IY, LD I,A/LD R,A/LD A,I/LD A,R, IN r,(C) and OUT (C),r for every
+; register, and the block-I/O mnemonics - now fixed in src/m80c/m80c.c, so
+; this file uses the plain mnemonics for all of those.
+
+	cseg
+
+bdos	equ	5
+
+; ------------------------------------------------------------------
+; entry
+; ------------------------------------------------------------------
+start:
+	ld	de,bnrmsg
+	call	prstr
+
+	call	t_pushpop
+	call	t_exch1
+	call	t_exchsp
+	call	t_ldsp
+	call	t_ldia
+	call	t_ldra
+	call	t_jpcc
+	call	t_jrcc
+	call	t_djnz
+	call	t_callcc
+	call	t_retcc
+
+	call	t_io
+
+	; these run last: retn/reti, block i/o, and the undocumented/
+	; duplicate encodings below are the likeliest candidates for a
+	; target emulator not to implement at all, which (for most
+	; emulators, ntvcm included) means an unrecoverable hard exit
+	; rather than a graceful per-check failure - so everything above
+	; gets to report before that risk.
+	call	t_retnreti
+	call	t_blockio
+	call	t_negdup
+	call	t_intmisc
+
+	ld	de,donemsg
+	call	prstr
+	ld	a,(failcnt)
+	or	a
+	jp	z,allok
+	ld	de,failsummsg
+	call	prstr
+	jp	finish
+allok:	ld	de,oksummsg
+	call	prstr
+finish:	jp	0			; warm boot
+
+; ------------------------------------------------------------------
+; output / check helpers
+; ------------------------------------------------------------------
+
+	; DE = pointer to $-terminated string
+prstr:	push	af
+	push	bc
+	push	de
+	push	hl
+	ld	c,9
+	call	bdos
+	pop	hl
+	pop	de
+	pop	bc
+	pop	af
+	ret
+
+	; A = value 0-15, prints one hex digit via bdos fn 2
+phexnib:
+	push	hl
+	push	bc
+	push	de
+	ld	hl,hexdig
+	ld	b,0
+	ld	c,a
+	add	hl,bc
+	ld	a,(hl)
+	ld	e,a
+	ld	c,2
+	call	bdos
+	pop	de
+	pop	bc
+	pop	hl
+	ret
+
+	; A = byte to print as 2 hex chars
+phex2:	push	af
+	push	bc
+	ld	c,a
+	ld	a,c
+	rrca
+	rrca
+	rrca
+	rrca
+	and	0fh
+	call	phexnib
+	ld	a,c
+	and	0fh
+	call	phexnib
+	pop	bc
+	pop	af
+	ret
+
+	; entry: HL=actual, DE=expected, BC=pointer to name (dollar-terminated)
+check16:
+	push	bc
+	or	a
+	sbc	hl,de
+	pop	bc
+	jp	nz,c16fail
+	ld	d,b
+	ld	e,c
+	call	prstr
+	ld	de,okmsg
+	call	prstr
+	ld	hl,passcnt
+	inc	(hl)
+	ret
+c16fail:
+	ld	d,b
+	ld	e,c
+	call	prstr
+	ld	de,failmsg
+	call	prstr
+	ld	hl,failcnt
+	inc	(hl)
+	ret
+
+; ------------------------------------------------------------------
+; push/pop: bc, de, hl, af, ix, iy
+; ------------------------------------------------------------------
+t_pushpop:
+	ld	bc,01122h
+	ld	de,03344h
+	ld	hl,05566h
+	push	bc
+	push	de
+	push	hl
+	pop	hl
+	ld	de,05566h
+	ld	bc,nm_pphl
+	call	check16
+	pop	hl
+	ld	de,03344h
+	ld	bc,nm_ppde
+	call	check16
+	pop	hl
+	ld	de,01122h
+	ld	bc,nm_ppbc
+	call	check16
+
+	ld	ix,07788h
+	push	ix
+	ld	ix,0
+	pop	ix
+	push	ix
+	pop	hl
+	ld	de,07788h
+	ld	bc,nm_ppix
+	call	check16
+
+	ld	iy,099aah
+	push	iy
+	ld	iy,0
+	pop	iy
+	push	iy
+	pop	hl
+	ld	de,099aah
+	ld	bc,nm_ppiy
+	call	check16
+
+	ld	a,0abh
+	push	af
+	xor	a
+	pop	af
+	ld	h,a
+	ld	l,0
+	ld	de,0ab00h
+	ld	bc,nm_ppaf
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; ex de,hl / exx / ex af,af'
+; ------------------------------------------------------------------
+t_exch1:
+	; both ex de,hl round trips run back-to-back, with no check16
+	; call between them: check16 clobbers hl (it computes hl-de) and
+	; bc (name pointer), so any check squeezed between two real
+	; instructions under test would corrupt the second one's inputs.
+	ld	de,01234h
+	ld	hl,05678h
+	ex	de,hl			; de=05678h, hl=01234h
+	push	hl			; stash 1st-swap result
+	ex	de,hl			; de=01234h, hl=05678h (round trip)
+	ld	de,05678h
+	ld	bc,nm_exdehl2
+	call	check16
+	pop	hl			; retrieve stashed 1st-swap result
+	ld	de,01234h
+	ld	bc,nm_exdehl1
+	call	check16
+
+	; likewise, both real exx's run back-to-back; the restored
+	; bc/de are stashed on the stack before any check16 call gets a
+	; chance to clobber them.
+	ld	bc,0aaaah
+	ld	de,0bbbbh
+	ld	hl,0cccch
+	exx
+	ld	bc,01111h
+	ld	de,02222h
+	ld	hl,03333h
+	exx				; bc,de,hl all restored
+	push	bc
+	push	de
+	ld	de,0cccch
+	ld	bc,nm_exxhl
+	call	check16
+	pop	hl			; stashed de
+	ld	de,0bbbbh
+	ld	bc,nm_exxde
+	call	check16
+	pop	hl			; stashed bc
+	ld	de,0aaaah
+	ld	bc,nm_exxbc
+	call	check16
+
+	ld	a,042h
+	or	a
+	ex	af,af'
+	ld	a,099h
+	scf
+	ex	af,af'
+	ld	h,a
+	ld	l,0
+	ld	de,04200h
+	ld	bc,nm_exafaf
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; ex (sp),hl / ex (sp),ix / ex (sp),iy
+; ------------------------------------------------------------------
+t_exchsp:
+	ld	hl,01234h
+	push	hl
+	ld	hl,05678h
+	ex	(sp),hl
+	ld	de,01234h
+	ld	bc,nm_exsphl1
+	call	check16
+	ex	(sp),hl
+	ld	de,05678h
+	ld	bc,nm_exsphl2
+	call	check16
+	pop	hl
+
+	ld	hl,0aaa1h
+	push	hl
+	ld	ix,0bbb2h
+	ex	(sp),ix
+	push	ix
+	pop	hl
+	ld	de,0aaa1h
+	ld	bc,nm_exspix1
+	call	check16
+	ex	(sp),ix
+	push	ix
+	pop	hl
+	ld	de,0bbb2h
+	ld	bc,nm_exspix2
+	call	check16
+	pop	hl
+
+	ld	hl,0ccc3h
+	push	hl
+	ld	iy,0ddd4h
+	ex	(sp),iy
+	push	iy
+	pop	hl
+	ld	de,0ccc3h
+	ld	bc,nm_exspiy1
+	call	check16
+	ex	(sp),iy
+	push	iy
+	pop	hl
+	ld	de,0ddd4h
+	ld	bc,nm_exspiy2
+	call	check16
+	pop	hl
+	ret
+
+; ------------------------------------------------------------------
+; ld sp,hl / ld sp,ix / ld sp,iy - verified via the already zexall/
+; zexdoc-checked ld (nn),sp and ld sp,(nn).
+; ------------------------------------------------------------------
+t_ldsp:
+	ld	(realsp),sp
+
+	ld	hl,0abcdh
+	ld	sp,hl
+	ld	(probe),sp
+	ld	sp,(realsp)
+	ld	hl,(probe)
+	ld	de,0abcdh
+	ld	bc,nm_ldsphl
+	call	check16
+
+	ld	ix,09876h
+	ld	sp,ix
+	ld	(probe),sp
+	ld	sp,(realsp)
+	ld	hl,(probe)
+	ld	de,09876h
+	ld	bc,nm_ldspix
+	call	check16
+
+	ld	iy,05432h
+	ld	sp,iy
+	ld	(probe),sp
+	ld	sp,(realsp)
+	ld	hl,(probe)
+	ld	de,05432h
+	ld	bc,nm_ldspiy
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; ld i,a / ld a,i round trip (fully deterministic - i has no
+; auto-increment).
+; ------------------------------------------------------------------
+t_ldia:
+	ld	a,03ch
+	ld	i,a
+	xor	a
+	ld	a,i
+	ld	h,a
+	ld	l,0
+	ld	de,03c00h
+	ld	bc,nm_ldia
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; ld r,a / ld a,r - informational only (R auto-increments every
+; opcode fetch on real hardware, so an exact post-value isn't
+; portable across implementations/timings).
+; ------------------------------------------------------------------
+t_ldra:
+	ld	de,ldramsg
+	call	prstr
+	ld	a,055h
+	ld	r,a
+	ld	a,r
+	call	phex2
+	ld	de,crlf
+	call	prstr
+	ret
+
+; ------------------------------------------------------------------
+; undocumented duplicate NEG encodings vs the canonical ed 44,
+; self-consistency checked (same input, same expected output as
+; whatever this emulator's already zexall/zexdoc-verified ed 44
+; produces) rather than a hand-derived flag byte.
+; ------------------------------------------------------------------
+t_negdup:
+	ld	a,001h
+	neg				; canonical ed 44
+	call	ndsave
+
+	ld	a,001h
+	db	0edh,04ch		; undocumented dup of neg
+	ld	bc,nm_neg4c
+	call	ndcheck
+
+	ld	a,001h
+	db	0edh,054h
+	ld	bc,nm_neg54
+	call	ndcheck
+
+	ld	a,001h
+	db	0edh,05ch
+	ld	bc,nm_neg5c
+	call	ndcheck
+
+	ld	a,001h
+	db	0edh,064h
+	ld	bc,nm_neg64
+	call	ndcheck
+
+	ld	a,001h
+	db	0edh,06ch
+	ld	bc,nm_neg6c
+	call	ndcheck
+
+	ld	a,001h
+	db	0edh,074h
+	ld	bc,nm_neg74
+	call	ndcheck
+
+	ld	a,001h
+	db	0edh,07ch
+	ld	bc,nm_neg7c
+	call	ndcheck
+	ret
+
+	; stash canonical NEG's A (real reg) and F (via push af) result
+ndsave:
+	push	af
+	pop	hl
+	ld	(negcanon),hl
+	ret
+
+	; entry: A,F already hold a duplicate-NEG result; BC=name
+ndcheck:
+	push	af
+	pop	hl
+	ld	de,(negcanon)
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; conditional jp cc,nn - all 8 condition codes, taken and not-taken.
+; ------------------------------------------------------------------
+t_jpcc:
+	; nz, taken (z=0)
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	jp	nz,L001
+	jp	L002
+L001:	ld	hl,0aaaah
+L002:	ld	de,0aaaah
+	ld	bc,nm_jpnzt
+	call	check16
+	; nz, not taken (z=1)
+	xor	a
+	ld	hl,0bbbbh
+	jp	nz,L003
+	jp	L004
+L003:	ld	hl,0aaaah
+L004:	ld	de,0bbbbh
+	ld	bc,nm_jpnzf
+	call	check16
+
+	; z, taken (z=1)
+	xor	a
+	ld	hl,0bbbbh
+	jp	z,L005
+	jp	L006
+L005:	ld	hl,0aaaah
+L006:	ld	de,0aaaah
+	ld	bc,nm_jpzt
+	call	check16
+	; z, not taken (z=0)
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	jp	z,L007
+	jp	L008
+L007:	ld	hl,0aaaah
+L008:	ld	de,0bbbbh
+	ld	bc,nm_jpzf
+	call	check16
+
+	; nc, taken (c=0)
+	xor	a
+	ld	hl,0bbbbh
+	jp	nc,L009
+	jp	L010
+L009:	ld	hl,0aaaah
+L010:	ld	de,0aaaah
+	ld	bc,nm_jpnct
+	call	check16
+	; nc, not taken (c=1)
+	scf
+	ld	hl,0bbbbh
+	jp	nc,L011
+	jp	L012
+L011:	ld	hl,0aaaah
+L012:	ld	de,0bbbbh
+	ld	bc,nm_jpncf
+	call	check16
+
+	; c, taken (c=1)
+	scf
+	ld	hl,0bbbbh
+	jp	c,L013
+	jp	L014
+L013:	ld	hl,0aaaah
+L014:	ld	de,0aaaah
+	ld	bc,nm_jpct
+	call	check16
+	; c, not taken (c=0)
+	xor	a
+	ld	hl,0bbbbh
+	jp	c,L015
+	jp	L016
+L015:	ld	hl,0aaaah
+L016:	ld	de,0bbbbh
+	ld	bc,nm_jpcf
+	call	check16
+
+	; po, taken (p=0, odd)
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	jp	po,L017
+	jp	L018
+L017:	ld	hl,0aaaah
+L018:	ld	de,0aaaah
+	ld	bc,nm_jppot
+	call	check16
+	; po, not taken (p=1, even)
+	xor	a
+	ld	hl,0bbbbh
+	jp	po,L019
+	jp	L020
+L019:	ld	hl,0aaaah
+L020:	ld	de,0bbbbh
+	ld	bc,nm_jppof
+	call	check16
+
+	; pe, taken (p=1, even)
+	xor	a
+	ld	hl,0bbbbh
+	jp	pe,L021
+	jp	L022
+L021:	ld	hl,0aaaah
+L022:	ld	de,0aaaah
+	ld	bc,nm_jppet
+	call	check16
+	; pe, not taken (p=0, odd)
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	jp	pe,L023
+	jp	L024
+L023:	ld	hl,0aaaah
+L024:	ld	de,0bbbbh
+	ld	bc,nm_jppef
+	call	check16
+
+	; p (plus/positive), taken (s=0)
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	jp	p,L025
+	jp	L026
+L025:	ld	hl,0aaaah
+L026:	ld	de,0aaaah
+	ld	bc,nm_jppt
+	call	check16
+	; p, not taken (s=1)
+	ld	a,80h
+	or	a
+	ld	hl,0bbbbh
+	jp	p,L027
+	jp	L028
+L027:	ld	hl,0aaaah
+L028:	ld	de,0bbbbh
+	ld	bc,nm_jppf
+	call	check16
+
+	; m (minus), taken (s=1)
+	ld	a,80h
+	or	a
+	ld	hl,0bbbbh
+	jp	m,L029
+	jp	L030
+L029:	ld	hl,0aaaah
+L030:	ld	de,0aaaah
+	ld	bc,nm_jpmt
+	call	check16
+	; m, not taken (s=0)
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	jp	m,L031
+	jp	L032
+L031:	ld	hl,0aaaah
+L032:	ld	de,0bbbbh
+	ld	bc,nm_jpmf
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; conditional jr cc,n - nz/z/nc/c, taken and not-taken.
+; ------------------------------------------------------------------
+t_jrcc:
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	jr	nz,L033
+	jp	L034
+L033:	ld	hl,0aaaah
+L034:	ld	de,0aaaah
+	ld	bc,nm_jrnzt
+	call	check16
+	xor	a
+	ld	hl,0bbbbh
+	jr	nz,L035
+	jp	L036
+L035:	ld	hl,0aaaah
+L036:	ld	de,0bbbbh
+	ld	bc,nm_jrnzf
+	call	check16
+
+	xor	a
+	ld	hl,0bbbbh
+	jr	z,L037
+	jp	L038
+L037:	ld	hl,0aaaah
+L038:	ld	de,0aaaah
+	ld	bc,nm_jrzt
+	call	check16
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	jr	z,L039
+	jp	L040
+L039:	ld	hl,0aaaah
+L040:	ld	de,0bbbbh
+	ld	bc,nm_jrzf
+	call	check16
+
+	xor	a
+	ld	hl,0bbbbh
+	jr	nc,L041
+	jp	L042
+L041:	ld	hl,0aaaah
+L042:	ld	de,0aaaah
+	ld	bc,nm_jrnct
+	call	check16
+	scf
+	ld	hl,0bbbbh
+	jr	nc,L043
+	jp	L044
+L043:	ld	hl,0aaaah
+L044:	ld	de,0bbbbh
+	ld	bc,nm_jrncf
+	call	check16
+
+	scf
+	ld	hl,0bbbbh
+	jr	c,L045
+	jp	L046
+L045:	ld	hl,0aaaah
+L046:	ld	de,0aaaah
+	ld	bc,nm_jrct
+	call	check16
+	xor	a
+	ld	hl,0bbbbh
+	jr	c,L047
+	jp	L048
+L047:	ld	hl,0aaaah
+L048:	ld	de,0bbbbh
+	ld	bc,nm_jrcf
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; djnz - taken (b<>0 after decrement) and not-taken (b=0 after decrement)
+; ------------------------------------------------------------------
+t_djnz:
+	ld	b,2
+	ld	hl,0bbbbh
+	djnz	L049
+	jp	L050
+L049:	ld	hl,0aaaah
+L050:	ld	de,0aaaah
+	ld	bc,nm_djnzt
+	call	check16
+
+	ld	b,1
+	ld	hl,0bbbbh
+	djnz	L051
+	jp	L052
+L051:	ld	hl,0aaaah
+L052:	ld	de,0bbbbh
+	ld	bc,nm_djnzf
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; conditional call cc,nn - all 8 condition codes, taken and not-taken.
+; csub is a shared marker subroutine: if a "call cc" is really taken,
+; csub runs and sets hl; if not taken, hl keeps its preset value.
+; ------------------------------------------------------------------
+csub:	ld	hl,0aaaah
+	ret
+
+t_callcc:
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	call	nz,csub
+	ld	de,0aaaah
+	ld	bc,nm_cnzt
+	call	check16
+	xor	a
+	ld	hl,0bbbbh
+	call	nz,csub
+	ld	de,0bbbbh
+	ld	bc,nm_cnzf
+	call	check16
+
+	xor	a
+	ld	hl,0bbbbh
+	call	z,csub
+	ld	de,0aaaah
+	ld	bc,nm_czt
+	call	check16
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	call	z,csub
+	ld	de,0bbbbh
+	ld	bc,nm_czf
+	call	check16
+
+	xor	a
+	ld	hl,0bbbbh
+	call	nc,csub
+	ld	de,0aaaah
+	ld	bc,nm_cnct
+	call	check16
+	scf
+	ld	hl,0bbbbh
+	call	nc,csub
+	ld	de,0bbbbh
+	ld	bc,nm_cncf
+	call	check16
+
+	scf
+	ld	hl,0bbbbh
+	call	c,csub
+	ld	de,0aaaah
+	ld	bc,nm_cct
+	call	check16
+	xor	a
+	ld	hl,0bbbbh
+	call	c,csub
+	ld	de,0bbbbh
+	ld	bc,nm_ccf
+	call	check16
+
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	call	po,csub
+	ld	de,0aaaah
+	ld	bc,nm_cpot
+	call	check16
+	xor	a
+	ld	hl,0bbbbh
+	call	po,csub
+	ld	de,0bbbbh
+	ld	bc,nm_cpof
+	call	check16
+
+	xor	a
+	ld	hl,0bbbbh
+	call	pe,csub
+	ld	de,0aaaah
+	ld	bc,nm_cpet
+	call	check16
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	call	pe,csub
+	ld	de,0bbbbh
+	ld	bc,nm_cpef
+	call	check16
+
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	call	p,csub
+	ld	de,0aaaah
+	ld	bc,nm_cpt
+	call	check16
+	ld	a,80h
+	or	a
+	ld	hl,0bbbbh
+	call	p,csub
+	ld	de,0bbbbh
+	ld	bc,nm_cpf
+	call	check16
+
+	ld	a,80h
+	or	a
+	ld	hl,0bbbbh
+	call	m,csub
+	ld	de,0aaaah
+	ld	bc,nm_cmt
+	call	check16
+	ld	a,1
+	or	a
+	ld	hl,0bbbbh
+	call	m,csub
+	ld	de,0bbbbh
+	ld	bc,nm_cmf
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; conditional ret cc - all 8 condition codes, taken and not-taken.
+; each inline "subN" body is jumped over at definition time then
+; called, so ret cc's target is a real return address, not a
+; contrived one.
+; ------------------------------------------------------------------
+t_retcc:
+	jp	L053
+L100:	ld	a,1
+	or	a
+	ld	hl,0aaaah
+	ret	nz
+	ld	hl,0bbbbh
+	ret
+L053:	call	L100
+	ld	de,0aaaah
+	ld	bc,nm_rnzt
+	call	check16
+
+	jp	L054
+L101:	xor	a
+	ld	hl,0aaaah
+	ret	nz
+	ld	hl,0bbbbh
+	ret
+L054:	call	L101
+	ld	de,0bbbbh
+	ld	bc,nm_rnzf
+	call	check16
+
+	jp	L055
+L102:	xor	a
+	ld	hl,0aaaah
+	ret	z
+	ld	hl,0bbbbh
+	ret
+L055:	call	L102
+	ld	de,0aaaah
+	ld	bc,nm_rzt
+	call	check16
+
+	jp	L056
+L103:	ld	a,1
+	or	a
+	ld	hl,0aaaah
+	ret	z
+	ld	hl,0bbbbh
+	ret
+L056:	call	L103
+	ld	de,0bbbbh
+	ld	bc,nm_rzf
+	call	check16
+
+	jp	L057
+L104:	xor	a
+	ld	hl,0aaaah
+	ret	nc
+	ld	hl,0bbbbh
+	ret
+L057:	call	L104
+	ld	de,0aaaah
+	ld	bc,nm_rnct
+	call	check16
+
+	jp	L058
+L105:	scf
+	ld	hl,0aaaah
+	ret	nc
+	ld	hl,0bbbbh
+	ret
+L058:	call	L105
+	ld	de,0bbbbh
+	ld	bc,nm_rncf
+	call	check16
+
+	jp	L059
+L106:	scf
+	ld	hl,0aaaah
+	ret	c
+	ld	hl,0bbbbh
+	ret
+L059:	call	L106
+	ld	de,0aaaah
+	ld	bc,nm_rct
+	call	check16
+
+	jp	L060
+L107:	xor	a
+	ld	hl,0aaaah
+	ret	c
+	ld	hl,0bbbbh
+	ret
+L060:	call	L107
+	ld	de,0bbbbh
+	ld	bc,nm_rcf
+	call	check16
+
+	jp	L061
+L108:	ld	a,1
+	or	a
+	ld	hl,0aaaah
+	ret	po
+	ld	hl,0bbbbh
+	ret
+L061:	call	L108
+	ld	de,0aaaah
+	ld	bc,nm_rpot
+	call	check16
+
+	jp	L062
+L109:	xor	a
+	ld	hl,0aaaah
+	ret	po
+	ld	hl,0bbbbh
+	ret
+L062:	call	L109
+	ld	de,0bbbbh
+	ld	bc,nm_rpof
+	call	check16
+
+	jp	L063
+L110:	xor	a
+	ld	hl,0aaaah
+	ret	pe
+	ld	hl,0bbbbh
+	ret
+L063:	call	L110
+	ld	de,0aaaah
+	ld	bc,nm_rpet
+	call	check16
+
+	jp	L064
+L111:	ld	a,1
+	or	a
+	ld	hl,0aaaah
+	ret	pe
+	ld	hl,0bbbbh
+	ret
+L064:	call	L111
+	ld	de,0bbbbh
+	ld	bc,nm_rpef
+	call	check16
+
+	jp	L065
+L112:	ld	a,1
+	or	a
+	ld	hl,0aaaah
+	ret	p
+	ld	hl,0bbbbh
+	ret
+L065:	call	L112
+	ld	de,0aaaah
+	ld	bc,nm_rpt
+	call	check16
+
+	jp	L066
+L113:	ld	a,80h
+	or	a
+	ld	hl,0aaaah
+	ret	p
+	ld	hl,0bbbbh
+	ret
+L066:	call	L113
+	ld	de,0bbbbh
+	ld	bc,nm_rpf
+	call	check16
+
+	jp	L067
+L114:	ld	a,80h
+	or	a
+	ld	hl,0aaaah
+	ret	m
+	ld	hl,0bbbbh
+	ret
+L067:	call	L114
+	ld	de,0aaaah
+	ld	bc,nm_rmt
+	call	check16
+
+	jp	L068
+L115:	ld	a,1
+	or	a
+	ld	hl,0aaaah
+	ret	m
+	ld	hl,0bbbbh
+	ret
+L068:	call	L115
+	ld	de,0bbbbh
+	ld	bc,nm_rmf
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; retn/reti return-address correctness (the interrupt-flip-flop
+; side effects aren't observable from cp/m, but the pop-pc-and-
+; return mechanics are fully checkable).
+; ------------------------------------------------------------------
+t_retnreti:
+	jp	L069
+L116:	ld	hl,0a1a1h
+	retn
+L069:	call	L116
+	ld	de,0a1a1h
+	ld	bc,nm_retn
+	call	check16
+
+	jp	L070
+L117:	ld	hl,0a2a2h
+	reti
+L070:	call	L117
+	ld	de,0a2a2h
+	ld	bc,nm_reti
+	call	check16
+	ret
+
+; ------------------------------------------------------------------
+; coverage-only: i/o. results are not checked (no real device is
+; attached), but every encoding is executed so a decode bug or
+; crash would show up. "in r,(c)" for r other than a, and the
+; undocumented rm=6 in/out forms, aren't recognized by this
+; toolchain's assembler and are emitted as raw bytes.
+; ------------------------------------------------------------------
+t_io:
+	in	a,(0)
+	in	b,(c)
+	in	c,(c)
+	in	d,(c)
+	in	e,(c)
+	in	h,(c)
+	in	l,(c)
+	in	a,(c)
+	db	0edh,070h		; in (c)      (undocumented flags-only;
+					; no register operand, so no mnemonic
+					; applies regardless of assembler)
+
+	out	(0),a
+	out	(c),b
+	out	(c),c
+	out	(c),d
+	out	(c),e
+	out	(c),h
+	out	(c),l
+	out	(c),a
+	db	0edh,071h		; out (c),0   (undocumented, same reason)
+	ret
+
+; ------------------------------------------------------------------
+; coverage-only: block i/o. b is preset to a small count so the
+; repeated forms don't run away, and hl points at a private scratch
+; buffer so ini/inir (which write to memory) can't clobber anything
+; that matters.
+; ------------------------------------------------------------------
+t_blockio:
+	ld	b,1
+	ld	hl,ioscratch
+	ini
+	ld	b,1
+	ld	hl,ioscratch
+	outi
+	ld	b,1
+	ld	hl,ioscratch+1
+	ind
+	ld	b,1
+	ld	hl,ioscratch+1
+	outd
+	ld	b,2
+	ld	hl,ioscratch
+	inir
+	ld	b,2
+	ld	hl,ioscratch+1
+	indr
+	ld	b,2
+	ld	hl,ioscratch
+	otir
+	ld	b,2
+	ld	hl,ioscratch+1
+	otdr
+	ret
+
+; ------------------------------------------------------------------
+; coverage-only: di/ei and every im 0/1/2 encoding, including the
+; 5 undocumented duplicates. none of these have a cp/m-observable
+; effect, so they're just executed, not checked.
+; ------------------------------------------------------------------
+t_intmisc:
+	di
+	ei
+	im	0
+	db	0edh,04eh		; im 0 (undocumented dup)
+	db	0edh,066h		; im 0 (undocumented dup)
+	db	0edh,06eh		; im 0 (undocumented dup)
+	im	1
+	db	0edh,076h		; im 1 (undocumented dup)
+	im	2
+	db	0edh,07eh		; im 2 (undocumented dup)
+	ei
+	ret
+
+; ------------------------------------------------------------------
+; data
+; ------------------------------------------------------------------
+hexdig:		db	"0123456789ABCDEF"
+
+passcnt:	db	0
+failcnt:	db	0
+probe:		dw	0
+realsp:		dw	0
+negcanon:	dw	0
+ioscratch:	db	0,0,0,0
+
+okmsg:		db	" PASS",13,10,'$'
+failmsg:	db	" FAIL",13,10,'$'
+crlf:		db	13,10,'$'
+
+bnrmsg:		db	"zexsup - Z80 exerciser supplement",13,10
+		db	"instructions zexall/zexdoc never execute as the",13,10
+		db	"instruction under test.",13,10,13,10,'$'
+donemsg:	db	13,10,"zexsup complete.",13,10,'$'
+oksummsg:	db	"all zexsup checks passed.",13,10,'$'
+failsummsg:	db	"one or more zexsup checks FAILED - see above.",13,10,'$'
+ldramsg:	db	"ld r,a / ld a,r (informational, not checked): r=$"
+
+nm_pphl:	db	"push/pop hl...................$"
+nm_ppde:	db	"push/pop de...................$"
+nm_ppbc:	db	"push/pop bc...................$"
+nm_ppix:	db	"push/pop ix...................$"
+nm_ppiy:	db	"push/pop iy...................$"
+nm_ppaf:	db	"push/pop af (a byte)..........$"
+
+nm_exdehl1:	db	"ex de,hl (1st swap)...........$"
+nm_exdehl2:	db	"ex de,hl (round trip).........$"
+nm_exxhl:	db	"exx (hl restored).............$"
+nm_exxbc:	db	"exx (bc restored).............$"
+nm_exxde:	db	"exx (de restored).............$"
+nm_exafaf:	db	"ex af,af' (round trip)........$"
+
+nm_exsphl1:	db	"ex (sp),hl (1st swap).........$"
+nm_exsphl2:	db	"ex (sp),hl (round trip).......$"
+nm_exspix1:	db	"ex (sp),ix (1st swap).........$"
+nm_exspix2:	db	"ex (sp),ix (round trip).......$"
+nm_exspiy1:	db	"ex (sp),iy (1st swap).........$"
+nm_exspiy2:	db	"ex (sp),iy (round trip).......$"
+
+nm_ldsphl:	db	"ld sp,hl......................$"
+nm_ldspix:	db	"ld sp,ix......................$"
+nm_ldspiy:	db	"ld sp,iy......................$"
+
+nm_ldia:	db	"ld i,a / ld a,i...............$"
+
+nm_neg4c:	db	"neg dup ed 4c vs ed 44........$"
+nm_neg54:	db	"neg dup ed 54 vs ed 44........$"
+nm_neg5c:	db	"neg dup ed 5c vs ed 44........$"
+nm_neg64:	db	"neg dup ed 64 vs ed 44........$"
+nm_neg6c:	db	"neg dup ed 6c vs ed 44........$"
+nm_neg74:	db	"neg dup ed 74 vs ed 44........$"
+nm_neg7c:	db	"neg dup ed 7c vs ed 44........$"
+
+nm_jpnzt:	db	"jp nz (taken)..................$"
+nm_jpnzf:	db	"jp nz (not taken)..............$"
+nm_jpzt:	db	"jp z (taken)...................$"
+nm_jpzf:	db	"jp z (not taken)...............$"
+nm_jpnct:	db	"jp nc (taken)..................$"
+nm_jpncf:	db	"jp nc (not taken)..............$"
+nm_jpct:	db	"jp c (taken)...................$"
+nm_jpcf:	db	"jp c (not taken)...............$"
+nm_jppot:	db	"jp po (taken).................$"
+nm_jppof:	db	"jp po (not taken).............$"
+nm_jppet:	db	"jp pe (taken).................$"
+nm_jppef:	db	"jp pe (not taken).............$"
+nm_jppt:	db	"jp p (taken)...................$"
+nm_jppf:	db	"jp p (not taken)...............$"
+nm_jpmt:	db	"jp m (taken)...................$"
+nm_jpmf:	db	"jp m (not taken)...............$"
+
+nm_jrnzt:	db	"jr nz (taken)..................$"
+nm_jrnzf:	db	"jr nz (not taken)..............$"
+nm_jrzt:	db	"jr z (taken)...................$"
+nm_jrzf:	db	"jr z (not taken)...............$"
+nm_jrnct:	db	"jr nc (taken)..................$"
+nm_jrncf:	db	"jr nc (not taken)..............$"
+nm_jrct:	db	"jr c (taken)...................$"
+nm_jrcf:	db	"jr c (not taken)...............$"
+
+nm_djnzt:	db	"djnz (taken)...................$"
+nm_djnzf:	db	"djnz (not taken)...............$"
+
+nm_cnzt:	db	"call nz (taken)................$"
+nm_cnzf:	db	"call nz (not taken)............$"
+nm_czt:		db	"call z (taken).................$"
+nm_czf:		db	"call z (not taken).............$"
+nm_cnct:	db	"call nc (taken)................$"
+nm_cncf:	db	"call nc (not taken)............$"
+nm_cct:		db	"call c (taken).................$"
+nm_ccf:		db	"call c (not taken).............$"
+nm_cpot:	db	"call po (taken)................$"
+nm_cpof:	db	"call po (not taken)............$"
+nm_cpet:	db	"call pe (taken)................$"
+nm_cpef:	db	"call pe (not taken)............$"
+nm_cpt:		db	"call p (taken).................$"
+nm_cpf:		db	"call p (not taken).............$"
+nm_cmt:		db	"call m (taken).................$"
+nm_cmf:		db	"call m (not taken).............$"
+
+nm_rnzt:	db	"ret nz (taken).................$"
+nm_rnzf:	db	"ret nz (not taken).............$"
+nm_rzt:		db	"ret z (taken)...................$"
+nm_rzf:		db	"ret z (not taken)...............$"
+nm_rnct:	db	"ret nc (taken).................$"
+nm_rncf:	db	"ret nc (not taken).............$"
+nm_rct:		db	"ret c (taken)...................$"
+nm_rcf:		db	"ret c (not taken)...............$"
+nm_rpot:	db	"ret po (taken)..................$"
+nm_rpof:	db	"ret po (not taken)..............$"
+nm_rpet:	db	"ret pe (taken)..................$"
+nm_rpef:	db	"ret pe (not taken)..............$"
+nm_rpt:		db	"ret p (taken)...................$"
+nm_rpf:		db	"ret p (not taken)...............$"
+nm_rmt:		db	"ret m (taken)...................$"
+nm_rmf:		db	"ret m (not taken)...............$"
+
+nm_retn:	db	"retn (return address)..........$"
+nm_reti:	db	"reti (return address)..........$"
+
+	end	start
