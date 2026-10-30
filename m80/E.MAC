@@ -1,5 +1,7 @@
 ; Z80 assembly to compute e to n digits.
 ; When DIGITS is 200, the first 192 digits are displayed.
+; Byte counters, inlined division by adding -n, and page-aligned
+; multiply-by-ten tables specialize the inner loop without changing the spigot.
 ;
 ; equivalent to:
 ;     program e;
@@ -47,6 +49,7 @@ BdosPrintString EQU 9         ; c register function to print a $ terminated stri
 
 true   equ 1
 false  equ 0
+; Byte indices and the page-aligned array require 10 <= DIGITS <= 255.
 digits equ 200
 
 aseg
@@ -57,7 +60,8 @@ org     100h
         ;     n := n - 1;
         ; end;
 
-        ; register c is n. hl is a[]. b is a constant 1
+        ; C counts initialized bytes; HL addresses the page-aligned array.
+        ; B is the byte value 1.
 
         ld         b, 1
         ld         c, DIGITS - 1
@@ -65,7 +69,7 @@ org     100h
 
   ainit:
         ld         (hl), b
-        dec        hl
+        dec        l
         dec        c
         jp         nz, ainit
 
@@ -74,10 +78,11 @@ org     100h
 
         ld         hl, array + 1
         ld         (hl), 2
-        dec        hl
+        dec        l
         ld         (hl), 0
 
-        ; register c is n. register b is high. register hl is x at the start of each inner loop
+        ; B is high outside the inner loop and n inside it.
+        ; DE holds x between inner iterations; C holds the byte quotient.
        
         ld         b, DIGITS
 
@@ -85,38 +90,40 @@ org     100h
         dec        b                ; high := high - 1; n := high
         push       bc               ; save b/high on the stack
         ld         de, 0            ; x := 0;
-        ld         h, d             ; n := high
 
   innerloop:
-        ld         l, b
-        call       udiv             ; computes both x MOD n and x DIV n.  hl = de / hl. remainder in de
-        ld         c, l             ; save division result in c
-        ld         a, e             ; remainder in de is just in 
-
-        ld         hl, array
-        ld         e, b
+        ; Add -n until the first underflow. INC C preserves ADD's carry.
+        ; Count the final failed subtraction too, starting the quotient at -1.
+        ex         de, hl           ; HL = x
+        xor        a
+        sub        b
+        ld         e, a
+        ld         d, 255           ; DE = -n, with 1 <= n <= 254
+        ld         c, 255
+  divloop:
         add        hl, de
-        ld         (hl), a          ; a[ n ] := x MOD n;
+        inc        c
+        jp         c, divloop
+        ld         a, l
+        add        a, b             ; restore only the byte remainder
+        ld         h, HIGH array   ; page-aligned byte array
+        ld         l, b
+        ld         (hl), a          ; a[n] = remainder
+        dec        l
+        ld         l, (hl)          ; a[n-1], used as a table index
+        ld         h, HIGH mul10lo
+        ld         e, (hl)
+        inc        h
+        ld         d, (hl)          ; DE = 10*a[n-1]
+        ld         a, e
+        add        a, c
+        ld         e, a
+        ld         a, d
+        adc        a, 0
+        ld         d, a             ; x = 10*a[n-1] + quotient
+        djnz       innerloop        ; n := n - 1; stop at zero
 
-        dec        hl               ; make hl point to a[ n - 1 ]
-        ld         e, (hl)          ; put a[ n - 1 ] in de
-
-        ex         de, hl
-        add        hl, hl           ; double hl ( a[ n - 1 ] )
-        ld         d, h             ; save the 2x amount
-        ld         e, l
-        add        hl, hl           ; now it's 4x
-        add        hl, hl           ; now it's 8x
-        add        hl, de           ; now it's 10x
-
-        ld         d, 0
-        ld         e, c
-        add        hl, de           ; add the two parts together
-
-        ex         de, hl
-        dec        b                ; n := n - 1;
-        jp         nz, innerloop    ; if n isn't 0 then loop again
-
+        ex         de, hl           ; final x is the next output digit(s)
         call       DisplayUnsigned  ; show the next digit(s) of e
         
         ld         a, 9
@@ -130,7 +137,7 @@ org     100h
         call       display
         ret                         ; return to CP/M
 
-DisplayUnsigned:                    ; print the usigned 16-bit number in hl
+DisplayUnsigned:                    ; print the unsigned 16-bit number in hl
         push    bc
         push    de
         push    hl
@@ -145,9 +152,9 @@ PrintUnsigned:                      ; print the unsigned 16-bit number in HL
         push    de                  ; Onto the stack
         ld      bc, -10             ; Divide by ten (by trial subtraction)
   PU$DIGIT:
-        ld      de, -1              ; DE = quotient. There is no 16-bit subtraction,
+        ld      de, -1              ; DE = quotient, including the final failed subtraction.
   PU$DGTDIV:
-        add     hl, bc              ; so we just add a negative value,
+        add     hl, bc              ; ADD's carry signals a successful subtraction,
         inc     de
         jp      c, PU$DGTDIV        ; while that overflows.
         ld      a, '0'+10           ; The loop runs once too much so we're 10 out
@@ -199,34 +206,46 @@ Display:                      ; display null-terminated string pointed to by hl
         pop     hl
         ret
 
-; unsigned divide de by hl, result in hl. remainder in divRem. divide by 0 not checked.
-udiv:
-        ld      a, e
-        or      d
-        jp      nz, udiv$notzero
-        ld      hl, 0
-        ret
-  udiv$notzero:
-        push    bc
-        ex      de, hl
-        ld      bc, 0
-  udiv$loop:
-        sbc     hl, de
-        jp      c, udiv$done
-        inc     bc
-        jp      udiv$loop
-  udiv$done:
-        add     hl, de
-        ex      de, hl              ; Do all of this again with the quotient
-        ld      l, c
-        ld      h, b
-        pop     bc
-        ret
-
             db      '00000'            
 NUM:        db      '$'             ; Space for number. cp/m strings end with a dollar sign
 CRLF:       db      13,10,0
 STRDONE:    db      'done.', 13, 10, 0
+; The low and high multiplication tables occupy adjacent complete pages.
+            org     ($+255) AND 0FF00H
+mul10lo:
+            db      0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150
+            db      160,170,180,190,200,210,220,230,240,250,4,14,24,34,44,54
+            db      64,74,84,94,104,114,124,134,144,154,164,174,184,194,204,214
+            db      224,234,244,254,8,18,28,38,48,58,68,78,88,98,108,118
+            db      128,138,148,158,168,178,188,198,208,218,228,238,248,2,12,22
+            db      32,42,52,62,72,82,92,102,112,122,132,142,152,162,172,182
+            db      192,202,212,222,232,242,252,6,16,26,36,46,56,66,76,86
+            db      96,106,116,126,136,146,156,166,176,186,196,206,216,226,236,246
+            db      0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150
+            db      160,170,180,190,200,210,220,230,240,250,4,14,24,34,44,54
+            db      64,74,84,94,104,114,124,134,144,154,164,174,184,194,204,214
+            db      224,234,244,254,8,18,28,38,48,58,68,78,88,98,108,118
+            db      128,138,148,158,168,178,188,198,208,218,228,238,248,2,12,22
+            db      32,42,52,62,72,82,92,102,112,122,132,142,152,162,172,182
+            db      192,202,212,222,232,242,252,6,16,26,36,46,56,66,76,86
+            db      96,106,116,126,136,146,156,166,176,186,196,206,216,226,236,246
+mul10hi:
+            db      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            db      0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1
+            db      1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+            db      1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2
+            db      2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3
+            db      3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3
+            db      3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4
+            db      4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
+            db      5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5
+            db      5,5,5,5,5,5,5,5,5,5,6,6,6,6,6,6
+            db      6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6
+            db      6,6,6,6,7,7,7,7,7,7,7,7,7,7,7,7
+            db      7,7,7,7,7,7,7,7,7,7,7,7,7,8,8,8
+            db      8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
+            db      8,8,8,8,8,8,8,9,9,9,9,9,9,9,9,9
+            db      9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9
 ARRAY:      ds      DIGITS
 
 end
