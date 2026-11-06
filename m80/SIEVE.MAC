@@ -53,7 +53,6 @@ org     100h
         jp         actualcode       ; put data before code to satisfy the m80 assembler, which can't resolve the symbols otherwise
 
         PKFLAGS:    dw      0               ; address of flags[ k ]
-        COUNT:      dw      0               ; count in C code
         ITER:       dw      0               ; iter in C code
         SaveSP:     dw      0               ; temporarily save SP here
 
@@ -65,8 +64,7 @@ org     100h
         
 actualcode:
   iteragain:                        ; for ( iter = 1; iter <= 10; iter++ )
-        ld         hl, 0            ; count = 0
-        ld         (COUNT), hl
+        ld         ix, 0            ; count = 0, kept in ix
 
         ; set all array entries to true:  for (i = 0; i <= SIZE; i++) flags[i] = TRUE;
 
@@ -97,55 +95,92 @@ actualcode:
 
         ; iterate through array entries and count primes
         ; register usage:
-        ;    bc:    i in the for loop
+        ;    hl:    scan pointer, then & flags[ k ]
         ;    de:    prime
-        ;    hl:    & flags[ i ]
+        ;    a:     1 for cpir; the flags page limit 22h in kloop
+        ;    bc:    cpir count (the sentinel always stops the scan first)
+        ;    c:     0 in kloop, stored to clear flags
+        ;    ix:    count
+
+        ld         hl, flags
 
   nextprime:
-        ld         hl, flags
-        add        hl, bc
-
-  npshortcut:
-        ld         a, (hl)
-        or         a
-        jp         nz, flagison
-        inc        bc
-        inc        hl
-        jp         npshortcut
-
-  flagison:
-        ld         a, 23h           ; did we reach the guaranteed-true sentinel just past the array?
+        ld         a, true
+        ld         bc, 0            ; 65536: only the sentinel or a set flag stops cpir
+        cpir                        ; find the next true flag; hl is one past it
+        dec        hl               ; hl = & flags[ i ]
+        ld         a, HIGH afterflags   ; the guaranteed-true sentinel just past the array?
         cp         h
-        jp         nz, flaginbounds
-        ld         a, 0
-        cp         l
         jp         z, checknextiter
+        inc        hl
+        push       hl               ; resume the scan just past flags[ i ]
 
-  flaginbounds:
+        ld         d, h             ; prime = i + i + 3 = 2 * ( &flags[ i ] + 1 ) - 2 * flags + 1
+        ld         e, l
         ex         de, hl
-        ld         hl, 3
+        add        hl, hl
+        ld         bc, 1 - 2 * flags
         add        hl, bc
-        add        hl, bc
-        ex         de, hl           ; de is prime
+        ex         de, hl           ; de is prime, hl = & flags[ i ] + 1
+        dec        hl
+        ld         c, 0             ; stored by kloop to clear flags
+        add        hl, de           ; hl = & flags[ k ], k = i + prime
 
-        ld         a, 22h           ; flags goes from 0x0300 to 0x22ff. 0x2300 means we're past the array
+        ; Primes below 256 make most of the marks. For them, b is the high
+        ; byte of 22ffh - 7 * prime: while h < b, eight more marks stay in bounds.
+        ld         a, d
+        or         a
+        jp         nz, kcheck
+        push       hl
+        ld         h, d             ; hl = 7 * prime = 8 * prime - prime
+        ld         l, e
+        add        hl, hl
+        add        hl, hl
+        add        hl, hl
+        sbc        hl, de           ; carry is clear: no carry from these small doublings
+        ld         a, 22h           ; high( 22ffh - 7 * prime ): the low byte never borrows
+        sub        h
+        ld         b, a
+        pop        hl
+        ld         a, h
+        cp         b
+        jp         nc, kcheck
+
+  k8loop:                           ; eight marks per bounds check
+        ld         (hl), c
         add        hl, de
+        ld         (hl), c
+        add        hl, de
+        ld         (hl), c
+        add        hl, de
+        ld         (hl), c
+        add        hl, de
+        ld         (hl), c
+        add        hl, de
+        ld         (hl), c
+        add        hl, de
+        ld         (hl), c
+        add        hl, de
+        ld         (hl), c
+        add        hl, de
+        ld         a, h
+        cp         b
+        jp         c, k8loop
+
+  kcheck:
+        ld         a, 22h           ; flags goes from 0x0300 to 0x22ff. 0x2300 means we're past the array
         cp         h
         jp         c, inccount
 
-  kloop:                            ; hl = pointer to k'th element in flags. dc = prime
-        ld         (hl), 0          ; flags[ k ] = false
+  kloop:                            ; hl = pointer to k'th element in flags. de = prime
+        ld         (hl), c          ; flags[ k ] = false
         add        hl, de           ; k += prime
         cp         h
         jp         nc, kloop
 
-  inccount:                         
-        ld         hl, (COUNT)      ; count++
-        inc        hl
-        ld         (COUNT), hl
-
-  flagisoff:                        ; loop back for the next candidate; the boundary is caught in flagison
-        inc        bc
+  inccount:
+        inc        ix               ; count++
+        pop        hl
         jp         nextprime
 
   checknextiter:                    ; are we done iterating loops times?
@@ -155,7 +190,8 @@ actualcode:
         cp         loops
         jp         nz, iteragain
 
-        ld         hl, (COUNT)      ; print the count of primes and the string
+        push       ix               ; print the count of primes and the string
+        pop        hl
         call       PrintUnsigned
         ld         hl, STRPRIMES
         call       DisplayString

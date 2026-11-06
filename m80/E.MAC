@@ -1,7 +1,8 @@
 ; Z80 assembly to compute e to n digits.
 ; When DIGITS is 200, the first 192 digits are displayed.
-; Byte counters, inlined division by adding -n, and page-aligned
-; multiply-by-ten tables specialize the inner loop without changing the spigot.
+; Byte counters, inlined division by adding -n, per-quotient loop tails, and
+; page-aligned multiply-by-ten tables specialize the inner loop without
+; changing the spigot.
 ;
 ; equivalent to:
 ;     program e;
@@ -82,49 +83,118 @@ org     100h
         ld         (hl), 0
 
         ; B is high outside the inner loop and n inside it.
-        ; DE holds x between inner iterations; C holds the byte quotient.
-       
+        ; HL holds x; C holds the low byte of -n (its high byte is 255).
+        ; The quotient is 0..9 in practice: an unrolled subtraction chain
+        ; exits to a tail specialized for each quotient, so no counter is
+        ; needed. Larger quotients use a counting loop and a generic tail.
+
         ld         b, DIGITS
 
   outerloop:
         dec        b                ; high := high - 1; n := high
         push       bc               ; save b/high on the stack
-        ld         de, 0            ; x := 0;
-
-  innerloop:
-        ; Add -n until the first underflow. INC C preserves ADD's carry.
-        ; Count the final failed subtraction too, starting the quotient at -1.
-        ex         de, hl           ; HL = x
+        ld         hl, 0            ; x := 0;
         xor        a
         sub        b
-        ld         e, a
-        ld         d, 255           ; DE = -n, with 1 <= n <= 254
-        ld         c, 255
-  divloop:
+        ld         c, a             ; c = low byte of -n
+
+  innerloop:
+        ld         d, 255
+        ld         e, c             ; DE = -n, with 1 <= n <= 254
+        add        hl, de           ; ADD's carry signals a successful subtraction
+        jp         nc, quot0
         add        hl, de
-        inc        c
-        jp         c, divloop
+        jp         nc, quot1
+        add        hl, de
+        jp         nc, quot2
+        add        hl, de
+        jp         nc, quot3
+        add        hl, de
+        jp         nc, quot4
+        add        hl, de
+        jp         nc, quot5
+        add        hl, de
+        jp         nc, quot6
+        add        hl, de
+        jp         nc, quot7
+        add        hl, de
+        jp         nc, quot8
+        add        hl, de
+        jp         nc, quot9
+        ld         a, 9             ; ten subtractions succeeded: count the rest
+  quotmore:
+        inc        a
+        add        hl, de
+        jp         c, quotmore
+        ld         (QUOT), a
         ld         a, l
         add        a, b             ; restore only the byte remainder
-        ld         h, HIGH array   ; page-aligned byte array
-        ld         l, b
-        ld         (hl), a          ; a[n] = remainder
-        dec        l
-        ld         l, (hl)          ; a[n-1], used as a table index
+        ld         d, HIGH array    ; page-aligned byte array
+        ld         e, b
+        ld         (de), a          ; a[n] = remainder
+        dec        e
+        ld         a, (de)          ; a[n-1], used as a table index
+        ld         l, a
         ld         h, HIGH mul10lo
-        ld         e, (hl)
-        inc        h
-        ld         d, (hl)          ; DE = 10*a[n-1]
-        ld         a, e
-        add        a, c
+        ld         a, (QUOT)
+        add        a, (hl)
         ld         e, a
-        ld         a, d
+        inc        h
+        ld         a, (hl)
         adc        a, 0
-        ld         d, a             ; x = 10*a[n-1] + quotient
-        djnz       innerloop        ; n := n - 1; stop at zero
+        ld         h, a
+        ld         l, e             ; x = 10*a[n-1] + quotient
+        inc        c                ; -n for the next, smaller n
+        dec        b                ; n := n - 1; stop at zero
+        jp         nz, innerloop
+        jp         innerdone
 
-        ex         de, hl           ; final x is the next output digit(s)
-        call       DisplayUnsigned  ; show the next digit(s) of e
+; One copy of the rest of the inner loop per quotient Q: a[n] = x MOD n,
+; x = 10*a[n-1] + Q.
+quottail macro q
+        ld         a, l
+        add        a, b             ; restore only the byte remainder
+        ld         d, HIGH array    ; page-aligned byte array
+        ld         e, b
+        ld         (de), a          ; a[n] = remainder
+        dec        e
+        ld         a, (de)          ; a[n-1], used as a table index
+        ld         l, a
+        ld         h, HIGH mul10lo
+        if         q
+        ld         a, (hl)
+        add        a, q
+        ld         e, a
+        inc        h
+        ld         a, (hl)
+        adc        a, 0
+        ld         h, a
+        ld         l, e             ; x = 10*a[n-1] + q
+        else
+        ld         a, (hl)
+        inc        h
+        ld         h, (hl)
+        ld         l, a             ; x = 10*a[n-1]
+        endif
+        inc        c                ; -n for the next, smaller n
+        dec        b                ; n := n - 1; stop at zero
+        jp         nz, innerloop
+        jp         innerdone
+        endm
+
+  quot0:  quottail 0
+  quot1:  quottail 1
+  quot2:  quottail 2
+  quot3:  quottail 3
+  quot4:  quottail 4
+  quot5:  quottail 5
+  quot6:  quottail 6
+  quot7:  quottail 7
+  quot8:  quottail 8
+  quot9:  quottail 9
+
+  innerdone:
+        call       DisplayUnsigned  ; final x is the next output digit(s)
         
         ld         a, 9
         pop        bc
@@ -210,6 +280,7 @@ Display:                      ; display null-terminated string pointed to by hl
 NUM:        db      '$'             ; Space for number. cp/m strings end with a dollar sign
 CRLF:       db      13,10,0
 STRDONE:    db      'done.', 13, 10, 0
+QUOT:       db      0               ; a quotient of 10 or more
 ; The low and high multiplication tables occupy adjacent complete pages.
             org     ($+255) AND 0FF00H
 mul10lo:
