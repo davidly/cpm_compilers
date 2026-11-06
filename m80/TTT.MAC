@@ -58,10 +58,8 @@ TailCount     equ     128   ; where the # of bytes in the command tail is locate
         jp      0                    
 
   Again:
-        ld      ix, 0               ; ix contains the global depth
-
-        ld      hl, 0
-        ld      (Moves), hl         ; reset the move count each iteration to avoid overflow
+        ld      ix, 0               ; ixl contains the global depth
+        ld      iy, 0               ; iy counts moves; reset each iteration to avoid overflow
 
         ld      a, 0                
         call    RunMinMax           ; first of 3 unique board configurations
@@ -71,6 +69,7 @@ TailCount     equ     128   ; where the # of bytes in the command tail is locate
 
         ld      a, 4
         call    RunMinMax           ; third
+        ld      (Moves), iy         ; publish this iteration's move count
                                  
         ld      hl, (Iterations)    ; increment iteration count
         inc     hl
@@ -101,139 +100,105 @@ TailCount     equ     128   ; where the # of bytes in the command tail is locate
         jp      0                   ; cp/m call to terminate the app
 
 RunMinMax:                          ; Run the MINMAX function for a given first move
-        ld      b, 0                ; store the first move
-        ld      c, a
         ld      hl, Board
-        add     hl, bc
-        ld      (hl), XPiece
+        add     a, l                ; the board is page-aligned: no carry into h
+        ld      l, a
+        ld      (hl), XPiece        ; store the first move
         push    hl                  ; save the pointer to the move location for later
-
-        ld      d, 0
-        ld      e, a
-        push    de                  ; push the move location and (unused) value
-
+        ld      e, l                ; the move, as its board address low byte
         ld      b, MinScore         ; alpha
         ld      c, MaxScore         ; beta
-        push    bc
-
         call    MinMaxMinimize
-
-        pop     de                  ; clean up the stack
-        pop     de                  ; clean up the stack
-
         pop     hl                  ; restore the move location
         ld      (hl), BlankPiece    ; restore a blank on the board
-
         ret
 
-; arguments on the stack:
-;   (iy + 0)         ; beta   
-;   (iy + 1)         ; alpha
-;   (iy + 2)         ; move (for caller's safekeeping only) in e on entry
-;   (iy + 3)         ; value of parent (for caller's safekeeping only) in d on entry
+; Separate maximize (X to move) and minimize (O to move) routines.
+; arguments in registers:
+;   b: alpha     c: beta
+;   e: the most recent move, as the low byte of its board address
 ; register usage:
-;   d: value local best score so far
-;   e: argument on entry: the most recent move. Later, i (0..8)
-;  iy: base pointer for this stack frame
-;  ix: global depth
-;  hl: temporary until the Loop where it points to the board position of the next (potential) move
+;   d: the best score so far (value)
+;   e: after the win check, the move being tried. A child returns with e
+;      unchanged, so the parent rebuilds hl from it instead of saving hl.
+;  hl: the board position being tried. The board is page-aligned and followed
+;      by a zero sentinel, so the scan only increments l and compares with a = 0.
+;  ixl: global depth (undocumented ixl forms, emitted as db)
+;  iy: move count
+; A maximize node only raises alpha and a minimize node only lowers beta, and
+; the parent saves b/c around each call, so no stack frame is needed.
 
-MinMaxMaximize:                     ; the recursive scoring function. defer frame creation until needed
-        ld      hl, (Moves)         ; no 16-bit memory increment, so load in hl for that
-        inc     hl
-        ld      (Moves), hl
-
+MinMaxMaximize:
+        inc     iy                  ; count the move
 ;        ld      a, ixl              ; load depth in a
 injectcode1: db 0ddh, 07dh
-
         cp      4                   ; DEPTH - 4  (if 4 or fewer pieces played, no possible winner)
-        jp      m, MaxSkipWin
-      
-        ld      a, e                ; where the move was taken 0..8
-        ld      b, OPiece           ; the piece that took the move
-        call    CallScoreProc       ; look for a winning position
+        jp      c, MaxSkipWin
 
+        ld      d, OPiece           ; the piece that took the move
+        call    CallScoreProc       ; look for a winning position
         cp      OPiece              ; see if O won
         ld      a, LoseScore        ; losing score. avoid branch by always loading
         ret     z
 
   MaxSkipWin:
-        push    iy                  ; save caller's stack frame
-        ld      iy, 4               ; 2 to skip past the return address, 2 for old iy
-        add     iy, sp
-
         ld      d, MinScore         ; value initialized
-        ld      e, 0ffh             ; the variable I will go from 0..8
         ld      hl, Board - 1
-        inc     ix                  ; increment depth
+;        inc     ixl                 ; increment depth
+        db      0ddh, 02ch
 
+  MaxNext:
+        xor     a                   ; a = BlankPiece while scanning
   MaxLoop:
-        ld      a, e
-        cp      8
-        jp      z, MaxLoadValue        ; if we're tried all the moves, return the best score
-        inc     hl
-        inc     e
-
-        ld      a, (hl)
-        cp      BlankPiece          ; is the board space free?
+        inc     l
+        cp      (hl)                ; is the board space free (or the sentinel)?
         jp      nz, MaxLoop
+        ld      a, l
+        cp      low ( Board + 9 )   ; the sentinel: every move has been tried
+        jp      z, MaxLoadValue
 
         ld      (hl), XPiece        ; make the move
-        push    hl                  ; save the pointer to the board position for restoration later
-
-        push    de                  ; push the move in the lower byte e and value in the upper byte d
-        ld      c, (iy + 0)         ; beta
-        ld      b, (iy + 1)         ; alpha
-        push    bc                  ; push alpha and beta
-        
+        ld      e, l                ; the move for the child's win check and our resume point
+        push    de                  ; save value in d and the move in e
+        push    bc                  ; save alpha and beta
         call    MinMaxMinimize      ; recurse to the min
-
-        pop     bc                  ; restore alpha. beta may have been modified by Minimize.
-        pop     de                  ; restore current move into e and value into d
-        pop     hl                  ; restore the move location
+        pop     bc
+        pop     de
+        ld      h, high Board       ; the child clobbers hl; e has the move's address
+        ld      l, e
         ld      (hl), BlankPiece    ; restore a blank on the board
-        
+
         cp      WinScore            ; SCORE - WinScore. If zero, can't do better.
         jp      z, MaxDecDepth
-
         cp      d                   ; SCORE - VALUE
-        jp      z, MaxLoop
-        jp      m, MaxLoop
-
-        cp      (iy + 0)            ; compare VALUE with beta
-        jp      p, MaxDecDepth      ; beta pruning
-
+        jp      z, MaxNext
+        jp      c, MaxNext          ; scores are small positive numbers: unsigned compares
+        cp      c                   ; compare SCORE with beta
+        jp      nc, MaxDecDepth     ; beta pruning
         ld      d, a                ; update VALUE with the new best score
         cp      b                   ; compare VALUE with alpha
-        jp      z, MaxLoop
-        jp      m, MaxLoop
-
-        ld      (iy + 1), a         ; update alpha with VALUE
-        jp      MaxLoop
+        jp      z, MaxNext
+        jp      c, MaxNext
+        ld      b, a                ; update alpha with VALUE
+        jp      MaxNext
 
    MaxLoadValue:
         ld      a, d
 
    MaxDecDepth:
-        dec     ix                  ; restore depth
-        pop     iy                  ; restore caller's frame pointer
+;        dec     ixl                 ; restore depth
+        db      0ddh, 02dh
         ret
 
-MinMaxMinimize:                     ; the recursive scoring function. defer frame creation until needed
-        ld      hl, (Moves)         ; no 16-bit memory increment, so load in hl for that
-        inc     hl
-        ld      (Moves), hl
-
+MinMaxMinimize:
+        inc     iy                  ; count the move
 ;        ld      a, ixl              ; load depth in a
 injectcode2: db 0ddh, 07dh
-
         cp      4                   ; DEPTH - 4  (if 4 or fewer pieces played, no possible winner)
-        jp      m, MinSkipWin
+        jp      c, MinSkipWin
 
-        ld      a, e                ; where the move was taken 0..8
-        ld      b, XPiece           ; the piece that took the move
+        ld      d, XPiece           ; the piece that took the move
         call    CallScoreProc       ; look for a winning position
-
         cp      XPiece              ; see if X won
         ld      a, WinScore         ; winning score. avoid branch by always loading
         ret     z
@@ -245,64 +210,51 @@ injectcode3: db 0ddh, 07dh
         ret     z
 
   MinSkipWin:
-        push    iy                  ; save caller's stack frame
-        ld      iy, 4               ; 2 to skip past the return address, 2 for old iy
-        add     iy, sp
-
         ld      d, MaxScore         ; value initialized
-        ld      e, 0ffh             ; the variable I will go from 0..8, starting at -1 initially
         ld      hl, Board - 1
-        inc     ix                  ; increment depth
+;        inc     ixl                 ; increment depth
+        db      0ddh, 02ch
 
+  MinNext:
+        xor     a                   ; a = BlankPiece while scanning
   MinLoop:
-        ld      a, e
-        cp      8
-        jp      z, MaxLoadValue        ; if we're tried all the moves, return the best score
-        inc     hl
-        inc     e
-
-        ld      a, (hl)
-        cp      BlankPiece          ; is the board space free?
+        inc     l
+        cp      (hl)                ; is the board space free (or the sentinel)?
         jp      nz, MinLoop
+        ld      a, l
+        cp      low ( Board + 9 )   ; the sentinel: every move has been tried
+        jp      z, MinLoadValue
 
         ld      (hl), OPiece        ; make the move
-        push    hl                  ; save the pointer to the board position for restoration later
-
-        push    de                  ; push the move in the lower byte e and value in the d
-        ld      c, (iy + 0)         ; beta
-        ld      b, (iy + 1)         ; alpha
-        push    bc                  ; push alpha and beta
-        
+        ld      e, l                ; the move for the child's win check and our resume point
+        push    de                  ; save value in d and the move in e
+        push    bc                  ; save alpha and beta
         call    MinMaxMaximize      ; recurse to the max
-
-        pop     bc                  ; restore beta. alpha may have been modified by Maximize
-        pop     de                  ; restore current move into e and value into d
-        pop     hl                  ; restore the move location
+        pop     bc
+        pop     de
+        ld      h, high Board       ; the child clobbers hl; e has the move's address
+        ld      l, e
         ld      (hl), BlankPiece    ; restore a blank on the board
-        
+
         cp      LoseScore           ; SCORE - LoseScore. If zero, can't do better.
         jp      z, MinDecDepth
-
         cp      d                   ; SCORE - VALUE
-        jp      p, MinLoop
-
-        cp      (iy + 1)            ; compare VALUE with alpha
+        jp      nc, MinNext
+        cp      b                   ; compare SCORE with alpha
         jp      z, MinDecDepth      ; alpha pruning
-        jp      m, MinDecDepth      ; alpha pruning
-
+        jp      c, MinDecDepth      ; alpha pruning
         ld      d, a                ; update VALUE with the new best score
         cp      c                   ; compare VALUE with beta
-        jp      p, MinLoop
-
-        ld      (iy + 0), a         ; update beta with VALUE
-        jp      MinLoop
+        jp      nc, MinNext
+        ld      c, a                ; update beta with VALUE
+        jp      MinNext
 
    MinLoadValue:
         ld      a, d
 
    MinDecDepth:
-        dec     ix                  ; restore depth
-        pop     iy                  ; restore caller's frame pointer
+;        dec     ixl                 ; restore depth
+        db      0ddh, 02dh
         ret
 
 DisplayOneCharacter:                ; display the character in a
@@ -497,30 +449,22 @@ atou:                               ; in: hl points to string. out: hl has integ
         pop     bc
         ret
 
-; a = the proc to call 0..8
-; b = the player who just took a move, O or X
+; e = the move, as the low byte of its board address
+; d = the player who just took a move, O or X
+; Returns that piece in a if it completed a line, else 0. Preserves b, c, d, e.
 
 CallScoreProc:
-        add     a, a                ; double the move position because function pointers are two bytes
-        ld      h, high WinProcs    ; load the pointer to the list of function pointers 0..8
+        ld      a, e                ; the board is at Page + 40h, the procs at Page + 80h,
+        add     a, a                ; so twice the board address low byte indexes WinProcs
+        ld      l, a
+        ld      h, high WinProcs
+        ld      a, (hl)             ; load the low byte of the proc address
+        inc     l                   ; the table fits in one page
+        ld      h, (hl)             ; load the high byte of the proc address
+        ld      l, a
+        ld      a, d                ; put the player move (X or O) in a
+        jp      (hl)                ; jump to the winner proc
 
-; M80 (unlike ASM) can't deal with symbols defined later.
-;        IF HIGH WinProcs NE HIGH AfterWinProcs  ; off by one due to zmac, but check that WinProcs is all in one 256-byte page
-;        error error error -- WinProcs needs to all be on one 256-byte page
-;        ENDIF
-; 
-;        IF ( 0 NE ( LOW WinProcs ) )       ; if WinProcs isn't 256-byte aligned. It's a lot slower
-;        ld      l, low WinProcs     ; load the low byte of the pointer to the list of function pointers 0..8
-;        add     a, l                ; only add the lower-byte since winprocs fits in a single 256-byte page
-;        ENDIF
- 
-        ld      l, a                ; set the offset of the winproc to call
-        ld      e, (hl)             ; load the low byte of the proc address
-        inc     hl                  ; increment the pointer to the next byte. inx and inr are both 5 cycles.
-        ld      d, (hl)             ; load the high byte of the proc address
-        ex      de, hl              ; exchange de and hl
-        ld      a, b                ; put the player move (X or O) in a
-        jp      (hl)                ; move the winner proc address from hl to pc (jump to it)
 
 proc0:
         ld      hl, Board + 1
@@ -726,12 +670,19 @@ proc8:
         xor     a
         ret
 
-; These next 4 lines should be consecutive to enable placement of WinProcs to improve performance
+; The board and the win procedure table share one 256-byte page. The board is
+; at Page + 40h with a zero sentinel after it; WinProcs is at Page + 80h, so the
+; table entry for the board address low byte L is at Page + 2 * L.
 
-DataAfterCode:    db      0              ; Wasted byte to help force alignmentof WinProcs
-  org   ( ( DataAfterCode + 0100h ) AND 0ff00h )  ; ensure WinProcs is 256-byte aligned for better performance
+DataAfterCode:    db      0              ; Wasted byte to help force alignment of Page
+  org   ( ( DataAfterCode + 0100h ) AND 0ff00h )
+Page:
+  org   Page + 40h
+Board:            db      0,0,0,0,0,0,0,0,0
+BoardSentinel:    db      0              ; never written: stops the move scan
+  org   Page + 80h
 WinProcs:         dw      proc0, proc1, proc2, proc3, proc4, proc5, proc6, proc7, proc8
-AfterWinProcs:    db      0              ; Wasted byte to validate alignment of WinProcs
+
 
 NEGF:             db      0              ; Space for negative flag
                   db      '-00000'  
@@ -740,7 +691,6 @@ CRLF:             db      13,10,0
 StringInvalidArg: db      'iteration argument invalid -- it must be 1 - 32767', 0
 StringIterations: db      'iterations: ', 0
 StringMoves:      db      'moves:      ', 0
-Board:            db      0,0,0,0,0,0,0,0,0
 Moves:            dw      0              ; move count
 Loops:            dw      DefaultLoops   ; # of iterations to make
 Iterations:       dw      0              ; # of iterations so far
