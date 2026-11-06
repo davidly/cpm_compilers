@@ -61,11 +61,6 @@ org     100h
   Again:
         lxi     h, 0
         shld    MOVES               ; set to 0 each iteration to avoid overflow
-        xra     a
-        sta     V
-        sta     DEPTH
-        sta     ALPHA
-        sta     BETA
 
         mvi     a, 0
         call    RUNMINMAX           ; first of 3 unique board configurations
@@ -105,233 +100,162 @@ org     100h
         jmp     0                   ; cp/m call to terminate the app
 
 RUNMINMAX:                          ; Run the MINMAX function for a given first move
-        mvi     b, 0                ; store the first move
-        mov     c, a
         lxi     h, BOARD
-        dad     b
-        mvi     m, XPIECE
+        add     l                   ; the board is in one page: no carry into h
+        mov     l, a
+        mvi     m, XPIECE           ; store the first move
         push    h                   ; save the pointer to the move location for later
-
-        xra     a                   ; depth
-        mov     b, c                ; move position
-        mvi     l, NSCO             ; alpha
-        mvi     h, XSCO             ; beta
+        mov     e, l                ; the move, as its board address low byte
+        mvi     b, NSCO             ; alpha
+        mvi     c, XSCO             ; beta
         call    MINIMIZE
-
         pop     h                   ; restore the move location
         mvi     m, BLANKPIECE       ; restore a blank on the board
-
         ret
 
-; The 8080 has no simple way to address arguments or local variables relative to sp.
-; The approach here is to:
-;   1) pass arguments in registers:
-;           a - depth
-;           b - move position
-;           l - alpha
-;           h - beta
-;   2) store the arguments in global variables so they are easy to access
-;   3) when making a call, push the global variables on the stack
-;   4) when returning froma call, restore the global variables with popped stack values
-;   5) for tail functions, just pass arguments in registers with no stack or global usage for arguments
-; The extra copies to/from globals are expensive, but overall faster since accessing them is fast.
+; Separate maximize (X to move) and minimize (O to move) routines.
+; Arguments in registers:
+;   b - alpha     c - beta
+;   e - the most recent move, as the low byte of its board address
+; Register usage:
+;   d - the best score so far (value)
+;   e - after the win check, the move being tried. A child returns with e
+;       unchanged, so the parent rebuilds hl from it instead of saving hl.
+;   hl - the board position being tried. The board is page-aligned and followed
+;        by a zero sentinel, so the scan only increments l and compares with a = 0.
+; A maximize node only raises alpha and a minimize node only lowers beta, and
+; the parent saves b/c and d/e around each call, so no globals are needed.
+; There is no depth counter. With fewer than five pieces placed nobody has three
+; in a row, so the win check simply finds none. A minimize node at depth 8 finds
+; the board full: its value stays at the maximum score, which no other node can
+; produce, and becomes the tie score.
 
 MAXIMIZE:                           ; the recursive scoring function
-        sta     DEPTH
-        shld    ALPHA               ; write alpha and beta
-
-        lhld    MOVES               ; no 16-bit memory increment, so load in hl for that
-        inx     h
-        shld    MOVES
-
-        cpi     4                   ; DEPTH - 4  (if 4 or fewer pieces played, no possible winner)
-        jm      XSKIPWIN
-
-        mov     a, b                ; where the move was taken 0..8
-        mvi     b, OPIECE           ; the piece that took the move
+        lxi     h, MOVES            ; count the move
+        inr     m
+        jnz     XCOUNTED
+        inr     l
+        inr     m
+XCOUNTED:
+        mvi     d, OPIECE           ; the piece that took the move
         call    CALLSCOREPROC       ; look for a winning position
-
         cpi     OPIECE              ; see if O won
         mvi     a, LSCO             ; losing score since O won
         rz
 
-XSKIPWIN:
-        mvi     a, NSCO             ; maximizing odd depths, so start with minimum score
-        sta     V
-        lxi     d, 00ffh            ; the variable I will go from 0..8. start at -1
+        mvi     d, NSCO             ; maximizing odd depths, so start with minimum score
+        lxi     h, BOARD - 1
 
-XLOOP:
-        mov     a, e
-        cpi     8
-        jz      XDONE
-        inr     e
-        lxi     h, BOARD
-        dad     d
+XNEXT:
         xra     a                   ; BLANKPIECE is 0
-        cmp     m
+XLOOP:
+        inr     l
+        cmp     m                   ; is the board space free (or the sentinel)?
         jnz     XLOOP
+        mov     a, l
+        cpi     ( BOARD + 9 ) AND 0FFH   ; the sentinel: every move has been tried
+        jz      XDONE
 
         mvi     m, XPIECE           ; make the move
-
-        ; save state, recurse, and restore state
-
-        push    d                   ; save i in the for loop
-        lhld    V                   ; V in l and DEPTH in h
-        push    h
-        mov     b, e                ; board position of the latest move
-        mov     a, h                ; depth
-        inr     a
-        lhld    ALPHA               ; alpha in l and beta in h
-        push    h
-
-        ; C = depth, B = move position, L = alpha, H = beta  ====> A = return score
-
+        mov     e, l                ; the move for the child's win check and our resume point
+        push    d                   ; save value in d and the move in e
+        push    b                   ; save alpha and beta
         call    MINIMIZE
-
-        pop     h
-        shld    ALPHA               ; restore ALPHA and BETA
-        pop     h                   ; restore state after recursion
-        shld    V                   ; restore V and DEPTH
-        pop     d                   ; restore i in the for loop
-
-        lxi     h, BOARD
-        dad     d
+        pop     b
+        pop     d
+        mov     l, e                ; the child clobbers hl; e has the move's address
+        mvi     h, BOARD SHR 8
         mvi     m, BLANKPIECE       ; restore the 0 on the board where the turn was placed
 
         cpi     WSCO                ; SC - WSCO. If zero, can't do better.
         rz
-
-        lxi     h, V
-        cmp     m                   ; compare score with value
-        jz      XLOOP               ; no j <= instruction on 8080
-        jm      XLOOP
-
-        mov     m, a                ; update value with score
-        lxi     h, BETA
-        cmp     m                   ; compare value with beta
-        rp                          ; beta pruning
-
-        lxi     h, ALPHA            ; save the address of alpha
-        cmp     m                   ; compare value with alpha
-        jz      XLOOP               ; no j <= instruction on 8080
-        jm      XLOOP
-
-        mov     m, a                ; update alpha with value
-        jmp     XLOOP
+        cmp     d                   ; compare score with value
+        jz      XNEXT               ; scores are small positive numbers: unsigned compares
+        jc      XNEXT
+        cmp     c                   ; compare score with beta
+        rnc                         ; beta pruning
+        mov     d, a                ; update value with score
+        cmp     b                   ; compare value with alpha
+        jz      XNEXT
+        jc      XNEXT
+        mov     b, a                ; update alpha with value
+        jmp     XNEXT
 
 XDONE:
-        lda     V
+        mov     a, d
         ret
 
 MINIMIZE:                           ; the recursive scoring function
-        sta     DEPTH
-        shld    ALPHA               ; write alpha and beta
-
-        lhld    MOVES               ; no 16-bit memory increment, so load in hl for that
-        inx     h
-        shld    MOVES
-
-        cpi     4                   ; DEPTH - 4  (if 4 or fewer pieces played, no possible winner)
-        jm      NSKIPWIN
-
-        mov     a, b                ; where the move was taken 0..8
-        mvi     b, XPIECE           ; the piece that took the move
+        lxi     h, MOVES            ; count the move
+        inr     m
+        jnz     NCOUNTED
+        inr     l
+        inr     m
+NCOUNTED:
+        mvi     d, XPIECE           ; the piece that took the move
         call    CALLSCOREPROC       ; look for a winning position
-
         cpi     XPIECE              ; see if X won
         mvi     a, WSCO             ; winning score. avoid branch by always loading
         rz
 
-        lda     DEPTH               ; check if at the bottom of the recursion
-        cpi     8
-        mvi     a, TSCO             ; tie score. avoid branch by always loading
-        rz
+        mvi     d, XSCO             ; minimizing, so start with maximum score
+        lxi     h, BOARD - 1
 
-NSKIPWIN:
-        mvi     a, XSCO             ; minimizing, so start with maximum score
-        sta     V
-        lxi     d, 00ffh            ; the variable I will go from 0..8. start at -1
-
-NLOOP:
-        mov     a, e
-        cpi     8
-        jz      NDONE
-        inr     e
-        lxi     h, BOARD
-        dad     d
+NNEXT:
         xra     a                   ; BLANKPIECE is 0
-        cmp     m
+NLOOP:
+        inr     l
+        cmp     m                   ; is the board space free (or the sentinel)?
         jnz     NLOOP
+        mov     a, l
+        cpi     ( BOARD + 9 ) AND 0FFH   ; the sentinel: every move has been tried
+        jz      NDONE
 
         mvi     m, OPIECE           ; make the move
-
-        ; save state, recurse, and restore state
-
-        push    d                   ; save i in the for loop
-        lhld    V                   ; V in l and DEPTH in h
-        push    h
-        mov     b, e                ; board position of the latest move
-        mov     a, h                ; depth
-        inr     a
-        lhld    ALPHA               ; alpha in l and beta in h
-        push    h
-
-        ; A = depth, B = move position, L = alpha, H = beta  ====> A = return score
-
+        mov     e, l                ; the move for the child's win check and our resume point
+        push    d                   ; save value in d and the move in e
+        push    b                   ; save alpha and beta
         call    MAXIMIZE
-
-        pop     h
-        shld    ALPHA               ; restore ALPHA and BETA
-        pop     h                   ; restore state after recursion
-        shld    V                   ; restore V and DEPTH
-        pop     d                   ; restore i in the for loop
-
-        lxi     h, BOARD
-        dad     d
+        pop     b
+        pop     d
+        mov     l, e                ; the child clobbers hl; e has the move's address
+        mvi     h, BOARD SHR 8
         mvi     m, BLANKPIECE       ; restore the 0 on the board where the turn was placed
 
         cpi     LSCO                ; SC - LSCO. If zero, can't do worse.
         rz
-
-        lxi     h, V
-        cmp     m                   ; compare score with value
-        jp      NLOOP
-
-        mov     m, a                ; update value with score
-        lxi     h, ALPHA
-        cmp     m                   ; compare value with alpha
+        cmp     d                   ; compare score with value
+        jnc     NNEXT
+        mov     d, a                ; update value with score
+        cmp     b                   ; compare value with alpha
         rz                          ; alpha pruning
-        rmi                         ; alpha pruning
-
-        lxi     h, BETA             ; save address of beta
-        cmp     m                   ; compare value with beta
-        jp      NLOOP
-
-        mov     m, a                ; update beta with value
-        jmp     NLOOP
+        rc                          ; alpha pruning
+        cmp     c                   ; compare value with beta
+        jnc     NNEXT
+        mov     c, a                ; update beta with value
+        jmp     NNEXT
 
 NDONE:
-        lda     V
+        mov     a, d
+        cpi     XSCO                ; no move was possible: the board is full
+        rnz
+        mvi     a, TSCO             ; tie score
         ret
 
-; a = the proc to call 0..8
-; b = the player who just took a move, O or X
+; e = the move, as the low byte of its board address
+; d = the player who just took a move, O or X
+; Returns that piece in a if it completed a line, else 0. Preserves b, c, d, e.
 CALLSCOREPROC:
-        add      a                  ; double the move position because function pointers are two bytes
-        lxi      h, WINPROCS        ; load the pointer to the list of function pointers 0..8
-
-;        mvi      d, 0              ; to enable winprocs to span a 256-byte page, use this instead.
-;        mov      e, a              ; this method results in overall 1.5% more cpu cycles.
-;        dad      d                 ; mvi is 7 cycles. dad is 10, add is 4, mov is 7. 27 > 11
-        add      l                  ; only add the lower-byte since winprocs fits in a single 256-byte page
+        mov      a, e               ; the board is at 540h and the procs at 580h,
+        add      a                  ; so twice the board address low byte indexes WINPROCS
         mov      l, a
-
-        mov      e, m               ; load the low byte of the proc address
-        inx      h                  ; increment the pointer to the next byte. inx and inr are both 5 cycles.
-        mov      d, m               ; load the high byte of the proc address
-        xchg                        ; exchange de and hl
-        mov      a, b               ; put the player move (X or O) in a
-        pchl                        ; move the winner proc address from hl to pc (jump to it)
+        mvi      h, WINPROCS SHR 8
+        mov      a, m               ; load the low byte of the proc address
+        inr      l                  ; the table fits in one page
+        mov      h, m               ; load the high byte of the proc address
+        mov      l, a
+        mov      a, d               ; put the player move (X or O) in a
+        pchl                        ; jump to the winner proc
 
 proc0:
         lxi      h, BOARD + 1
@@ -747,13 +671,20 @@ PUTHL:                              ; print the signed 16-bit number in HL
         stax    d                   
         jmp     bdos                ; And only then print the string. bdos will return to caller
 
-org     500h                        ; make data 256-byte aligned so it all fits in one 256-byte area
-                                    ; and math for winprocs and board can be on just the lower byte.
+org     500h                        ; the board and win procedure table share one 256-byte page.
                                     ; the assembler won't warn if data and code overlap!
                                     ; there is no way to force alignment, which would be better.
+                                    ; the board is at 540h with a zero sentinel after it; WINPROCS
+                                    ; is at 580h, so the entry for board address low byte L is
+                                    ; at 500h + 2 * L.
 
-WINPROCS:  dw      proc0, proc1, proc2, proc3, proc4, proc5, proc6, proc7, proc8
+org     540h
 BOARD:     db      0,0,0,0,0,0,0,0,0
+SENTINEL:  db      0                ; never written: stops the move scan
+MOVES:     dw      0                ; Count of moves examined (to validate the app)
+
+org     580h
+WINPROCS:  dw      proc0, proc1, proc2, proc3, proc4, proc5, proc6, proc7, proc8
 NEGF:      db      0                ; Space for negative flag
            db      '-00000'            
 NUM:       db      '$'              ; Space for number. cp/m strings end with a dollar sign
@@ -761,11 +692,6 @@ CRLF:      db      13,10,0
 STRITERS:  db     'iterations: ', 0
 STRINVARG: db     'iteration argument invalid; it must be 1 - 32767', 13,10,0
 STRMOVES:  db     'moves: ', 0
-V:         db      0                ; value in minmax
-DEPTH:     db      0                ; current depth of recursion. must be after V
-ALPHA:     db      0                ; Alpha in a/b pruning
-BETA:      db      0                ; Beta in a/b pruning. must be after ALPHA
-MOVES:     dw      0                ; Count of moves examined (to validate the app)
 ITERS:     dw      0                ; iterations of running the app so far
 LOOPS:     dw      0                ; # of iterations to make
 mulTmp:    dw      0

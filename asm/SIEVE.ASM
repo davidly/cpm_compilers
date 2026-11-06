@@ -86,56 +86,101 @@ org     100h
         lhld       SaveSP           ; restore stack pointer
         sphl
 
+        lxi        h, afterarray    ; one guaranteed-true sentinel byte just past the 8192
+        mvi        m, true          ; filled bytes; kloop can never reach or clear it
+
         ; iterate through array entries and count primes
+        ; register usage:
+        ;    hl:    scan pointer, then & flags[ k ]
+        ;    de:    prime
+        ;    a:     0 while scanning; the flags page limit 22h in kloop
+        ;    c:     0 in kloop, stored to clear flags
+        ;    b:     high byte bound for eight marks per check (primes below 256)
 
-        lxi        b, 0             ; b is "i" in the outer for loop
-
-  nextprime:                        ; for (i = 0; i <= SIZE; i++) {
+        lxi        h, flags - 1
+  nextscan:
         xra        a
-        lxi        h, flags
-        dad        b
   npshortcut:
-        cmp        m                ; if (flags[i])
-        jnz        flagison
-        inx        b
-        mvi        a, 20h	    ; past 8192 bytes?
-        cmp        b
-        jz         checknextiter
         inx        h
-        xra        a
-        jmp        npshortcut
+        cmp        m                ; if (flags[i])
+        jz         npshortcut
 
-  flagison:
-        xchg
-        lxi        h, 3             ; compute prime, which is added to k each inner loop from d
-        dad        b                ; prime = i + i + 3
+        mvi        a, afterarray SHR 8  ; the guaranteed-true sentinel just past the array?
+        cmp        h
+        jz         checknextiter
+        push       h                ; resume the scan after flags[ i ]
+
+        mov        d, h             ; prime = i + i + 3 = 2 * & flags[ i ] - 2 * flags + 3
+        mov        e, l
+        dad        h
+        lxi        b, 3 - 2 * flags
         dad        b
-        xchg
+        xchg                        ; de is prime, hl = & flags[ i ]
+        dad        d                ; hl = & flags[ k ], k = i + prime
+        mvi        c, 0             ; stored by kloop to clear flags
 
+        ; Primes below 256 make most of the marks. For them, b is the high
+        ; byte of 22ffh - 7 * prime: while h < b, eight more marks stay in bounds.
+        mov        a, d
+        ora        a
+        jnz        kcheck
+        push       h
+        mov        h, d             ; hl = 7 * prime = ( ( 2 * prime + prime ) * 2 ) + prime
+        mov        l, e
+        dad        h
+        dad        d
+        dad        h
+        dad        d
+        mvi        a, 22h           ; high( 22ffh - 7 * prime ): the low byte never borrows
+        sub        h
+        mov        b, a
+        pop        h
+        mov        a, h
+        cmp        b
+        jnc        kcheck
+
+  k8loop:                           ; eight marks per bounds check
+        mov        m, c
+        dad        d
+        mov        m, c
+        dad        d
+        mov        m, c
+        dad        d
+        mov        m, c
+        dad        d
+        mov        m, c
+        dad        d
+        mov        m, c
+        dad        d
+        mov        m, c
+        dad        d
+        mov        m, c
+        dad        d
+        mov        a, h
+        cmp        b
+        jc         k8loop
+
+  kcheck:
         ; check if pointer to after last item in flags < pointer to k'th element in flags (hl)
-        ; this is duplicate code to that in kloop, but it avoids an extra instruction in the loop.
-
         mvi        a, 22h           ; 22h - 23h will set the carry bit
-        dad        d                ; k += prime
         cmp        h
         jc         inccount
 
-  kloop:                            ; hl = pointer to k'th element in flags. dc = prime
-        mvi        m, 0             ; flags[ k ] = false
+  kloop:                            ; hl = pointer to k'th element in flags. de = prime
+        mov        m, c             ; flags[ k ] = false
         dad        d                ; k += prime
         cmp        h
         jnc        kloop
 
   inccount:
-        lhld       COUNT            ; count++
+        lxi        h, COUNT         ; count++
+        inr        m
+        jnz        counted
         inx        h
-        shld       COUNT
-
-  flagisoff:                        ; check if outer loop is done
-        inx        b
-        mvi        a, 20h           ; past 8192 byes?
-        cmp        b
-        jnz        nextprime
+        inr        m
+  counted:
+        pop        h
+        jmp        nextscan
 
   checknextiter:                    ; are we done iterating loops times?
         lda        ITER

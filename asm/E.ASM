@@ -1,7 +1,8 @@
 ; 8080 assembly to compute e to n digits.
 ; When DIGITS is 200, the first 192 digits are displayed.
-; Byte counters, inlined division by adding -n, and page-aligned
-; multiply-by-ten tables specialize the inner loop without changing the spigot.
+; Byte counters, inlined division by adding -n, per-quotient loop tails, and
+; page-aligned multiply-by-ten tables specialize the inner loop without
+; changing the spigot.
 ;
 ; equivalent to:
 ;     program e;
@@ -80,50 +81,295 @@ org     100h
         dcr        l
         mvi        m, 0
 
-        ; register b is both "high" and "n". register de is x at the start of each inner loop
+        ; register b is both "high" and "n". HL holds x; C holds the low byte
+        ; of -n (its high byte is 255). The quotient is 0..9 in practice: an
+        ; unrolled subtraction chain exits to a tail specialized for each
+        ; quotient, so no counter is needed. Larger quotients use a counting
+        ; loop and a generic tail.
 
         mvi        b, DIGITS
 
   outerloop:
         dcr        b                ; high := high - 1; n := high;
         push       b                ; save b/high on the stack
-        lxi        d, 0             ; x := 0;
-
-  innerloop:
-        ; Divide x by byte n. DAD adds -n; INR preserves its carry.
-        ; Include the final failed subtraction, starting the quotient at -1.
-        xchg                        ; HL = x
+        lxi        h, 0             ; x := 0;
         xra        a
         sub        b
-        mov        e, a
-        mvi        d, 255           ; DE = -n, with 1 <= n <= 254
-        mvi        c, 255
-  divloop:
+        mov        c, a             ; c = low byte of -n
+
+  innerloop:
+        mvi        d, 255
+        mov        e, c             ; DE = -n, with 1 <= n <= 254
+        ; DAD's carry signals a successful subtraction.
         dad        d
-        inr        c
-        jc         divloop
+        jnc        quot0
+        dad        d
+        jnc        quot1
+        dad        d
+        jnc        quot2
+        dad        d
+        jnc        quot3
+        dad        d
+        jnc        quot4
+        dad        d
+        jnc        quot5
+        dad        d
+        jnc        quot6
+        dad        d
+        jnc        quot7
+        dad        d
+        jnc        quot8
+        dad        d
+        jnc        quot9
+        mvi        a, 9             ; ten subtractions succeeded: count the rest
+  quotmore:
+        inr        a
+        dad        d
+        jc         quotmore
+        sta        QUOT
         mov        a, l
         add        b                ; restore only the byte remainder
-        mvi        h, array / 256
-        mov        l, b
-        mov        m, a             ; a[n] = remainder
-        dcr        l
-        mov        l, m             ; a[n-1], used as a table index
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
         mvi        h, mul10lo / 256
-        mov        e, m
-        inr        h
-        mov        d, m             ; DE = 10*a[n-1]
-        mov        a, e
-        add        c
+        lda        QUOT
+        add        m
         mov        e, a
-        mov        a, d
+        inr        h
+        mov        a, m
         aci        0
-        mov        d, a             ; x = 10*a[n-1] + quotient
-        dcr        b                ; n := n - 1;
-        jnz        innerloop        ; if n isn't 0 then loop again
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + quotient
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
 
-        xchg                        ; final x is the next output digit(s)
-        call       DisplayUnsigned  ; show the next digit(s) of e
+        ; One copy of the rest of the inner loop per quotient Q:
+        ; a[n] = x MOD n, x = 10*a[n-1] + Q.
+  quot0:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        inr        h
+        mov        h, m
+        mov        l, a             ; x = 10*a[n-1]
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+  quot1:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        adi        1
+        mov        e, a
+        inr        h
+        mov        a, m
+        aci        0
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + 1
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+  quot2:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        adi        2
+        mov        e, a
+        inr        h
+        mov        a, m
+        aci        0
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + 2
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+  quot3:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        adi        3
+        mov        e, a
+        inr        h
+        mov        a, m
+        aci        0
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + 3
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+  quot4:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        adi        4
+        mov        e, a
+        inr        h
+        mov        a, m
+        aci        0
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + 4
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+  quot5:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        adi        5
+        mov        e, a
+        inr        h
+        mov        a, m
+        aci        0
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + 5
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+  quot6:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        adi        6
+        mov        e, a
+        inr        h
+        mov        a, m
+        aci        0
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + 6
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+  quot7:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        adi        7
+        mov        e, a
+        inr        h
+        mov        a, m
+        aci        0
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + 7
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+  quot8:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        adi        8
+        mov        e, a
+        inr        h
+        mov        a, m
+        aci        0
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + 8
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+  quot9:
+        mov        a, l
+        add        b                ; restore only the byte remainder
+        mvi        d, array / 256   ; page-aligned byte array
+        mov        e, b
+        stax       d                ; a[n] = remainder
+        dcr        e
+        ldax       d                ; a[n-1], used as a table index
+        mov        l, a
+        mvi        h, mul10lo / 256
+        mov        a, m
+        adi        9
+        mov        e, a
+        inr        h
+        mov        a, m
+        aci        0
+        mov        h, a
+        mov        l, e             ; x = 10*a[n-1] + 9
+        inr        c                ; -n for the next, smaller n
+        dcr        b                ; n := n - 1
+        jnz        innerloop
+        jmp        innerdone
+
+  innerdone:
+        call       DisplayUnsigned  ; final x is the next output digit(s)
 
         mvi        a, 9
         pop        b		    ; restore high
@@ -194,6 +440,7 @@ PrintUnsigned:                      ; print the unsigned 16-bit number in HL
 NUM:        db      '$'             ; Space for number. cp/m strings end with a dollar sign
 CRLF:       db      13,10,0
 STRDONE:    db      'done.', 13, 10, 0
+QUOT:       db      0               ; a quotient of 10 or more
 ; The low and high multiplication tables occupy adjacent complete pages.
             org     ($+255) AND 0FF00H
 mul10lo:
