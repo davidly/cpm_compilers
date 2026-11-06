@@ -58,7 +58,6 @@ TailCount     equ     128   ; where the # of bytes in the command tail is locate
         jp      0                    
 
   Again:
-        ld      ix, 0               ; ixl contains the global depth
         ld      iy, 0               ; iy counts moves; reset each iteration to avoid overflow
 
         ld      a, 0                
@@ -123,29 +122,24 @@ RunMinMax:                          ; Run the MINMAX function for a given first 
 ;      unchanged, so the parent rebuilds hl from it instead of saving hl.
 ;  hl: the board position being tried. The board is page-aligned and followed
 ;      by a zero sentinel, so the scan only increments l and compares with a = 0.
-;  ixl: global depth (undocumented ixl forms, emitted as db)
 ;  iy: move count
 ; A maximize node only raises alpha and a minimize node only lowers beta, and
 ; the parent saves b/c around each call, so no stack frame is needed.
+; There is no depth counter. With fewer than five pieces placed nobody has three
+; in a row, so the win check simply finds none. A minimize node at depth 8 finds
+; the board full: its value stays at the maximum score, which no other node can
+; produce, and becomes the tie score.
 
 MinMaxMaximize:
         inc     iy                  ; count the move
-;        ld      a, ixl              ; load depth in a
-injectcode1: db 0ddh, 07dh
-        cp      4                   ; DEPTH - 4  (if 4 or fewer pieces played, no possible winner)
-        jp      c, MaxSkipWin
-
         ld      d, OPiece           ; the piece that took the move
         call    CallScoreProc       ; look for a winning position
         cp      OPiece              ; see if O won
         ld      a, LoseScore        ; losing score. avoid branch by always loading
         ret     z
 
-  MaxSkipWin:
         ld      d, MinScore         ; value initialized
         ld      hl, Board - 1
-;        inc     ixl                 ; increment depth
-        db      0ddh, 02ch
 
   MaxNext:
         xor     a                   ; a = BlankPiece while scanning
@@ -169,12 +163,12 @@ injectcode1: db 0ddh, 07dh
         ld      (hl), BlankPiece    ; restore a blank on the board
 
         cp      WinScore            ; SCORE - WinScore. If zero, can't do better.
-        jp      z, MaxDecDepth
+        ret     z
         cp      d                   ; SCORE - VALUE
         jp      z, MaxNext
         jp      c, MaxNext          ; scores are small positive numbers: unsigned compares
         cp      c                   ; compare SCORE with beta
-        jp      nc, MaxDecDepth     ; beta pruning
+        ret     nc                  ; beta pruning
         ld      d, a                ; update VALUE with the new best score
         cp      b                   ; compare VALUE with alpha
         jp      z, MaxNext
@@ -184,36 +178,18 @@ injectcode1: db 0ddh, 07dh
 
    MaxLoadValue:
         ld      a, d
-
-   MaxDecDepth:
-;        dec     ixl                 ; restore depth
-        db      0ddh, 02dh
         ret
 
 MinMaxMinimize:
         inc     iy                  ; count the move
-;        ld      a, ixl              ; load depth in a
-injectcode2: db 0ddh, 07dh
-        cp      4                   ; DEPTH - 4  (if 4 or fewer pieces played, no possible winner)
-        jp      c, MinSkipWin
-
         ld      d, XPiece           ; the piece that took the move
         call    CallScoreProc       ; look for a winning position
         cp      XPiece              ; see if X won
         ld      a, WinScore         ; winning score. avoid branch by always loading
         ret     z
 
-;        ld     a, ixl              ; load depth in a
-injectcode3: db 0ddh, 07dh
-        cp      8                   ; check for bottom of recursion
-        ld      a, TieScore         ; tie score. avoid branch by always loading
-        ret     z
-
-  MinSkipWin:
         ld      d, MaxScore         ; value initialized
         ld      hl, Board - 1
-;        inc     ixl                 ; increment depth
-        db      0ddh, 02ch
 
   MinNext:
         xor     a                   ; a = BlankPiece while scanning
@@ -237,12 +213,12 @@ injectcode3: db 0ddh, 07dh
         ld      (hl), BlankPiece    ; restore a blank on the board
 
         cp      LoseScore           ; SCORE - LoseScore. If zero, can't do better.
-        jp      z, MinDecDepth
+        ret     z
         cp      d                   ; SCORE - VALUE
         jp      nc, MinNext
         cp      b                   ; compare SCORE with alpha
-        jp      z, MinDecDepth      ; alpha pruning
-        jp      c, MinDecDepth      ; alpha pruning
+        ret     z                   ; alpha pruning
+        ret     c                   ; alpha pruning
         ld      d, a                ; update VALUE with the new best score
         cp      c                   ; compare VALUE with beta
         jp      nc, MinNext
@@ -251,10 +227,9 @@ injectcode3: db 0ddh, 07dh
 
    MinLoadValue:
         ld      a, d
-
-   MinDecDepth:
-;        dec     ixl                 ; restore depth
-        db      0ddh, 02dh
+        cp      MaxScore            ; no move was possible: the board is full
+        ret     nz
+        ld      a, TieScore         ; tie score
         ret
 
 DisplayOneCharacter:                ; display the character in a
