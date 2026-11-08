@@ -1,0 +1,72 @@
+/* E.SRC FROM ../SYSTEMS CONSULTANTS PLMX V23, PORTED TO INTEL
+   PL/M-80 4.1: BDOS CALLS GO THROUGH MON1, STRINGS ARE INITIAL ARRAYS,
+   OUTPUT IS UPPERCASE, AND PRT$NUM PRINTS 0 CORRECTLY. */
+100H:
+MON1: PROCEDURE(F,A);
+    DECLARE F BYTE, A ADDRESS;
+    GO TO 5;
+END MON1;
+
+WR$CON: PROCEDURE(CHAR);
+    DECLARE CHAR BYTE;
+    CALL MON1(2, CHAR);
+END WR$CON;
+
+PRT$DOLLAR: PROCEDURE(ADRS);
+    DECLARE ADRS ADDRESS;
+    CALL MON1(9, ADRS);
+END PRT$DOLLAR;
+
+PRT$NUM: PROCEDURE(N);
+    DECLARE N ADDRESS;
+    DECLARE S(5) BYTE INITIAL(' ', ' ', ' ', ' ', '0');
+    DECLARE (I,J) BYTE;
+    I = 4;
+    DO WHILE N > 0;
+        J = N MOD 10 + '0';
+        N = N / 10;
+        S(I) = J;
+        I = I - 1;
+    END;
+    DO I = 0 TO 4;
+        IF S(I) <> ' ' THEN DO;
+            CALL WR$CON(S(I));
+            S(I) = ' ';
+        END;
+    END;
+    S(4) = '0'; /* PLMX'S VERSION LEFT IT BLANK, SO 0 PRINTED NOTHING */
+END PRT$NUM;
+
+DECLARE DIGITS LITERALLY '200';
+DECLARE ARRAY(DIGITS) ADDRESS;
+DECLARE DONEMSG(9) BYTE INITIAL(13, 10, 'DONE', 13, 10, '$');
+
+FINDE: PROCEDURE;
+    DECLARE (HIGH, N, X) ADDRESS;
+
+    HIGH = DIGITS;
+    X = 0;
+    DO N = 2 TO DIGITS - 1;
+        ARRAY(N) = 1;
+    END;
+
+    ARRAY(0) = 0;
+    ARRAY(1) = 2;
+
+    DO WHILE HIGH > 9;
+        HIGH = HIGH - 1;
+        N = HIGH;
+        DO WHILE N <> 0;
+            ARRAY(N) = X MOD N;
+            X = 10 * ARRAY(N - 1) + X / N;
+            N = N - 1;
+        END;
+
+        CALL PRT$NUM(X);
+    END;
+
+    CALL PRT$DOLLAR(.DONEMSG);
+END FINDE;
+
+CALL FINDE;
+CALL MON1(0, 0);

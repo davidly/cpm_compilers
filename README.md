@@ -56,6 +56,8 @@ The BA compiler is in the [tic-tac-toe and its applicability to nuclear war](htt
 
 The [dcc](https://github.com/davidly/dcc) C compiler (developed by me and Dave Glover) runs on Linux, MacOS, and Windows. It turns C89+ into a .mac file for m80 to assemble and l80 to link. It generates the smallest, fastest binaries of all the compilers. But it still can't beat good assembly :)
 
+Intel PL/M-80 v4.1 is the 1976 cross-compiler, a Fortran program that ran on Tymshare's PDP-10s. The compiler isn't in this repo; the [plm80](https://github.com/davidly/ntvcm/tree/main/plm80) tools in the NTVCM repo recover it from an archived Tymshare tape and run it in a PDP-10 emulator. The "intel plm-80 v4.1" folder has the benchmark sources and notes. That version of PL/M has no recursion, so its ttt saves each level in arrays instead.
+
 Here are runtimes for the benchmarks in milliseconds for a 4Mhz Z80 as emulated by [NTVCM](https://github.com/davidly/ntvcm/)
 
 <img alt="table" src="images/table.jpg" />
