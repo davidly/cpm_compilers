@@ -16,6 +16,10 @@
 ;   - RETN/RETI - return-address correctness is checkable even though the
 ;     IFF1/IFF2 interrupt state they also touch isn't observable from CP/M.
 ;   - LD I,A / LD A,I - fully deterministic (I has no auto-increment).
+;   - SBC HL,rr with the carry set and the subtrahend's low 12 bits all 1s:
+;     zexall runs SBC HL, but its vectors never combine those, which is
+;     where ntvcm once lost the half-carry (it added the carry before
+;     masking to 12 bits).  Only the documented flags are checked.
 ;   - The 6 undocumented duplicate NEG encodings (ED 4C/54/5C/64/6C/74/7C) -
 ;     zexall's own "negop" test never varies its opcode bytes (verified by
 ;     reading its increment/shift vectors), so only the canonical ED 44 is
@@ -75,6 +79,7 @@ start:
 	call	t_djnz
 	call	t_callcc
 	call	t_retcc
+	call	t_sbchl
 
 	call	t_io
 
@@ -1105,6 +1110,73 @@ t_io:
 	ret
 
 ; ------------------------------------------------------------------
+; sbc hl,de: H is set on a borrow from bit 12, (hl and 0fffh) <
+; (de and 0fffh) + carry. each case checks the result, then the
+; documented flags (s, z, h, p/v, n, c: mask 0d7h). the flags are pushed
+; before check16 runs, since it changes them.
+; ------------------------------------------------------------------
+t_sbchl:
+	scf
+	ld	hl,00fffh
+	ld	de,00fffh
+	sbc	hl,de			; 0fffh - 0fffh - 1 = 0ffffh: s, h, n, c
+	push	af
+	ld	de,0ffffh
+	ld	bc,nm_sbc1r
+	call	check16
+	ld	de,00093h
+	ld	bc,nm_sbc1f
+	call	sbcflags
+
+	scf
+	ld	hl,00fffh
+	ld	de,0ffffh
+	sbc	hl,de			; 0fffh - 0ffffh - 1 = 0fffh: h, n, c
+	push	af
+	ld	de,00fffh
+	ld	bc,nm_sbc2r
+	call	check16
+	ld	de,00013h
+	ld	bc,nm_sbc2f
+	call	sbcflags
+
+	scf
+	ld	hl,00123h
+	ld	de,00fffh
+	sbc	hl,de			; 0123h - 0fffh - 1 = 0f123h: s, h, n, c
+	push	af
+	ld	de,0f123h
+	ld	bc,nm_sbc3r
+	call	check16
+	ld	de,00093h
+	ld	bc,nm_sbc3f
+	call	sbcflags
+
+	or	a
+	ld	hl,00fffh
+	ld	de,00fffh
+	sbc	hl,de			; no carry in: 0, z and n, no h
+	push	af
+	ld	de,00000h
+	ld	bc,nm_sbc4r
+	call	check16
+	ld	de,00042h
+	ld	bc,nm_sbc4f
+	call	sbcflags
+	ret
+
+	; the flags pushed by the caller, masked to the documented ones, are
+	; checked against DE; BC = name. returns past the pushed word.
+sbcflags:
+	pop	hl			; our return address
+	ex	(sp),hl			; HL = the pushed AF; the return address goes back on the stack
+	ld	a,l
+	and	0d7h
+	ld	l,a
+	ld	h,0
+	jp	check16
+
+; ------------------------------------------------------------------
 ; coverage-only: block i/o. b is preset to a small count so the
 ; repeated forms don't run away, and hl points at a private scratch
 ; buffer so ini/inir (which write to memory) can't clobber anything
@@ -1277,6 +1349,15 @@ nm_rpt:		db	"ret p (taken)...................$"
 nm_rpf:		db	"ret p (not taken)...............$"
 nm_rmt:		db	"ret m (taken)...................$"
 nm_rmf:		db	"ret m (not taken)...............$"
+
+nm_sbc1r:	db	"sbc hl,de c 0fff-0fff result..$"
+nm_sbc1f:	db	"sbc hl,de c 0fff-0fff flags...$"
+nm_sbc2r:	db	"sbc hl,de c 0fff-ffff result..$"
+nm_sbc2f:	db	"sbc hl,de c 0fff-ffff flags...$"
+nm_sbc3r:	db	"sbc hl,de c 0123-0fff result..$"
+nm_sbc3f:	db	"sbc hl,de c 0123-0fff flags...$"
+nm_sbc4r:	db	"sbc hl,de nc 0fff-0fff result.$"
+nm_sbc4f:	db	"sbc hl,de nc 0fff-0fff flags..$"
 
 nm_retn:	db	"retn (return address)..........$"
 nm_reti:	db	"reti (return address)..........$"

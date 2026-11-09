@@ -8,7 +8,9 @@
 ; where such a sequence arises from ordinary timing-padding.
 ;
 ; Tests 1-4 and the final HALT test are targeted regressions for bugs found
-; in ntvcm.  Tests 5-10 fill undocumented-opcode gaps in zexall/zexdoc and
+; in ntvcm.  Tests 11 and 12 are regressions for undocumented-flag bugs found
+; in ntvcm: the block output instructions' flags, and Y and X after a block
+; repeat that rewrites its own opcode.  Tests 5-10 fill undocumented-opcode gaps in zexall/zexdoc and
 ; zexsup.  Undocumented flag bits whose values differ among Z80 variants are
 ; deliberately not checked.
 ;
@@ -363,7 +365,123 @@ t7done:
 	call	test_prefixes
 	call	gend
 
-; ---- test 11: DD 76 (prefixed HALT) dispatch-ordering ----
+; ---- test 11: undocumented flags of OUTI, OUTD, OTIR and OTDR ----
+;
+; zexall/zexdoc don't test block I/O, and ntvcm set only Z and N for it.
+; Per Sean Young's "The Undocumented Z80 Documented": S, Z, Y and X are as
+; DEC B sets them, from B after it's decremented; N is bit 7 of the byte
+; output; with k = that byte + L after HL moves, H and C are set if k > 255;
+; and P/V is the parity of (k AND 7) XOR B.  The repeating forms leave the
+; flags of their last pass.  Each case below sets one of these differently.
+; The bytes go at fixed addresses (8002h-80FEh, in any CP/M TPA) to fix L.
+; The flags don't depend on the port, so C is left as it is.
+;
+	ld	de,msg11
+	call	gstart
+	ld	hl,blkout
+	ld	(t11ptr),hl
+t11next:
+	ld	hl,(t11ptr)
+	ld	a,(hl)			; the opcode; 0 ends the table
+	or	a
+	jp	z,t11done
+	ld	(curop),a
+	ld	(t11op+1),a
+	inc	hl
+	ld	a,(hl)			; B, the count
+	ld	(t11cnt),a
+	inc	hl
+	ld	e,(hl)			; HL, the address
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(t11adr),de
+	ld	a,(hl)			; the byte output first
+	ld	(de),a
+	inc	hl
+	ld	a,(curop)
+	and	8			; OUTD and OTDR go down
+	ld	a,(hl)			; the byte the repeating forms output next
+	jr	nz,t11down
+	inc	de
+	jr	t11put
+t11down:
+	dec	de
+t11put:
+	ld	(de),a
+	inc	hl
+	ld	a,(hl)			; the expected flags
+	ld	(t11exp),a
+	inc	hl
+	ld	(t11ptr),hl
+	ld	a,(t11cnt)
+	ld	b,a
+	ld	hl,(t11adr)
+t11op:
+	db	0edh,0a3h		; OUTI, OUTD, OTIR or OTDR (patched)
+	push	af
+	pop	de			; E = the flags
+	ld	a,(t11exp)
+	cp	e
+	call	nz,failcur
+	jp	t11next
+t11done:
+	call	gend
+;
+; ---- test 12: Y and X after LDIR/LDDR rewrites its own opcode ----
+;
+; A pass of LDIR or LDDR that will repeat sets Y and X from bits 13 and 11
+; of the instruction's own address, not from A plus the byte moved (found
+; on Zilog chips in 2018, after "The Undocumented Z80 Documented"; z80test's
+; LDIR->NOP' tests check it).  Normally the next pass changes them again,
+; but here the first pass overwrites the instruction's second byte with 00,
+; so the next fetch runs ED 00, a two-byte NOP, which keeps the flags.  The
+; routine runs at 9000h (neither bit), 8800h (X) and A000h (Y); H and N are
+; clear and P/V is set, since BC is still nonzero.
+;
+	ld	de,msg12
+	call	gstart
+	ld	hl,ldrouts
+	ld	(t12ptr),hl
+t12next:
+	ld	hl,(t12ptr)
+	ld	a,(hl)			; the opcode; 0 ends the table
+	or	a
+	jp	z,t12done
+	ld	(curop),a
+	ld	(t12code+1),a
+	inc	hl
+	ld	e,(hl)			; the routine's address
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(t12ptr),hl
+	ld	(t12adr),de
+	ld	hl,t12code		; copy ED B0 or ED B8, PUSH AF, POP HL, RET there
+	ld	bc,5
+	ldir
+	ld	de,(t12adr)		; DE = its second byte
+	inc	de
+	ld	hl,t12zero		; HL = a 00 byte to copy over it
+	ld	bc,2			; still nonzero after one pass
+	ld	ix,t12back
+	push	ix
+	ld	ix,(t12adr)
+	jp	(ix)
+t12back:
+	ld	a,(t12adr+1)		; the expected Y and X: bits 13 and 11
+	and	028h
+	or	004h			; P/V set, H and N clear
+	ld	e,a
+	ld	a,l			; the flags
+	and	03eh			; Y, H, X, P/V, N
+	cp	e
+	call	nz,failcur
+	jp	t12next
+t12done:
+	call	gend
+;
+; ---- test 13: DD 76 (prefixed HALT) dispatch-ordering ----
 ;
 ; Real hardware executes this as plain, undisturbed HALT; this emulator
 ; deliberately leaves it as a disclosed not-implemented limitation instead
@@ -381,16 +499,16 @@ t7done:
 ; NOT present or NOT working: the emulator silently ran the wrong
 ; instruction instead of safely stopping.
 ;
-t11:
-	        ld      de,msg11
+t13:
+	        ld      de,msg13
         call    prstr
         ld      hl,sentinel
         ld      (hl),0aah
         db      0ddh,076h,005h          ; DD 76 05
-	        ld      de,msg11bad
+	        ld      de,msg13bad
 	        call    prstr
 ;
-; ---- exit (only reached if test 11 did not halt/abort) ----
+; ---- exit (only reached if test 13 did not halt/abort) ----
 ;
         jp      0000h
 ;
@@ -622,6 +740,12 @@ retnops:	db	055h,05dh,065h,06dh,075h,07dh
 
 curpre:	ds	1
 curop:	ds	1
+t11ptr:	ds	2
+t11adr:	ds	2
+t11cnt:	ds	1
+t11exp:	ds	1
+t12ptr:	ds	2
+t12adr:	ds	2
 rangeend:	ds	1
 groupfail:	ds	1
 firstfail:	ds	1
@@ -658,8 +782,47 @@ msg7:      db   'test 7 (DD/FD CB RES/SET register results): $'
 msg8:      db   'test 8 (duplicate ED LD/RETN encodings): $'
 msg9:      db   'test 9 (undefined ED opcodes): $'
 msg10:     db   'test 10 (ignored/repeated prefixes): $'
-msg11:     db   13,10,'test 11 (DD 76 dispatch order) - emulator should halt/abort now...',13,10,'$'
-msg11bad:  db   'test 11: DID NOT ABORT - fix missing or broken!',13,10,'$'
+msg11:     db   'test 11 (OUTI/OUTD/OTIR/OTDR undocumented flags): $'
+msg12:     db   'test 12 (LDIR/LDDR rewriting itself: Y and X from PC): $'
+msg13:     db   13,10,'test 13 (DD 76 dispatch order) - emulator should halt/abort now...',13,10,'$'
+msg13bad:  db   'test 13: DID NOT ABORT - fix missing or broken!',13,10,'$'
+; test 11: opcode, B, HL, the first byte output, the next byte for the
+; repeating forms (at HL+1 or HL-1), and the expected flags
+blkout:	db	0a3h,001h
+	dw	080feh
+	db	080h,000h,053h		; OUTI: B 0, N, L FFh: k 17Fh so H and C
+	db	0a3h,029h
+	dw	08010h
+	db	001h,000h,028h		; OUTI: B 28h gives Y and X; k 12h
+	db	0a3h,090h
+	dw	08080h
+	db	07fh,000h,099h		; OUTI: B 8Fh gives S and X; k 100h so H and C
+	db	0abh,001h
+	dw	08002h
+	db	002h,000h,044h		; OUTD: L 01h, k 3: P/V
+	db	0b3h,002h
+	dw	08040h
+	db	011h,0f0h,053h		; OTIR: last byte F0h, L 42h: k 132h
+	db	0bbh,002h
+	dw	08051h
+	db	0aah,007h,044h		; OTDR: last byte 07h, L 4Fh: k 56h, P/V
+	db	0
+; test 12: opcode and the routine's address
+ldrouts:	db	0b0h
+	dw	09000h
+	db	0b0h
+	dw	08800h
+	db	0b0h
+	dw	0a000h
+	db	0b8h
+	dw	09000h
+	db	0b8h
+	dw	08800h
+	db	0b8h
+	dw	0a000h
+	db	0
+t12code:	db	0edh,0b0h,0f5h,0e1h,0c9h	; LDIR or LDDR / PUSH AF / POP HL / RET
+t12zero:	db	0
 msgfailat: db   'FAIL at opcode $'
 crlf:      db   13,10,'$'
 msgpass:   db   'PASS',13,10,'$'
