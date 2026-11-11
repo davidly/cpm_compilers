@@ -48,6 +48,7 @@ PRT$NUM: PROCEDURE( N );
             S( I ) = ' ';
         END;
     END;
+    S( 4 ) = '0'; /* restore the digit for the next call with N = 0 */
 END PRT$NUM;
 
 DECLARE DIGITS LITERALLY '200';
