@@ -1,2 +1,4 @@
-# there are no command-line tools for turbo modula-2. Run the app and compile from within.
-
+#!/bin/sh
+set -eu
+CDPATH= cd -- "$(dirname -- "$0")"
+exec ntvcm -c M2CL.COM "$@" < /dev/null

@@ -1,2 +1,7 @@
-rem there are no command-line tools for turbo pascal. Run the app and compile from within.
-
+@echo off
+setlocal
+pushd "%~dp0" || exit /b 1
+ntvcm -c TURBOCL.COM %* <nul
+set "result=%errorlevel%"
+popd
+exit /b %result%

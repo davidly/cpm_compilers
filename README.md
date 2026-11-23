@@ -15,7 +15,7 @@ I cannot vouch that any of these tools matches their official distribution form.
 
 In some cases I've included user manuals in PDF form that I've found online for the various compilers. They sometimes match the version and sometimes not, but they are always helpful.
 
-I can vouch that the m.bat and m.sh scripts in each folder builds working benchmark binaries. In the cases of tools that can't be invoked via the command-line (e.g. Turbo Pascal), those tools also produce working benchmark binaries.
+I can vouch that the m.bat and m.sh scripts in each folder builds working benchmark binaries.
 
 It is my intention to show each tool in its best light with respect to the benchmarks. If you know of better optimization flags or ways to improve the benchmark source code for a given tool, please feel free to submit a pull request or open an issue. That said, I want to avoid cheap hacks like using peek/poke in BASIC instead of variables.
 
@@ -42,7 +42,7 @@ To run the resulting apps, use NTVCM's -c flag to force console mode and -p flag
 
 Many other CP/M 2.2 emulators will work in place of NTVCM. The tools in this repo are a good test of CP/M 2.2 BDOS compatibility; some rely on surprising (to me) BDOS behaviors.
 
-The Borland Pascal and Modula-2 products don't support command-line builds, so you have to run the apps, load the source file, and build manually.
+The Borland Turbo Pascal v1, v2, and v3 build scripts use `TURBOCL.COM`. The Turbo Modula-2 scripts use `M2CL.COM`, which compiles and links a program module. Each folder includes a Python script to rebuild its command-line compiler from the original compiler binary.
 
 The build scripts assume ntvcm is in your path. 
 
