@@ -44,6 +44,8 @@ Many other CP/M 2.2 emulators will work in place of NTVCM. The tools in this rep
 
 The Borland Turbo Pascal v1, v2, and v3 build scripts use `TURBOCL.COM`. The Turbo Modula-2 scripts use `M2CL.COM`, which compiles and links a program module. Each folder includes a Python script to rebuild its command-line compiler from the original compiler binary.
 
+The BLS Pascal v1.0 and COMPAS-80 v3.03 build scripts use `BLSPASCL.COM` and `COMPASCL.COM`. Run `m.bat sieve`, `m.bat e`, and `m.bat ttt` on Windows, or `./m.sh sieve`, `./m.sh e`, and `./m.sh ttt` on Linux or macOS. Each invocation produces a standalone `.COM`. The scripts accept a source basename or a `.PAS` filename. Run `python3 build_pascal_cli.py` in either folder to regenerate its command-line compiler.
+
 The build scripts assume ntvcm is in your path. 
 
 Linux systems generally have case-sensitive file systems and CP/M generally forces uppercase filenames. You're best off if you change all tool files, source files, and arguments to uppercase on Linux.

@@ -1,0 +1,253 @@
+%*+-------------------------------------+-----------------+---------------------+
+!           Cursor movement           !      Block      !       Various       !
++-------------------------------------+-----------------+---------------------+
+! ^S    Left char   ^D    Right char  ! ^K^B  Begin     ! ^J    Help          !
+! ^A    Left word   ^F    Right word  ! ^K^K  End       ! ^K^D  Quit editor   !
+! ^Q^S  Start line  ^Q^D  End line    ! ^K^Y  Delete    ! ^K^X  Exit editor   !
+! ^E    Up line     ^X    Down line   ! ^K^C  Copy      ! ^V    INSERT on/off !
+! ^Q^E  Top line    ^Q^X  Bottom line ! ^K^V  Move      ! ^Z    AUTO on/off   !
+! ^R    Up page     ^C    Down page   ! ^K^P  Print     ! ^B    TABS on/off   !
+! ^Q^R  Start text  ^Q^C  End text    ! ^K^H  Del marks ! ^W    ADJUST on/off !
++-------------------------------------+-----------------+---------------------+
+!               Delete                !      Edit       !       Search        !
++-------------------------------------+-----------------+---------------------+
+! DEL   Char left   ^G    Char right  ! RETN  New line  ! ^Q^F  Find string   !
+! ^QDEL Start line  ^Q^Y  End line    ! ^I    Tabulate  ! ^Q^A  Find/replace  !
+! ^Y    Line all    ^T    Word right  ! ^N    Insert CR ! ^L    Find next     !
++-------------------------------------+-----------------+---------------------+
+! Find/replace options:  G = Global (all text), N = Replace without prompting !
++-----------------------------------------------------------------------------+
+! ADJUST mode: Use ^S and ^D to adjust then ^E or ^X to repeat above or below !
++-----------------------------------------------------------------------------+
+
+% COMPAS ON-LINE HELP: The command mode
+
+COMPAS prompts by printing '>>'. Each time this prompt appears, COMPAS is
+ready to accept and process a command line. The following commands are
+available in the command mode.
+
+LOAD      Load a source text.           SAVE      Save the source text.
+NAME      Set current file name.        EDIT      Invoke the editor.
+COMPILE   Compile the source text.      RUN       Run current program.
+PROGRAM   Compile to program file.      OBJECT    Compile into object file.
+FIND      Find a run-time error.        WHERE     Restart editor.
+DIR       Display disk directory.       USE       Set default drive and user.
+MEMORY    Display memory size.          ZAP       Zap (delete) source text.
+HELP      Display help screens.         QUIT      Return to CP/M.
+
+Note that all commands may be abbreviated to their first letter.
+
+For further help on the commands above, enter 'HELP' or 'H' followed by the
+command name (or the first character of it).
+
+%ECOMPAS ON-LINE HELP: The EDIT command.
+
+The EDIT command invokes the on-screen editor. Once you are in the editor, a
+list of editor commands may be displayed by pressing CTRL/J.
+
+%LCOMPAS ON-LINE HELP: The LOAD command.
+
+The LOAD command is used to load a source text into memory. The command line
+format is:
+
+        LOAD <filename>
+
+If the file type is omitted, it defaults to '.PAS'. The current file name is
+set to <filename>. When a file is loaded, it is appended to the end of the
+source text already in memory. If the file specified does not exist, COMPAS
+displays 'No such file'. If loading the file would overflow the memory buffer,
+COMPAS displays 'File too big'. For both errors, the text already in memory
+remains unchanged.
+
+%SCOMPAS ON-LINE HELP: The SAVE command.
+
+The SAVE command is used to save the text in memory in a disk file. The com-
+mand line format is:
+
+        SAVE <filename>
+
+If <filename> is omitted entirely, it defaults to the current file name set by
+LOAD or NAME. If the file type is omitted, it defaults to '.PAS'. If a file of
+the same name and type exists on the disk specified, its type is changed to
+'.BAK' before the new file is created. If the disk directory is full, COMPAS
+displays 'Directory is full'. If there is not enough room on the disk to cre-
+ate a new file, COMPAS displays 'Disk is full'. If one of these errors are re-
+ported, insert another disk, log it in using the USE command, any try SAVE
+again.
+
+%NCOMPAS ON-LINE HELP: The NAME command.
+
+The NAME command is used to change the current file name. The current file
+name is used by SAVE, PROGRAM, and OBJECT when a file name is not explicitly
+stated. The command line format is:
+
+        NAME <filename>
+
+If <filename> is omitted entirely, NAME displays the current file name instead
+of changing it. If the file type is omitted, it defaults to '.PAS'.
+
+The current file name is set to 'WORK.PAS' when COMPAS is cold-started and
+when a ZAP command is issued.
+
+%CCOMPAS ON-LINE HELP: The COMPILE command.
+
+When the compiler is invoked from a COMPILE command, the object code is stored
+directly into memory in succession of the source text.
+
+Following a successful compilation you are informed of the size of the object
+code, the size of free memory and the size of the data area:
+
+        Code: rrrrr bytes (aaaa-bbbb)
+        Free: sssss bytes (cccc-dddd)
+        Data: ttttt bytes (eeee-ffff)
+
+The numbers displayed in parentheses are the start and end addresses (in hex)
+of each specific area.
+
+Note that whenever you invoke the editor, the object code is erased.
+
+%RCOMPAS ON-LINE HELP: The RUN command.
+
+The RUN command is used to execute a program. If no program code is present,
+the compiler is invoked to compile the program (see 'HELP COMPILE' text).
+Assuming a successful compilation, or if the object code was already present,
+the program is started. When it ends, it automatically transfers control to
+the command mode.
+
+If a run time error occurs, the program will terminate displaying a run time
+error message, for instance:
+
+        EXECUTION ERROR 04 AT PC=254E
+        Program terminated
+
+You may then use the FIND command to locate the statement that caused the
+error (see 'HELP FIND' text).
+
+%PCOMPAS ON-LINE HELP: The PROGRAM command.
+
+The PROGRAM command is used to compile the program into a command file on a
+disk. The command line formats is:
+
+        PROGRAM <filename>,<origin>,<top>
+
+If <filename> is omitted, the current file name is used, with its type changed
+to '.COM'. The file type defaults to '.COM'. <origin> and <top> are hex num-
+bers (up to four hex digits). Any one of them may be omitted, for instance
+'PROGRAM TEST,4000' (only <origin>) or 'PROGRAM ,,C000' (only <top>).
+
+<origin> specifies the start address of the object code. If it is omitted, the
+end address of the runtime package is assumed. <top> specifies the top of mem-
+ory for the program. Programs will never access locations above this address.
+If <top> is omitted, the current logical top of memory is assumed. Since the
+compiler allocates storage for variables starting at the top of memory and
+working downwards, programs compiled for a given memory size cannot be run on
+systems with smaller memory sizes. On compiling the program, COMPAS writes a
+copy of the runtime package into the command file. Once compiled, the program
+can be executed from CP/M simply by typing its name.
+
+%OCOMPAS ON-LINE HELP: The OBJECT command.
+
+The OBJECT command produces an object file which contains the compiled program
+code only (the runtime package is not included). The command line format is:
+
+        OBJECT <filename>,<origin>,<top>
+
+If <filename> is omitted, the current file name is used, with its type changed
+to '.OBJ'. The file type defaults to '.OBJ'. The <origin> and <top> parameters
+correspond to those of the PROGRAM command (see 'HELP PROGRAM' text). Object
+files may only be activated through the chain procedure of COMPAS Pascal. For
+further details on program chaining, please refer to the COMPAS Pascal Prog-
+ramming Manual.
+
+%FCOMPAS ON-LINE HELP: The FIND command.
+
+The FIND command is used to locate a statement in the source text which cor-
+responds to an offset address in the object code. The command line format is:
+
+        FIND <offset>
+
+where <offset> is the offset address of the statement to be located. The off-
+set address must be specified in hex (up to four hex digits). <offset> may be
+omitted, in which case it defaults to the offset address of the last run time
+error. Thus, to locate the statement that caused a run time error, simply en-
+ter 'FIND'.
+
+If the offset address is found, the compiler stops and displays 'Target ad-
+dress found' followed by 'Press <RETURN> to edit or <ESC> to abort. When you
+press RETURN, the editor is invoked, and the cursor is placed at or just after
+the relevant section. If the offset is out of range, the compiler outputs
+'Target address not found'.
+
+%WCOMPAS ON-LINE HELP: The WHERE command.
+
+The WHERE command invokes the editor, and moves the cursor to a specific posi-
+tion in the text. The command line format is:
+
+        WHERE <offset>
+
+where <offset> is a hex number specifying the offset address of the spot to be
+located. Whenever you leave the editor, the offset address of the cursor is
+recorded as the default <offset> value. Thus, if you use WHERE (without an ar-
+gument) instead of EDIT to invoke the editor, the cursor will be moved to the
+spot you left previously instead of to the beginning of the text. In addition,
+when the compiler reports an error, it also records the offset address of the
+error as the default WHERE argument. In this case, WHERE without an argument
+will invoke the editor and move the cursor to the spot in error.
+
+%DCOMPAS ON-LINE HELP: The DIR command.
+
+The DIR command is used to display the directory of a disk. The command line
+format is:
+
+        DIR <afn>
+
+where <afn> is an ambiguous file name as the one used in a CP/M DIR command,
+i.e. question marks (?) and asterisks (*) may be interspersed through the file
+name and type fields.
+
+A question mark will match any character in that position, and an asterisk will
+match any combination of characters within the field in which it is used. If
+both the name field and the type field are omitted, leaving only a drive iden-
+tifier and a colon, then all files on that drive are listed. If <afn> is omit-
+ted entirely, then all files of the currently logged drive are listed.
+
+Note that system files are not displayed.
+
+%UCOMPAS ON-LINE HELP: The USE command.
+
+The USE command is used to log in new disks, and to change the currently log-
+ged drive and user number. The command line format is:
+
+        USE <drive><user>
+
+where <drive> is a drive identifier (A-P), and <user> is a user number (0-15).
+If <drive> is specified, the currently logged drive is changed, and if <user>
+is specified, the current user number is changed. The USE command ends by dis-
+playing the currently logged drive and user number.
+
+Whenever a disk is changed in one of the drives, a USE command should be is-
+sued to log in that disk. Otherwise, CP/M will report an R/O error if you try
+to write to that disk.
+
+%MCOMPAS ON-LINE HELP: The MEMORY command.
+
+The MEMORY command displays the size of free memory:
+
+        Free: rrrrr bytes (aaaa-bbbb)
+
+The numbers in parentheses are the start and end addresses (in hex) of the
+unused area.
+
+%ZCOMPAS ON-LINE HELP: The ZAP command.
+
+The ZAP command erases the text in memory and sets the current file name to
+'WORK.PAS'. As a safety precaution, ZAP asks 'Are you sure (Y/N)?'. Any answer
+but 'Y' or 'y' will leave the text unchanged.
+
+%QCOMPAS ON-LINE HELP: The QUIT command.
+
+The QUIT command transfers control to CP/M. You may later warm-start COMPAS
+by entering 'COMPAS *'. This of course requires that no vital memory areas
+have been overwritten by other programs run it the meantime.
+
+

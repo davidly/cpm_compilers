@@ -1,0 +1,117 @@
+&Ddefined
+&E expected
+&Ffile
+&H are not allowed here
+&IIllegal 
+&J identifier
+&NExpression is not of type 
+&Oonstant
+&Ptype
+&RInteger or real 
+&SUnknown identifier or syntax error in 
+&Tstatement
+&UUnknown or illegal 
+&Vvariable
+&Xxpression
+&YType mismatch in 
+&ZVariables of this type cannot be 
+01'.'&E
+02BEGIN&E
+03&Ifunction result &P
+04Duplicate&J
+05Absolute &Vs are not allowed in records
+06Type&J&E
+07Files may only be &V parameters
+08&U&P
+09END&E
+10Set base &P out of range
+11File components may not be &Fs
+12&Istring length
+13&Isubrange base &P
+14'..'&E
+15&Ysubrange bounds
+16Lower bound greater than upper bound
+17&Usimple &P
+18Simple &P&E
+19Unknown pointer &P in &P definitions
+20Un&D label in &T part
+21&IGOTO in &T part
+22Label already &D
+23THEN&E
+24DO&E
+25&U&V&J
+26Variable &P is not a simple &P
+27&YFOR &T e&Xs
+28TO or DOWNTO&E
+29C&O and CASE selector &P does not agree
+30END or OTHERWISE&E
+31Unknown label
+32Too many nested WITH &Ts
+33Record &V&E
+34&U&V
+35&Iassignment
+36&Yassignment or parameter list
+37&Ninteger
+38&Nboolean
+39E&X &P is not a simple &P
+40&Nstring
+41&Ye&X
+42Operand &P(s) does not agree with operator
+43Structured &Vs&H
+44&Yset
+45&Se&X
+46C&Os&H
+47E&X &P does not agree with index &P
+48&Ufield&J
+49&Uc&O
+50Integer c&O&E
+51&Rc&O&E
+52String c&O not properly terminated
+53Error in integer c&O
+54Error in real c&O
+55Illegal character in&J
+56'['&E
+57']'&E
+58':'&E
+59';'&E
+60&S&T
+61','&E
+62'('&E
+63')'&E
+64'='&E
+65':='&E
+66OF&E
+67Unexpected end of source text
+68No such &F
+69Buffer overflow
+70Memory overflow
+71&Zinput
+72&Zoutput
+73Text&F&E
+74File &V&E
+75Text&Fs&H
+76Un&Pd &Fs&H
+77String c&O&E
+78String c&O length does not agree with &P
+79&Iordering of fields in record c&O
+80&Ystructured c&O
+81C&O out of range
+82Files and pointers&H
+83&Iuse of re&P facility
+84&Re&X&E
+85String &V&E
+86Text&Fs and un&Pd &Fs&H
+87Un&Pd &F&E
+88Pointer &V&E
+89&R&V&E
+90Integer &V&E
+91Reserved word
+92Label not within current block
+93Procedure or function not properly &D
+94Error in CODE &T
+95&Iuse of AT specification
+96Overlays not supported in direct mode
+97Overlays cannot be forwarded
+98PROCEDURE or FUNCTION&E
+99Cannot create overlay &F
+
