@@ -1,0 +1,26 @@
+
+
+
+                       SPEED USERS MANUAL 
+    (This is intended a suplement to the FAST users manual) 
+
+
+SPEED  is  esentially  FAST  with  a copy of the CCP written by
+Digital Research.   For  this  reason,  distribution  of  SPEED
+should  be  limited  to  those  who are licensed users of CP/M.
+Except for this restriction, SPEED is considered public  domain
+software.
+
+
+One  notable difference between FAST and SPEED is the length of
+time that they remain in your system.  FAST is present only for
+the execution of one transient.   SPEED,  on  the  other  hand,
+stays  in  your  system  until you cold boot or type control-A.
+SPEED prompts with '>A>' (get it?  greater than A> heh heh)  as
+a  constant reminder that it is in control.  You should allways
+be aware that SPEED is control because, like FAST, it  disables
+the  disk  change detection built into BDOS.  It is possible to
+clobber a disk by switching disks and not  booting.   Control-C
+does  nothing  except  reset  BDOS  under SPEED.  When you must
+change disks, type control-B to reset SPEED.
+

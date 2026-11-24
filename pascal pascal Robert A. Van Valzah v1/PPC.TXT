@@ -1,0 +1,223 @@
+
+			PPC Users Manual
+
+
+How to use the compiler
+=======================
+
+If you have a file named dog.pas and you want to compile it, you'd
+just type
+
+	submit pc dog
+
+The compiler will ask "LISTING?".  You reply with a single character;
+carriage return means no listing, any other character means yes listing.
+The listing will be sent to the console as the compilation proceeds.
+Any errors detected in the compilation are flagged in this listing.
+At some point (hopefully reasonably near to the point of infraction)
+the error number will be inserted into the listing, enclosed in ">>"
+and "<<".  The line following an error will start with "********"
+and otherwise be blank to call attention to the error.  The compiler
+will also wait for a single character from the console before
+compilation continues.  This is so people with crt's can see the
+error.  Error numbers should be looked up in Jensen and Wirth (see
+below).  Error number 99 is pound sign ("#") expected.
+
+The compiler should work with a 32k CP/M and might work in 24k, but
+there are no memory overflow checks.  If it hangs or something, you
+probably don't have enough memory.
+
+On good sized programs, the compiler manages to get about 300-400
+lines of Pascal translated to object per minute.  These figures were
+taken on my system with 2mHz Z-80, 8" disk, running under SPEED.
+Compilation speed will fall to less than half this rate without SPEED,
+thus SPEED is strongly recommended.  This is particularly true if
+you use the submit file to do the compilation.  The run time package
+does only single sector disk buffering and this too makes SPEED
+very important.
+
+
+
+How it all works
+================
+The program PPC.COM takes your Pascal source and makes a single pass
+over it translating it to a sort of p-code as it goes.  This p-code is
+written to disk.  PFET.COM reads the p-code file on its first pass,
+assigning 8080 addresses to all p-code labels and storing the p-code
+in memory for the second pass.  On its second pass, PFET reads the
+p-code from memory and generates the actual 8080 object code.  This
+code is written to a disk file.  The last step in compilation is to
+link the generated object code to the run time package.  This is done
+by simply using PIP to concatenate the run time package and the object
+file from PFET to produce an executable .COM file.  The compiler (PPC)
+is written in Pascal, as is the p-code translator (PFET).  The run time
+package is written in assembler.
+
+
+
+Differences from "standard" Pascal
+==================================
+
+This section will detail the ways in which ppc deviates from standard
+Pascal as defined in "Pascal User Manual and Report", second ed., K.
+Jensen and N. Wirth.
+
+
+Two additional reserved words have been defined:  get and put.
+The following words are not now considered reserved, but are
+in standard Pascal, so they should be avoided:  file, goto, in, label,
+nil, packed, set, and with.
+
+The ASCII tab character is an acceptable white space character.
+
+Comments are begun with the sequence "(*" and ended with "*)".
+
+Identifiers may be very long, but only the first 8 are significant.
+
+
+The data type Boolean is not supported.  Relational and logical
+operators may be used only in if statements.  The boolean constant
+identifiers true and false are not defined.  The not operator is
+not implemented.  These are the legal relational and logical
+operators:  =, <>, <, <=, >=, >, and, and or.
+
+The data type integer is available.  Values must be in the range -32768 to
+32767.  There are no standard functions such as abs, sqr, trunc, etc.
+The constant maxint is not defined by the compiler.  The type integer is
+identical to type word.  The following operations are defined on integers:
+
+	*	multiply
+	/	divide and truncate (why use div? int's are all you've got!)
+	+	add
+	-	subtract
+
+Multiplication and division are presently implemented with repeated
+addition and subtraction (gag!).  This makes the order of the operands
+critical.  If one operand is likely to be less than the other, put the
+lesser operand on the left of the multiplication symbol for best speed.
+Dividing a large number by one takes a long time -- dividing it by zero
+takes forever!  (It's not that I'm not aware of the shiftng methods
+of division and multiplication, it's just that I wanted something quick
+and didn't feel like looking up the good routines.  I've never felt
+the need to replace these routines with the good ones.)
+
+Also note that there is no integer negation.  If you want negative one,
+write it as 0-1.
+
+The type real is not supported.
+
+The type char is not supported, but see type alfa below.
+
+The type alfa can hold eight characterers.  Alfas can be assigned and
+compared just like integers (just don't try to do math on them!).
+All relational operators are defined using the ASCII collating sequence.
+Length can't enter into the compariosn because alfas are always eight
+characters long (it's up to you to supply padding).  Alfas may be passed
+as parameters.
+
+
+Since files are not supported, the program heading is not needed, and
+in fact, is not allowed.  The first thing the compiler expects to see
+are the global constant declarations.
+
+Goto statements are not supported, therefore label declarations are not
+needed and not permitted.
+
+Constant declarations are pretty much the same as in regular Pascal,
+except that leading signs are not allowed and character constants
+can be only one character in length.  A minor extension is that I put
+in limited compile time constant expressions to make coding the
+translator easier.  See the syntax graphs to see where these can be
+used.
+
+Variable declarations have the restriction that the type must be
+a type identifier and may not be a complex type.  Thus
+
+	var months : array [ 1 .. 12 ] of integer;
+
+is illegal, while
+
+	type mtharray = array [ 1 .. 12 ] of integer;
+	var  months : mtharray;
+
+is legal.
+
+In this implementation, functions can return only integer values.
+This makes it unnecessary (and illegal) to give a function return type
+in the function declaration.
+
+
+The case statement is limited in that it cannot accept multiple case
+labels on the same statement.  On the other hand, it has been extended
+to allow an else statement which is executed when none of the case
+labels match the expression value.  See the syntax graphs for the syntax.
+
+
+Single dimensional arrays of integers and alfas (the two "built-in" types)
+are allowed.  You can also declare arrays of subrange or enumerated types,
+but these are treated as arrays of integers and take the same amount of
+storage.  Of course, arrays of arrays are not allowed, as that would
+be more than one dimension.
+
+If a simple alfa variable appears with a subscript after it, it is
+treated as though it were an array of integers.  This fact can be used
+to get at the individual characters of an alfa variable.  For example,
+if "a" is a simple (not an array) alfa variable, then a[0] refers to
+the first two characters.  The least significant eight bits would
+contain the first character and the most significant eight bits would
+contain the second character.
+
+
+Record types are not allowed.  Therefore, there is no need for a with
+statement.
+
+
+There is no set type.  (However, it shouldn't be too hard to implement
+a 64-bit set type using the p-instructions already around for alfa
+variables . . . ).
+
+
+There are no pointer types, and consequently, no new function.
+
+
+There are no files and no read or write statements.  All input and
+output is done with the put and get statements.  These are only vaguely
+similar to the standard Pascal put and get.  GET#0 gets one character
+from the input file.  PUT#0 sends its output to the output file.  PUT#1
+sends its output unconditionally to the console.  The arguments to the
+put statements consist of a series of expressions separated by commas.
+If an expression evaluates to an alfa, all eight characters of the alfa
+are printed.  Integer expressions followed by a pound sign ('#') will
+print the decimal value of the expression.  If no pound sign follows
+the expression, the low eight bits of the expression are sent as one
+character.  The input and output files mentioned above can be either
+disk files or console input and output.  Which is used depends on what
+is typed on the command line following the compiled .com file when it
+is executed.  If the first filename following the .com file name is
+blank or '*', then input characters are taken from the console.  If
+it is the name of a disk file, then input comes from that disk file.
+A similar rule applies to the second filename following the command
+and the destiny of the output characters.
+
+
+Var parameters are different in that if one parameter to a procedure
+is to be var, then all parameters must be var parameters.  This is
+a silly restriction that should be easily removed by any talented
+compiler hacker.  There is a also a small kludge to make the compiler's
+job easier;  the word var must appear in the call to all procedures
+with var parameters, as well as in the declaration.  This is very
+easy to forget an a real nuisance at times.  Somebody please fix.
+
+
+It is possible to forward declare procedures an functions, but as
+with var parameters, there is a minor syntactic kludge to make the
+compiler's life easier.  The forward part is handled in the normal
+way except that you D-O-N-'-T give the parameter list (the compiler
+never checks procedure calls against their declarations anyway!).
+When you actually want to declare the procedure, use the form
+
+	procedure foo(<real parameter list>); backward;
+
+This gives the compiler a hint it can't miss that this procedure
+was forward declared earlier!
+

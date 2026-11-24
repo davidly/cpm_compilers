@@ -1,0 +1,6 @@
+ppc $1.pas a.pco
+pfet a.pco a.oco
+era a.pco
+pip $1.com=rtp.com,a.oco[ov
+era a.oco
+

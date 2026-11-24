@@ -1,0 +1,307 @@
+.pl66
+---------------- VOLUME 66 ABSTRACTS ----------------
+
+Thió  filå  containó  abstractó oî thå  followinç  programó  anä 
+files. 
+
+	A.OCO
+	A.PCO
+	COMPARE.COM
+	CPMDIR.C
+	DISK.DOC    <-- included at end of this file
+	DMSPATCH.ASM
+	DSCUSPAT.ASM
+	EQ.COM
+	EQ.PAS
+	FMAN.PRN
+	FROMCPM.C
+	FWD.PAS
+	HW5.PAS
+	HW5DATA.
+	MICROPAT.ASM
+	PASYNTAX.DOC
+	PC.SUB
+	PFET.COM
+	PFET.PAS
+	PHONE.C
+	PLAYDATA.
+	PLAYKAL.PAS
+	POPS.DOC
+	POWTWO.PAS
+	PPC.COM
+	PPC.DOC
+	PPC.PAS
+	PSTACK.DOC
+	REGEN.DOC 
+	RSPEED.ASM
+	RSPEED.COM
+	RTP.ASM
+	RTP.COM
+	SKEW2PAT.ASM
+	SKEW3PAT.ASM
+	SMAN.PRN
+	SPEED.COM
+	SPEED2.COM
+	STIRLING.PAS
+	TESTER.PAS
+	VALIDATE.SUB
+
+
+
+
+
+
+
+
+====¾  PPC.COM¬  PFET.COÍ  Š
+anä relateä fileó compriså Boâ Vaî Valsah'ó Pascaì compiler®  Iô 
+ió  á compileò foò á subseô oæ thå Pascaì programminç  language¬ 
+writteî iî Pascaì anä caî compilå itself.
+
+Thå samplå programó thaô É compileä workeä aó theù should®   Thå 
+Eighô Queenó prograí (EQ.PAS© printeä á buncè oæ permutationó oæ 
+thå digitó ± tï ¸ thï É didn'ô geô ouô mù chesó boarä anä  checë 
+them.
+
+POWTWO.PAS 
+
+printó thå negativå poweró oæ twï froí 
+ .µ tï .000976562µ (2**-1...2**-10).
+
+Botè  programó tooë lesó thaî halæ á minutå tï compilå usinç thå 
+supplieä SUBMIÔ filå anä SPEED2.COÍ (beô yoõ thoughô nï onå useä 
+SUBMIÔ files!)®   EQ.COÍ tooë lesó thaî halæ á minutå tï ruî anä 
+POWTWO.COÍ raî aó fasô aó iô coulä print®   Thió waó donå oî á ² 
+meç Z-80®   Wheî theù werå compileä withouô SPEED2.COÍ theù botè 
+tooë morå thaî á minute.
+
+Thå  compileò waó á clasó assignmenô foò onå oæ  Bob'ó  classes®  
+Iô ió verù welì documenteä aó tï ho÷ tï uså thå compileò anä thå 
+specifiã  subseô  iô compileó (iô eveî haó somå oæ  Bob'ó  usuaì 
+creativå misspellings).
+
+Thoså  interesteä iî thå innardó oæ compileró oò largå  programó 
+iî generaì shoulä finä thió interesting.
+
+     Abstract by Paul Krystosek
+
+.paŠContents of this disk -- largely from DISK.DOC notes by Bob Van Valzah
+=====================
+
+A.OCO -- 
+
+Thió  samplå  prograí  ió  thå objecô codå outpuô  oæ  thå  PFEÔ 
+portioî oæ thå compileò package®  (OCÏ ½ Objecô COde).
+
+A.PCO -- 
+
+Thió samplå prograí ió thå P-codå outpuô oæ thå PPC.COÍ  portioî 
+oæ  thå  compiler®   Botè A.PCÏ anä A.OCO¬  iî  thió  case¬  arå 
+partiallù compileä outputó oæ EQ.PAS¬  thå eighô queenó problem®  
+Normally¬ iæ yoõ uså thå PC.SUÂ filå foò compilations¬ A.OCÏ anä 
+A.PCÏ  wilì  botè bå writteî tï disë anä subsequentlù eraseä  bù 
+thå submiô file.
+
+COMPARE.COM -- 
+
+prograí tï comparå twï files¬  froí CP/Í Users§ Grouğ disë  #40¬ 
+usefuì  foò  checkinç differenceó betweeî differenô versionó  oæ 
+thå samå program.
+
+CPMDIR.C -- 
+
+Á  UNIØ Ã prograí foò printinç á CP/Í directorù tï STDOUÔ  (UNIØ 
+printer).
+
+DISK.DOC -- 
+
+Bob Van Valzah's notes on some of the files on this disk.
+
+
+DMSPATCH.ASM -- 
+
+Patching for SPEED.COM or SPEED2.COM
+for use on DMS controller.
+
+DSCUSPAT.ASM -- 
+
+Patchinç  foò  SPEED.COÍ  oò SPEED2.COÍ foò uså  oî  thå  DISCUÓ 
+controller.
+
+EQ.COM -- 
+
+Compileä  outpuô  oæ EQ.PAS¬  thå eighô  queenó  chesó  problem¬ 
+writteî bù Bob.
+
+EQ.PAS -- 
+
+Sourcå  codå iî Pascaì tï prinô ouô alì solutionó tï thå  eight-
+queenó chesó problem.
+
+
+ŠFMAN.PRN -- 
+
+"Fast Manual" -- documentation for SPEED.
+
+FROMCPM.C -- 
+
+UNIX C program to print a CP/M file to STDOUT via modem.
+
+FWD.PAS -- Sample Pascal Program.
+
+HW5.COM -- Sample program.
+
+HW5.PAS -- 
+
+Samplå PASCAÌ prograí tï builä aî optimaì searcè treå anä decodå 
+á message.
+
+HW5DATA. -- Sample data for above program.
+
+MICROPAT.ASM -- 
+
+Patch for SPEED for use on MICROPOLIS disk controller systems.
+
+PASYNTAX.DOC -- Bob's notes on PASCAL syntax.
+
+PC.SUB -- Submit file for compiling from .PAS file to .COM file.
+
+PFET.COM -- Part of PPC compiler package.
+
+PFET.PAS -- 
+
+Sourcå  codå  foò  thå  PFEÔ portioî  oæ  thå  compileò  packagå 
+(compileó P-codå intï objecô code).
+
+PHONE.C -- 
+
+UNIØ  Ã  prograí tï prinô ouô thå wordó yoõ caî spelì witè  youò 
+phonå number.
+
+PLAYDATA. -- data for following program.
+
+PLAYKAL.PAS -- 
+
+Samplå  prograí  tï  determinå besô moveó iî  á  gamå  oæ  Kalaè 
+(Anybodù kno÷ ho÷ tï plaù Kalah?)
+
+POPS.DOC -- 
+
+Bob's documentation on the P-codes used by the compiler.
+
+POWTWO.PAS -- 
+
+Sample program to print out the negative powers of 2.
+
+Š               PPC.COM -- PASCAL PASCAL COMPILER.
+
+PPC.DOC -- Documentation on the compiler.
+
+PPC.PAS -- Pascal Source code for the compiler.
+
+PSTACK.DOC -- 
+
+Documentatioî oî thå stacë operationó oæ thå run-timå P-machine.
+
+REGEN.DOC -- Notes on how to modify and recompile the compiler.
+
+RSPEED.ASM -- Disk Hardware Read Speed Tester.
+
+RSPEED.COM -- Object of above.
+
+RTP.ASM -- Run Time Package Source code file.
+
+RTP.COM -- Run Time Package Object code file.
+
+SKEW2PAT.ASM -- Patch for SPEED or SPEED2.
+
+SKEW3PAT.ASM -- Patch for SPEED or SPEED2.
+
+SMAN.PRN -- Speed Users Manual.
+
+SPEED.COM -- Disk Speed-up program for CP/M 1.4
+
+SPEED2.COM -- Same as above for CP/M 2.2
+
+STIRLING.PAS -- Sample program to generate Stirling numbers.
+
+TESTER.PAS -- Sample program.
+
+VALIDATE.SUB -- Submit file to verify that your computer is "fertile."
+
+
+.paŠ
+
+Contents of this disk
+=====================
+
+
+compare.com	file compare utility from previous CP/M UG disk
+		an absolute must for self compiler writers
+
+cpmdir.c	V7 UNIX C program to print a CP/M directory on stdout
+
+disk.doc	this file
+
+eq.pas		prints all solutions to the "eight queens problem"
+
+fromcpm.c	V7 UNIX C program to read a CP/M file to standard output
+
+fwd.pas		Pascal program illustrating forward procedure declarations
+
+hw5.pas		builds an optimal binary search tree and decodes a message
+
+hw5data		sample data for above
+
+pasyntax.doc	syntax graphs for this Pascal compiler
+
+pc.sub		submit file to compile a Pascal program
+
+pfet.com	object code of the p-code to 8080 translator
+
+pfet.pas	source of above
+
+phone.c		C program to print words you can spell with your phone number
+
+playkal.pas	Pascal program to determine best moves in game of Kalah
+
+playdata	sample data for above
+
+pops.doc	documentation on the p-codes used by the compiler
+
+powtwo.pas	Pascal program to print negative powers of two
+
+ppc.com		object code of Pascal to p-code compiler
+
+ppc.doc		users manual for Pascal compiler
+
+ppc.pas		source of Pascal compiler
+
+pstack.doc	documentation on the run time p-machine stack
+
+regen.doc	notes on how to modify and compile the compiler
+
+rtp.asm		source for the run time package
+
+rtp.com		object of above
+Šspeed.com	makes your system go faster by disk buffering
+
+speed2.com	above for 2.x systems
+
+stirling.pas	Pascal program to print a table of Stirling numbers
+
+tester.pas	tests functionality of Pascal compiler
+
+validate.sub	submit file to make sure you have a "fertile" compiler
+
+
+
+Both playkal.pas and hw5.pas are solutions to programming assignments
+for my computer science classes at the University of Illinos.  They are
+included here to show how to build trees when you don't have pointers.
+They also illustrate a kludgey way of simulating Pascal records when you
+don't have them either.
+
+stirling.pas is included to show a kludgey way to do output formatting.
+
+

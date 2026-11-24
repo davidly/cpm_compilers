@@ -1,0 +1,22 @@
+ppc ppc.pas a.pco
+pfet a.pco a.oco
+era a.pco
+pip ppcnew.com=rtp.com,a.oco[vo
+era a.oco
+ppc pfet.pas a.pco
+pfet a.pco a.oco
+era a.pco
+pip pfetnew.com=rtp.com,a.oco[vo
+era a.oco
+ppcnew ppc.pas a.pco
+pfetnew a.pco a.oco
+era a.pco
+pip ppcself.com=rtp.com,a.oco[vo
+era a.oco
+compare ppcself.com ppcnew.com
+ppcnew pfet.pas a.pco
+pfetnew a.pco a.oco
+era a.pco
+pip pfetself.com=rtp.com,a.oco[vo
+compare pfetself.com pfetnew.com
+

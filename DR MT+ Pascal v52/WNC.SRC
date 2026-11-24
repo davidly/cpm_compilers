@@ -1,0 +1,21 @@
+MODULE WRNXCH;
+
+(*$M @WNC*)
+(*$M **)
+
+(*$I FIBDEF.LIB*)
+
+VAR
+  @LFB:		EXTERNAL ^FIB;
+
+EXTERNAL PROCEDURE PUT(VAR F:FIB; SZ:INTEGER);
+
+PROCEDURE @WNC(CH:CHAR);
+BEGIN
+  @LFB^.FBUFFER[0] := CH;		(* F^ := CH *)
+  PUT(@LFB^,@LFB^.BUFLEN)		(* PUT(F)   *)
+END;
+
+MODEND.
+
+
