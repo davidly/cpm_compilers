@@ -104,8 +104,8 @@ Microsoft COBOL v4.65|Microsoft Cobol v465|sieve,e,ttt|m|com|1|TTT.COM|-
 SuperSoft C v1.1.25|SuperSoft C v1125|sieve,e,ttt|m|com|10|TTT.COM|-
 Whitesmith C v2.2|Whitesmith C v2.2|sieve,e,tm,ttt|m|com|10|TTT.COM|-
 System/z BASIC/Z v1.11|SystemZ BASICZ v111|sieve,e,ttt|systemz|com|10|TTT.COM|-
-Nevada NVBASIC v2.2|Nevada BASIC v2.2|sieve,e,ttt|-|ntvcm -n -c -p BASIC {B}|10|TTT.BAS|*8190/4195
-Nevada FORTRAN v3.0 (mod 0)|Nevada fortran v3|sieve,e,ttt|m|com|1|TTT.COM|*8190/2000
+Nevada NVBASIC v2.2|Nevada BASIC v2.2|sieve,e,ttt|-|ntvcm -n -c -p BASIC {B}|10|TTT.BAS|-
+Nevada FORTRAN v3.0 (mod 0)|Nevada fortran v3|sieve,e,ttt|m|com|1|TTT.COM|-
 SuperSoft FORTRAN v3.2|SuperSoft fortran v32|sieve,e,ttt|m|com|1|TTT.COM|-
 SuperSoft Ada v2.10|SuperSoft ada v21|sieve,e,ttt|m|com|1|TTT.COM|-
 Digital Research CBASIC CB-80 v2.0|dr CBASIC v2|sieve,e,ttt|m|com|1|TTT.COM|-
@@ -121,7 +121,7 @@ Software Tookworks C/80 v3.0|software toolworks c 80 v3.0|sieve,e,tm,ttt|m|com|1
 Software Tookworks C/80 v3.0a|software toolworks c 80 v3.0a|sieve,e,tm,ttt|m|com|1|TTT.COM|-
 8080 Forth 83 v2.1.0|8080 Forth 83 v2.1.0|sieve,e,ttt|-|ntvcm -n -c -p F83.COM <{B}.F|10|TTT.F|-
 8080 Forth 83 v2.1.1|8080 Forth 83 v2.1.1|sieve,e,ttt|-|ntvcm -n -c -p F83.COM <{B}.F|10|TTT.F|-
-Nevada NVBASIC v2.5|Nevada BASIC v2.5|sieve,e,ttt|-|ntvcm -n -c -p NVBASIC {B}|10|TTT.BAS|*8190/4195
+Nevada NVBASIC v2.5|Nevada BASIC v2.5|sieve,e,ttt|-|ntvcm -n -c -p NVBASIC {B}|10|TTT.BAS|-
 JRT Modula-2 v1.0|JRT Modula-2 v1|sieve,e,ttt|m|@m|10|TTT.LIB-MODULA.LIB|-
 Small-C v1.2|small-c v12|sieve,e,ttt|m|com|10|TTT.COM|-
 BDS C v1.60|BDS C v160|sieve,e,tm,ttt|m|com|10|TTT.COM|-
@@ -165,7 +165,7 @@ NOT_COVERED = [
 
 # Text a correct run prints; without it the timing is meaningless.
 EXPECTED = {
-    "sieve": re.compile(rb"\b(1899|1548|1027|551)\b"),  # smaller sieves: tbasic, Nevada
+    "sieve": re.compile(rb"\b(1899|1548)\b"),  # Tarbell BASIC sieves a smaller array
     "e": re.compile(rb"(?i)\bdo(ne)?\b|27182818"),
     "tm": re.compile(rb"(?i)success"),
     "ttt": re.compile(rb"6493"),
