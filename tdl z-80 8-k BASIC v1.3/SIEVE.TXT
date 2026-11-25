@@ -23,10 +23,3 @@
 
 save "sieve"
 run
-
-rem filler text consumed during execution...
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-rem interactive mode ^x to exit
-
-

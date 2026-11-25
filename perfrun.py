@@ -48,14 +48,13 @@ IS_WINDOWS = os.name == "nt"
 #   tttdiv  : ttt iterations performed by the benchmark (sheet shows per-iteration ms)
 #   size    : file whose size is the "ttt app file size" (A-B means size(A)-size(B))
 #   sieve   : - or a scale applied as a spreadsheet formula (smaller sieve arrays)
-#   flags   : optional; serial = run alone after everything else (see TDL below)
 # {B} is replaced by the benchmark name in uppercase (SIEVE, E, TM, TTT).
 TABLE = r"""
 8080 Assembly|asm|sieve,e,ttt|m|com|1|TTT.COM|-
 Intel PL/M-80 v4.1 (PDP-10 Fortran)|intel plm-80 v4.1|sieve,e,ttt|plm|com|1|TTT.COM|-
 Z80 Assembly|m80|sieve,e,ttt|m|com|1|TTT.COM|-
 Microsoft BASIC  Rev. 4.51|microsoft basic-80 v451|sieve,e,ttt|-|ntvcm -c -p OBASIC {B}.BAS|1|TTT.BAS|-
-TDL Z-80 8-K BASIC sbasic v1.3|tdl z-80 8-k BASIC v1.3|sieve,e,ttt|-|ntvcm -p SBASIC <{B}.TXT|1|TTT.BAS|-|serial
+TDL Z-80 8-K BASIC sbasic v1.3|tdl z-80 8-k BASIC v1.3|sieve,e,ttt|-|ntvcm -p SBASIC <{B}.TXT|1|TTT.BAS|-
 Algol-M v1.1|Algol-M v11|sieve,e,ttt|ntvcm ALGOLM.COM {B}|ntvcm -c -p RUNALG.COM {B}|1|TTT.AIN|-
 RML Algol v4.1C|rml algol60 v41c|sieve,e,ttt|ntvcm ALGOL.COM {B}|ntvcm -c -p ARUN.COM {B}|10|TTT.ASC|-
 Microsoft BASIC Rev. 5.03|microsoft basic-80 v503|sieve,e,ttt|-|ntvcm -c -p MBASIC {B}.BAS|1|TTT.BAS|-
@@ -158,13 +157,6 @@ MESCC v1.24 - 14 Sep 2021|MESCC v1.24|sieve,e,tm,ttt|m|com|10|TTT.COM|-
 Cowgol 0.6.1|Cowgol 0.6.1/all|sieve,e,ttt|m|com|10|TTT.COM|-
 """
 
-# TDL BASIC can't load text files, so its programs are typed in from a .TXT
-# file that ends with filler and ^X (its only way back to CP/M). ntvcm hands
-# typed keys to a polling program at a rate tied to real time, so on a busy
-# machine the ^X can arrive before the benchmark finishes. That row runs on its
-# own after everything else and is retried if its output is incomplete.
-SERIAL_RETRIES = 3
-
 # Spreadsheet rows this script can't produce.
 NOT_COVERED = [
     "HiSoft HI-TECH C v4.11 (DOS x-comp), BA BASIC compiler, PASTA/80, "
@@ -201,7 +193,6 @@ class Row:
         self.tttdiv = int(f[5])
         self.size = f[6]
         self.sieve_scale = f[7]
-        self.serial = len(f) > 8 and f[8] == "serial"
 
 
 def parse_table():
@@ -261,11 +252,19 @@ class Runner:
         self.ntvcm = ntvcm
         self.env = dict(os.environ)
         self.env["PATH"] = os.path.dirname(ntvcm) + os.pathsep + self.env.get("PATH", "")
+        # Intel PL/M-80: the compiler images aren't in the ntvcm repo; they're recovered from a
+        # Tymshare tape with plm80/recover.py (see plm80/README.md there)
         self.plm = None
+        self.plm_missing = "needs NTVCM=<ntvcm repo> with plm80/compile.py"
         ntvcm_repo = os.environ.get("NTVCM") or os.path.join(root, "..", "ntvcm")
         compile_py = os.path.join(ntvcm_repo, "plm80", "compile.py")
         if os.path.isfile(compile_py):
-            self.plm = os.path.abspath(compile_py)
+            upstream = os.path.join(ntvcm_repo, "plm80", "upstream")
+            have = {f.lower() for f in os.listdir(upstream)} if os.path.isdir(upstream) else set()
+            if {"plm81.sav", "plm82.sav"} <= have:
+                self.plm = os.path.abspath(compile_py)
+            else:
+                self.plm_missing = "needs plm80/upstream/PLM81.SAV and PLM82.SAV (run plm80/recover.py in ntvcm)"
 
     def command(self, text, B):
         """Table command line -> (argv, stdin file or None)."""
@@ -290,14 +289,7 @@ class Runner:
                     if base in ("sieve", "e", "tm", "ttt") and not os.path.exists(os.path.join(d, f.upper())):
                         os.rename(os.path.join(d, f), os.path.join(d, f.upper()))
             for b in row.benches:
-                tries = SERIAL_RETRIES if row.serial else 1
-                for attempt in range(tries):
-                    value, out = self.run_bench(row, b, d, log, result)
-                    if value != "FAIL" or stopping.is_set():
-                        break
-                    if attempt + 1 < tries:
-                        log.append(b"[perfrun: incomplete output, retrying]\n")
-                result[b] = value
+                result[b], _ = self.run_bench(row, b, d, log, result)
         except OSError as e:
             log.append(("perfrun: %s\n" % e).encode())
             for b in row.benches:
@@ -328,7 +320,7 @@ class Runner:
                 build_out, _ = run_proc(argv, d, self.env, t)
             elif row.build == "plm":
                 if not self.plm:
-                    result["notes"] = "needs NTVCM=<ntvcm repo> with plm80/compile.py"
+                    result["notes"] = self.plm_missing
                     if b == "ttt":
                         result["size"] = "SKIP"
                     return "SKIP", b""
@@ -460,16 +452,13 @@ def main():
 
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs))
     try:
-        pending = {pool.submit(do, r) for r in rows if not r.serial}
+        pending = {pool.submit(do, r) for r in rows}
         while pending:
             # short waits so Ctrl-C is seen promptly (also on Windows)
             done, pending = concurrent.futures.wait(pending, timeout=1)
             for f in done:
                 f.result()
         pool.shutdown()
-        for r in rows:
-            if r.serial:
-                do(r)
     except KeyboardInterrupt:
         say("\nperfrun: interrupted, cleaning up")
         stopping.set()

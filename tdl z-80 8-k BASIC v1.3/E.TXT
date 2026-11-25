@@ -26,10 +26,3 @@
 410 PRINT "done"
 save "e"
 run
-
-rem filler text consumed during execution...
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-rem interactive mode ^x to exit
-
-

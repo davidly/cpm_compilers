@@ -99,10 +99,3 @@
 4540 goto 4280
 save "ttt"
 run
-
-rem filler text consumed during execution...
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-rem interactive mode ^x to exit
-
-
