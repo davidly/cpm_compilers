@@ -11,34 +11,33 @@ if [ ! -r "$str.COW" ]; then
     exit 1
 fi
 
-ntvcm -r:0 INIT
-# the cowgol passes read their data files past the soft eof; with ^z fill there,
-# tokenise fails and so can codegen (depending on file sizes). 0 fill works.
-ntvcm -r:0 TOKENISE runtime0.cow runtime1.cow runtime2.cow $str.COW
+ntvcm INIT
+# note that tokenise fails if data past the soft eof is ^z. 0 works. hack is in ntvcm.
+ntvcm TOKENISE runtime0.cow runtime1.cow runtime2.cow $str.COW
 
-ntvcm -r:0 PARSER
-ntvcm -r:0 TYPECHCK
+ntvcm PARSER
+ntvcm TYPECHCK
 
 rm IOPS.DAT > /dev/null 2>&1
 mv IOPSOUT.DAT IOPS.DAT
-ntvcm -r:0 BACKEND
+ntvcm BACKEND
 
 rm IOPS.DAT
 mv IOPSOUT.DAT IOPS.DAT
-ntvcm -r:0 CLASSIFY
-ntvcm -r:0 BLOCKIFY
+ntvcm CLASSIFY
+ntvcm BLOCKIFY
 
 rm IOPS.DAT
 mv IOPSOUT.DAT IOPS.DAT
-ntvcm -r:0 CODEGEN
+ntvcm CODEGEN
 
 rm IOPS.DAT
 mv IOPSOUT.DAT IOPS.DAT
-ntvcm -r:0 PLACER
+ntvcm PLACER
 
 rm IOPS.DAT
 mv IOPSOUT.DAT IOPS.DAT
-ntvcm -r:0 EMITTER
+ntvcm EMITTER
 
 rm $str.COM > /dev/null 2>&1
 mv COW.COM $str.COM
