@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-perfrun.py - build and run the sieve / e / tm / ttt benchmarks for each compiler
+perfrun.py - build and run the sieve / e / tm / mm / ttt benchmarks for each compiler
 and record the numbers used by images/table.xlsx:
 
-    sieve ms, e ms, tm ms, ttt ms (per iteration), ttt app file size
+    sieve ms, e ms, tm ms, mm ms, ttt ms (per iteration), ttt app file size
+
+mm is the BYTE (October 1982) 20x20 matrix multiply. It uses floating point
+where the language has it; tools without floating point (INT_MM below) run
+the same arithmetic in integers, and the notes column says so.
 
 Times are ntvcm's "approx ms at 4Mhz" (emulated cycles / 4000), so they don't
 depend on how fast this machine is or how many runs happen in parallel.
@@ -12,9 +16,9 @@ Each compiler is built and run in a temporary copy of its folder. Nothing in
 the repo is modified; all binaries and temp files are deleted when the run
 finishes or is interrupted. Results go to perfrun_results.csv, with rows named
 exactly as in column A of the spreadsheet. A benchmark whose output doesn't
-show the expected result (e.g. 1899 primes, 6493 moves) is recorded as FAIL.
+show the expected result (e.g. 1899 primes, 6493 moves, sum 465880) is recorded as FAIL.
 
-usage: perfrun.py [-j jobs] [-t seconds] [-k] [--ntvcm path] [name-filter ...]
+usage: perfrun.py [-j jobs] [-t seconds] [-b benches] [-k] [--ntvcm path] [name-filter ...]
 
 Works on Linux, macOS, and Windows (Python 3.8+). perfrun.sh and perfrun.bat
 are wrappers for this script.
@@ -48,113 +52,113 @@ IS_WINDOWS = os.name == "nt"
 #   tttdiv  : ttt iterations performed by the benchmark (sheet shows per-iteration ms)
 #   size    : file whose size is the "ttt app file size" (A-B means size(A)-size(B))
 #   sieve   : - or a scale applied as a spreadsheet formula (smaller sieve arrays)
-# {B} is replaced by the benchmark name in uppercase (SIEVE, E, TM, TTT).
+# {B} is replaced by the benchmark name in uppercase (SIEVE, E, TM, MM, TTT).
 TABLE = r"""
-8080 Assembly|asm|sieve,e,ttt|m|com|1|TTT.COM|-
-Intel PL/M-80 v4.1 (PDP-10 Fortran)|intel plm-80 v4.1|sieve,e,ttt|plm|com|1|TTT.COM|-
-Z80 Assembly|m80|sieve,e,ttt|m|com|1|TTT.COM|-
-Microsoft BASIC  Rev. 4.51|microsoft basic-80 v451|sieve,e,ttt|-|ntvcm -c -p OBASIC {B}.BAS|1|TTT.BAS|-
-TDL Z-80 8-K BASIC sbasic v1.3|tdl z-80 8-k BASIC v1.3|sieve,e,ttt|-|ntvcm -p SBASIC <{B}.TXT|1|TTT.BAS|-
-Algol-M v1.1|Algol-M v11|sieve,e,ttt|ntvcm ALGOLM.COM {B}|ntvcm -c -p RUNALG.COM {B}|1|TTT.AIN|-
-RML Algol v4.1C|rml algol60 v41c|sieve,e,ttt|ntvcm ALGOL.COM {B}|ntvcm -c -p ARUN.COM {B}|10|TTT.ASC|-
-Microsoft BASIC Rev. 5.03|microsoft basic-80 v503|sieve,e,ttt|-|ntvcm -c -p MBASIC {B}.BAS|1|TTT.BAS|-
-BDS C v1.1|bds c v11|sieve,e,ttt|m|com|10|TTT.COM|-
-Sorcim PASCAL/M v12.08|Sorcim Pascal M v12.08|sieve,e,ttt|ntvcm -c PRUN PASCAL {B}.PAS, L={B}.LST|ntvcm -c -p PRUN {B}.PCO|10|TTT.PCO|-
-Tarbell BASIC v10.7|tbasic v10.7 and v12.10|sieve,e,ttt|-|ntvcm -c -p TBASIC <{B}.TXT|1|TTT.BAS|-
-Tarbell BASIC v12.10|tbasic v10.7 and v12.10|sieve,e,ttt|-|ntvcm -c -p TBASIC12 <{B}.TXT|1|TTT.BAS|-
-BDS C v1.3|bds c v13|sieve,e,ttt|m|com|10|TTT.COM|-
-Whitesmith C v2.0|Whitesmith C v2|sieve,e,ttt|m|com|10|TTT.COM|-
-Whitesmith C v2.1|Whitesmith C v2.1|sieve,e,ttt|m|com|10|TTT.COM|-
-Whitesmith Pascal (built on C v2.1)|Whitesmith Pascal|sieve,e,ttt|m|com|10|TTT.COM|-
-Microsoft BASIC Rev. 5.1|microsoft basic-80 v51|sieve,e,ttt|-|ntvcm -c -p MBASIC {B}.BAS|1|TTT.BAS|-
-Microsoft BASIC Rev. 5.2 (apple II CP/M)|microsoft basic-80 v52|sieve,e,ttt|-|ntvcm -c -p MBASICA {B}.BAS|1|TTT.BAS|-
-MT MicroSYSTEMS Pascal/MT Compiler v3.0b|mt pascal v3.0b|sieve,e,ttt|m|com|10|TTT.COM|-
-G.Ohnysty S-BASIC v5.4b|g Ohnysty S-BASIC v5.4b|sieve,e,ttt|ntvcm -8 SBASIC {B}.BAS|ntvcm -c -p -n {B}.COM|1|TTT.COM|-
-Transam TCL Pascal v1.4|transam tcl pascal v1.4|sieve,e,ttt|m|com|10|TTT.COM|-
-Systems Consultants PLMX v2.3|Systems Consultants PLMX v23|sieve,e,ttt|m|com|1|TTT.COM|-
-Digital Research PL/I-80 v1.0|dr pli-80 v1|sieve,e,ttt|m|com|1|TTT.COM|-
-InterSystems Pascal/Z v4.0|InterSystems Pascal-Z v4|sieve,e,ttt|m|com|10|TTT.COM|-
-Microsoft COBOL-80 v4.01|Microsoft Cobol v401|sieve,e,ttt|m|com|1|TTT.COM|-
-Pascal Pascal (Robert A Van Valzah) v1|pascal pascal Robert A. Van Valzah v1|sieve,e,ttt|m|com|10|TTT.COM|-
-Pascal Pascal (Robert A Van Valzah) v2|pascal pascal Robert A. Van Valzah|sieve,e,ttt|m|com|10|TTT.COM|-
-Digital Research MT+ Pascal v5.2|DR MT+ Pascal v52|sieve,e,ttt|m|com|10|TTT.COM|-
-Sorcim PASCAL/M v1981 8080|Sorcim Pascal M 1981|sieve,e,ttt|ntvcm -c PRUN PASCAL {B}.PAS, L={B}.LST|ntvcm -c -p PRUN {B}.PCO|10|TTT.PCO|-
-Sorcim PASCAL/M v1981 Z80|Sorcim Pascal M 1981|sieve,e,ttt|ntvcm -c PRUN PASCAL {B}.PAS, L={B}.LST|ntvcm -c -p PRUNZ80 {B}.PCO|10|TTT.PCO|-
-BLS Pascal v1.0|BLS Pascal v1.0|sieve,e,ttt|m|com|10|TTT.COM|-
-BASICE v2.1 + run.com v2.3|basice|sieve,e,ttt|ntvcm BASIC {B}.BAS|ntvcm -c -p RUN {B}.INT|1|TTT.INT|-
-BDS C v1.44|bds c v144|sieve,e,ttt|m|com|10|TTT.COM|-
-Microsoft FORTRAN-80 v3.44|Microsoft fortran v344|sieve,e,ttt|m|com|10|TTT.COM|-
-Compiler Systems CB80 BASIC v1.00|Compiler Systems CB80 v1|sieve,e,ttt|m|com|1|TTT.COM|-
-Digital Research CB80 BASIC v1.3|dr cbasic v1.3|sieve,e,ttt|m|com|1|TTT.COM|-
-Digital Research MT+ Pascal v5.5|DR MT+ Pascal v55|sieve,e,ttt|m|com|1|TTT.COM|-
-Clive Partridge BCPL|Clive Partridge BCPL|sieve,e,ttt|m|com|10|TTT.COM|-
-Microsoft BASIC-80 Rev. 5.21|Microsoft BASIC-80 v521|sieve,e,ttt|-|ntvcm -c -p MBASIC {B}.BAS|1|TTT.BAS|-
-Microsoft BASCOM v5|Microsoft BASCOM v5|sieve,e,ttt|m|com|10|TTT.COM|-
-Q/C Compiler v1.0|qc compiler v1|sieve,e,ttt|m|com|10|TTT.COM|-
-SuperSoft Ada v1.00a|supersoft ada v100a|sieve,e,ttt|m|com|10|TTT.COM|-
-SuperSoft Ada v1.20a|supersoft ada v120a|sieve,e,ttt|m|com|10|TTT.COM|-
-Janus ADA v1.4.5|Janus Ada v145|sieve,e,ttt|m|com|10|TTT.COM|-
-Prospero Software Pro Pascal v2.1|pro pascal v2.1|sieve,e,ttt|m|com|10|TTT.COM|-
-JRT Pascal v2.0|JRT Pascal v2|sieve,e,ttt|ntvcm JRTPAS2 {B}|ntvcm -c -p EXEC {B}.INT|10|TTT.INT|-
-JRT Pascal v2.2|JRT Pascal v22|sieve,e,ttt|ntvcm JRTPAS2 {B}|ntvcm -c -p EXEC {B}.INT|10|TTT.INT|-
-BDS C v1.50a|bds c v150|sieve,e,tm,ttt|m|com|10|TTT.COM|-
-Digital Research PL/I-80 v1.3|dr pli-80 v13|sieve,e,ttt|m|com|1|TTT.COM|-
-Digital Research PL/I-80 v1.4|dr pli-80 v14|sieve,e,ttt|m|com|1|TTT.COM|-
-Microsoft COBOL v4.65|Microsoft Cobol v465|sieve,e,ttt|m|com|1|TTT.COM|-
-SuperSoft C v1.1.25|SuperSoft C v1125|sieve,e,ttt|m|com|10|TTT.COM|-
-Whitesmith C v2.2|Whitesmith C v2.2|sieve,e,tm,ttt|m|com|10|TTT.COM|-
-System/z BASIC/Z v1.11|SystemZ BASICZ v111|sieve,e,ttt|systemz|com|10|TTT.COM|-
-Nevada NVBASIC v2.2|Nevada BASIC v2.2|sieve,e,ttt|-|ntvcm -n -c -p BASIC {B}|10|TTT.BAS|-
-Nevada FORTRAN v3.0 (mod 0)|Nevada fortran v3|sieve,e,ttt|m|com|1|TTT.COM|-
-SuperSoft FORTRAN v3.2|SuperSoft fortran v32|sieve,e,ttt|m|com|1|TTT.COM|-
-SuperSoft Ada v2.10|SuperSoft ada v21|sieve,e,ttt|m|com|1|TTT.COM|-
-Digital Research CBASIC CB-80 v2.0|dr CBASIC v2|sieve,e,ttt|m|com|1|TTT.COM|-
-COMPAS-80 v3.03|COMPAS-80 v3.03|sieve,e,ttt|m|com|10|TTT.COM|-
-Borland Turbo Pascal v1.00|borland turbo pascal v1|sieve,e,ttt|m|com|1|TTT.COM|-
-Digital Research MT+ Pascal v5.6.1|dr mt+ pascal v561|sieve,e,ttt|m|com|1|TTT.COM|-
-JRT Pascal v3.0|JRT Pascal v3|sieve,e,ttt|ntvcm JRTPAS3 {B}|ntvcm -c -p EXEC {B}.INT|10|TTT.INT|-
-JRT Pascal v4.0|jrt pascal v4|sieve,e,ttt|ntvcm PAS4 {B}|ntvcm -c -p EXEC4 {B}.INT|10|TTT.INT|-
-MANX Aztec C v1.05|manx aztec c v105|sieve,e,ttt|m|com|10|TTT.COM|-
-MI - C v3.18I|mi - c v318|sieve,e,ttt|m|com|1|TTT.COM|-
-Q/C Compiler v3.1a|qc compiler v31a|sieve,e,ttt|m|com|10|TTT.COM|-
-Software Tookworks C/80 v3.0|software toolworks c 80 v3.0|sieve,e,tm,ttt|m|com|1|TTT.COM|-
-Software Tookworks C/80 v3.0a|software toolworks c 80 v3.0a|sieve,e,tm,ttt|m|com|1|TTT.COM|-
-8080 Forth 83 v2.1.0|8080 Forth 83 v2.1.0|sieve,e,ttt|-|ntvcm -n -c -p F83.COM <{B}.F|10|TTT.F|-
-8080 Forth 83 v2.1.1|8080 Forth 83 v2.1.1|sieve,e,ttt|-|ntvcm -n -c -p F83.COM <{B}.F|10|TTT.F|-
-Nevada NVBASIC v2.5|Nevada BASIC v2.5|sieve,e,ttt|-|ntvcm -n -c -p NVBASIC {B}|10|TTT.BAS|-
-JRT Modula-2 v1.0|JRT Modula-2 v1|sieve,e,ttt|m|@m|10|TTT.LIB-MODULA.LIB|-
-Small-C v1.2|small-c v12|sieve,e,ttt|m|com|10|TTT.COM|-
-BDS C v1.60|BDS C v160|sieve,e,tm,ttt|m|com|10|TTT.COM|-
-BDS C vZ2.0 (for ZCPR3)|bds c vZ20|sieve,e,tm,ttt|m|com|10|TTT.COM|-
-Janus Ada v1.5.0|Janus Ada v150|sieve,e,ttt|m|com|1|TTT.COM|-
-Borland Turbo Pascal v2.00A|borland turbo pascal v2|sieve,e,ttt|m|com|1|TTT.COM|-
-MANX Aztec C v1.06B|manx aztec c v106b|sieve,e,tm,ttt|m|com|1|TTT.COM|-
-MANX Aztec C v1.06D|manx aztec c v106d|sieve,e,tm,ttt|m|com|1|TTT.COM|-
-Software Tookworks C/80 v3.1|software toolworks c80 v3.1|sieve,e,tm,ttt|m|com|1|TTT.COM|-
-Draco v2.3|draco v2.3|sieve,e,ttt|m|com|10|TTT.COM|-
-Hochstrasser Modula-2 v2.01|Hochstrasser Modula-2 v201|sieve,e,ttt|m|com|10|TTT.COM|-
-Borland Turbo Pascal v3.01A|borland turbo pascal v3|sieve,e,ttt|m|com|1|TTT.COM|-
-Eco-C v3.43|eco-c v343|sieve,e,tm,ttt|m|com|1|TTT.COM|-
-HiSoft HI-TECH C v1.35|hisoft hi-tech c v135|sieve,e,tm,ttt|m|com|1|TTT.COM|-
-Mix C v2.0.0|mix c v2|sieve,e,ttt|m|com|10|TTT.COM|-
-Mix C v2.1.0|mix c v2.1|sieve,e,ttt|m|com|10|TTT.COM|-
-Oxford Pascal v2.1|Oxford Pascal v21|sieve,e,ttt|m|com|10|TTT.COM|-
-HiSoft Pascal 30 October 1985|hisoft pascal 1985|sieve,e,ttt|m|com|10|TTT.COM|-
-HiSoft Pascal 30 May 1986|hisoft pascal 1986|sieve,e,ttt|m|com|10|TTT.COM|-
-Borland Turbo Modula-2 (interpreted)|borland turbo modula-2|sieve,e,ttt|m|ntvcm -c -p M2RUN {B}|1|TTT.MCD|-
-Borland Turbo Modula-2 (compiled)|borland turbo modula-2|sieve,e,ttt|m|com|1|TTT.COM|-
-Small-C v2.7|small-c v27|sieve,e,ttt|m|com|10|TTT.COM|-
-FTL Modula-2 v1.18|ftl modula-2 v118|sieve,e,ttt|m|com|10|TTT.COM|-
-Arnor BCPL v2.00|Arnor BCPL v2.00|sieve,e,ttt|m|com|10|TTT.COM|-
-S. Kelley Z80 BCPL|z80 BCPL|sieve,e,ttt|m|com|10|TTT.COM|-
-HiSoft HI-TECH C v3.09|hisoft hi-tech c v3.09|sieve,e,tm,ttt|m|com|1|TTT.COM|-
-Small-C/Plus v1.00|small-c plus v1|sieve,e,tm,ttt|m|com|10|TTT.COM|-
-FTL Modula-2 v1.30|ftl modula-2 v130|sieve,e,ttt|m|com|10|TTT.COM|-
-Z80 CamelForth v1.01|Z80 CamelForth v101|sieve,e,ttt|-|ntvcm -c -p CAMEL80 <{B}.F|10|TTT.F|-
-DX-Forth v4.30|DX-FORTH for CPM 4.30|sieve,e,ttt|-|ntvcm -c -p FORTH.COM - include {B}.F {B} bye|10|TTT.F|-
-DX-Forth v4.56|DX-FORTH for CPM 4.56|sieve,e,ttt|-|ntvcm -c -p FORTH.COM - include {B}.F {B} bye|10|TTT.F|-
-MESCC v1.24 - 14 Sep 2021|MESCC v1.24|sieve,e,tm,ttt|m|com|10|TTT.COM|-
-Cowgol 0.6.1|Cowgol 0.6.1/all|sieve,e,ttt|m|com|10|TTT.COM|-
+8080 Assembly|asm|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Intel PL/M-80 v4.1 (PDP-10 Fortran)|intel plm-80 v4.1|sieve,e,mm,ttt|plm|com|1|TTT.COM|-
+Z80 Assembly|m80|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Microsoft BASIC  Rev. 4.51|microsoft basic-80 v451|sieve,e,mm,ttt|-|ntvcm -c -p OBASIC {B}.BAS|1|TTT.BAS|-
+TDL Z-80 8-K BASIC sbasic v1.3|tdl z-80 8-k BASIC v1.3|sieve,e,mm,ttt|-|ntvcm -p SBASIC <{B}.TXT|1|TTT.BAS|-
+Algol-M v1.1|Algol-M v11|sieve,e,mm,ttt|ntvcm ALGOLM.COM {B}|ntvcm -c -p RUNALG.COM {B}|1|TTT.AIN|-
+RML Algol v4.1C|rml algol60 v41c|sieve,e,mm,ttt|ntvcm ALGOL.COM {B}|ntvcm -c -p ARUN.COM {B}|10|TTT.ASC|-
+Microsoft BASIC Rev. 5.03|microsoft basic-80 v503|sieve,e,mm,ttt|-|ntvcm -c -p MBASIC {B}.BAS|1|TTT.BAS|-
+BDS C v1.1|bds c v11|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Sorcim PASCAL/M v12.08|Sorcim Pascal M v12.08|sieve,e,mm,ttt|ntvcm -c PRUN PASCAL {B}.PAS, L={B}.LST|ntvcm -c -p PRUN {B}.PCO|10|TTT.PCO|-
+Tarbell BASIC v10.7|tbasic v10.7 and v12.10|sieve,e,mm,ttt|-|ntvcm -c -p TBASIC <{B}.TXT|1|TTT.BAS|-
+Tarbell BASIC v12.10|tbasic v10.7 and v12.10|sieve,e,mm,ttt|-|ntvcm -c -p TBASIC12 <{B}.TXT|1|TTT.BAS|-
+BDS C v1.3|bds c v13|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Whitesmith C v2.0|Whitesmith C v2|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Whitesmith C v2.1|Whitesmith C v2.1|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Whitesmith Pascal (built on C v2.1)|Whitesmith Pascal|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Microsoft BASIC Rev. 5.1|microsoft basic-80 v51|sieve,e,mm,ttt|-|ntvcm -c -p MBASIC {B}.BAS|1|TTT.BAS|-
+Microsoft BASIC Rev. 5.2 (apple II CP/M)|microsoft basic-80 v52|sieve,e,mm,ttt|-|ntvcm -c -p MBASICA {B}.BAS|1|TTT.BAS|-
+MT MicroSYSTEMS Pascal/MT Compiler v3.0b|mt pascal v3.0b|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+G.Ohnysty S-BASIC v5.4b|g Ohnysty S-BASIC v5.4b|sieve,e,mm,ttt|ntvcm -8 SBASIC {B}.BAS|ntvcm -c -p -n {B}.COM|1|TTT.COM|-
+Transam TCL Pascal v1.4|transam tcl pascal v1.4|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Systems Consultants PLMX v2.3|Systems Consultants PLMX v23|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Digital Research PL/I-80 v1.0|dr pli-80 v1|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+InterSystems Pascal/Z v4.0|InterSystems Pascal-Z v4|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Microsoft COBOL-80 v4.01|Microsoft Cobol v401|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Pascal Pascal (Robert A Van Valzah) v1|pascal pascal Robert A. Van Valzah v1|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Pascal Pascal (Robert A Van Valzah) v2|pascal pascal Robert A. Van Valzah|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Digital Research MT+ Pascal v5.2|DR MT+ Pascal v52|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Sorcim PASCAL/M v1981 8080|Sorcim Pascal M 1981|sieve,e,mm,ttt|ntvcm -c PRUN PASCAL {B}.PAS, L={B}.LST|ntvcm -c -p PRUN {B}.PCO|10|TTT.PCO|-
+Sorcim PASCAL/M v1981 Z80|Sorcim Pascal M 1981|sieve,e,mm,ttt|ntvcm -c PRUN PASCAL {B}.PAS, L={B}.LST|ntvcm -c -p PRUNZ80 {B}.PCO|10|TTT.PCO|-
+BLS Pascal v1.0|BLS Pascal v1.0|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+BASICE v2.1 + run.com v2.3|basice|sieve,e,mm,ttt|ntvcm BASIC {B}.BAS|ntvcm -c -p RUN {B}.INT|1|TTT.INT|-
+BDS C v1.44|bds c v144|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Microsoft FORTRAN-80 v3.44|Microsoft fortran v344|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Compiler Systems CB80 BASIC v1.00|Compiler Systems CB80 v1|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Digital Research CB80 BASIC v1.3|dr cbasic v1.3|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Digital Research MT+ Pascal v5.5|DR MT+ Pascal v55|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Clive Partridge BCPL|Clive Partridge BCPL|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Microsoft BASIC-80 Rev. 5.21|Microsoft BASIC-80 v521|sieve,e,mm,ttt|-|ntvcm -c -p MBASIC {B}.BAS|1|TTT.BAS|-
+Microsoft BASCOM v5|Microsoft BASCOM v5|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Q/C Compiler v1.0|qc compiler v1|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+SuperSoft Ada v1.00a|supersoft ada v100a|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+SuperSoft Ada v1.20a|supersoft ada v120a|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Janus ADA v1.4.5|Janus Ada v145|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Prospero Software Pro Pascal v2.1|pro pascal v2.1|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+JRT Pascal v2.0|JRT Pascal v2|sieve,e,mm,ttt|ntvcm JRTPAS2 {B}|ntvcm -c -p EXEC {B}.INT|10|TTT.INT|-
+JRT Pascal v2.2|JRT Pascal v22|sieve,e,mm,ttt|ntvcm JRTPAS2 {B}|ntvcm -c -p EXEC {B}.INT|10|TTT.INT|-
+BDS C v1.50a|bds c v150|sieve,e,tm,mm,ttt|m|com|10|TTT.COM|-
+Digital Research PL/I-80 v1.3|dr pli-80 v13|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Digital Research PL/I-80 v1.4|dr pli-80 v14|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Microsoft COBOL v4.65|Microsoft Cobol v465|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+SuperSoft C v1.1.25|SuperSoft C v1125|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Whitesmith C v2.2|Whitesmith C v2.2|sieve,e,tm,mm,ttt|m|com|10|TTT.COM|-
+System/z BASIC/Z v1.11|SystemZ BASICZ v111|sieve,e,mm,ttt|systemz|com|10|TTT.COM|-
+Nevada NVBASIC v2.2|Nevada BASIC v2.2|sieve,e,mm,ttt|-|ntvcm -n -c -p BASIC {B}|10|TTT.BAS|-
+Nevada FORTRAN v3.0 (mod 0)|Nevada fortran v3|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+SuperSoft FORTRAN v3.2|SuperSoft fortran v32|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+SuperSoft Ada v2.10|SuperSoft ada v21|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Digital Research CBASIC CB-80 v2.0|dr CBASIC v2|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+COMPAS-80 v3.03|COMPAS-80 v3.03|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Borland Turbo Pascal v1.00|borland turbo pascal v1|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Digital Research MT+ Pascal v5.6.1|dr mt+ pascal v561|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+JRT Pascal v3.0|JRT Pascal v3|sieve,e,mm,ttt|ntvcm JRTPAS3 {B}|ntvcm -c -p EXEC {B}.INT|10|TTT.INT|-
+JRT Pascal v4.0|jrt pascal v4|sieve,e,mm,ttt|ntvcm PAS4 {B}|ntvcm -c -p EXEC4 {B}.INT|10|TTT.INT|-
+MANX Aztec C v1.05|manx aztec c v105|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+MI - C v3.18I|mi - c v318|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Q/C Compiler v3.1a|qc compiler v31a|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Software Tookworks C/80 v3.0|software toolworks c 80 v3.0|sieve,e,tm,mm,ttt|m|com|1|TTT.COM|-
+Software Tookworks C/80 v3.0a|software toolworks c 80 v3.0a|sieve,e,tm,mm,ttt|m|com|1|TTT.COM|-
+8080 Forth 83 v2.1.0|8080 Forth 83 v2.1.0|sieve,e,mm,ttt|-|ntvcm -n -c -p F83.COM <{B}.F|10|TTT.F|-
+8080 Forth 83 v2.1.1|8080 Forth 83 v2.1.1|sieve,e,mm,ttt|-|ntvcm -n -c -p F83.COM <{B}.F|10|TTT.F|-
+Nevada NVBASIC v2.5|Nevada BASIC v2.5|sieve,e,mm,ttt|-|ntvcm -n -c -p NVBASIC {B}|10|TTT.BAS|-
+JRT Modula-2 v1.0|JRT Modula-2 v1|sieve,e,mm,ttt|m|@m|10|TTT.LIB-MODULA.LIB|-
+Small-C v1.2|small-c v12|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+BDS C v1.60|BDS C v160|sieve,e,tm,mm,ttt|m|com|10|TTT.COM|-
+BDS C vZ2.0 (for ZCPR3)|bds c vZ20|sieve,e,tm,mm,ttt|m|com|10|TTT.COM|-
+Janus Ada v1.5.0|Janus Ada v150|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Borland Turbo Pascal v2.00A|borland turbo pascal v2|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+MANX Aztec C v1.06B|manx aztec c v106b|sieve,e,tm,mm,ttt|m|com|1|TTT.COM|-
+MANX Aztec C v1.06D|manx aztec c v106d|sieve,e,tm,mm,ttt|m|com|1|TTT.COM|-
+Software Tookworks C/80 v3.1|software toolworks c80 v3.1|sieve,e,tm,mm,ttt|m|com|1|TTT.COM|-
+Draco v2.3|draco v2.3|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Hochstrasser Modula-2 v2.01|Hochstrasser Modula-2 v201|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Borland Turbo Pascal v3.01A|borland turbo pascal v3|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Eco-C v3.43|eco-c v343|sieve,e,tm,mm,ttt|m|com|1|TTT.COM|-
+HiSoft HI-TECH C v1.35|hisoft hi-tech c v135|sieve,e,tm,mm,ttt|m|com|1|TTT.COM|-
+Mix C v2.0.0|mix c v2|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Mix C v2.1.0|mix c v2.1|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Oxford Pascal v2.1|Oxford Pascal v21|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+HiSoft Pascal 30 October 1985|hisoft pascal 1985|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+HiSoft Pascal 30 May 1986|hisoft pascal 1986|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Borland Turbo Modula-2 (interpreted)|borland turbo modula-2|sieve,e,mm,ttt|m|ntvcm -c -p M2RUN {B}|1|TTT.MCD|-
+Borland Turbo Modula-2 (compiled)|borland turbo modula-2|sieve,e,mm,ttt|m|com|1|TTT.COM|-
+Small-C v2.7|small-c v27|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+FTL Modula-2 v1.18|ftl modula-2 v118|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Arnor BCPL v2.00|Arnor BCPL v2.00|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+S. Kelley Z80 BCPL|z80 BCPL|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+HiSoft HI-TECH C v3.09|hisoft hi-tech c v3.09|sieve,e,tm,mm,ttt|m|com|1|TTT.COM|-
+Small-C/Plus v1.00|small-c plus v1|sieve,e,tm,mm,ttt|m|com|10|TTT.COM|-
+FTL Modula-2 v1.30|ftl modula-2 v130|sieve,e,mm,ttt|m|com|10|TTT.COM|-
+Z80 CamelForth v1.01|Z80 CamelForth v101|sieve,e,mm,ttt|-|ntvcm -c -p CAMEL80 <{B}.F|10|TTT.F|-
+DX-Forth v4.30|DX-FORTH for CPM 4.30|sieve,e,mm,ttt|-|ntvcm -c -p FORTH.COM - include {B}.F {B} bye|10|TTT.F|-
+DX-Forth v4.56|DX-FORTH for CPM 4.56|sieve,e,mm,ttt|-|ntvcm -c -p FORTH.COM - include {B}.F {B} bye|10|TTT.F|-
+MESCC v1.24 - 14 Sep 2021|MESCC v1.24|sieve,e,tm,mm,ttt|m|com|10|TTT.COM|-
+Cowgol 0.6.1|Cowgol 0.6.1/all|sieve,e,mm,ttt|m|com|10|TTT.COM|-
 """
 
 # Spreadsheet rows this script can't produce.
@@ -163,11 +167,31 @@ NOT_COVERED = [
     "Z88DK sccz80/zsdcc, pint, dcc (cross-compilers)",
 ]
 
+# Folders whose mm benchmark uses integer arithmetic: the language or this version of it
+# has no floating point, or its floating point can't run mm (see the MM source's comments).
+INT_MM = {
+    "bds c v11", "bds c v13", "bds c v144", "bds c v150", "BDS C v160", "bds c vZ20",
+    "software toolworks c 80 v3.0", "software toolworks c 80 v3.0a", "software toolworks c80 v3.1",
+    "qc compiler v1", "qc compiler v31a", "SuperSoft C v1125", "mi - c v318",
+    "hisoft hi-tech c v135", "small-c v27", "MESCC v1.24", "Whitesmith C v2",
+    "pascal pascal Robert A. Van Valzah v1", "pascal pascal Robert A. Van Valzah",
+    "supersoft ada v100a", "supersoft ada v120a", "Janus Ada v145",
+    "8080 Forth 83 v2.1.0", "8080 Forth 83 v2.1.1", "Z80 CamelForth v101",
+    "DX-FORTH for CPM 4.30", "DX-FORTH for CPM 4.56",
+    "Arnor BCPL v2.00", "z80 BCPL", "Clive Partridge BCPL", "draco v2.3", "Cowgol 0.6.1/all",
+    "Microsoft Cobol v401", "Microsoft Cobol v465",
+    "asm", "m80", "Systems Consultants PLMX v23", "intel plm-80 v4.1",
+}
+
 # Text a correct run prints; without it the timing is meaningless.
 EXPECTED = {
     "sieve": re.compile(rb"\b(1899|1548)\b"),  # Tarbell BASIC sieves a smaller array
     "e": re.compile(rb"(?i)\bdo(ne)?\b|27182818"),
     "tm": re.compile(rb"(?i)success"),
+    # the sum as printed after its label, e.g. "summ is : 465880.000000", "SUM =  465880",
+    # "summ is :    4.6588E+05", "summ is exactly 465880" where a runtime rounds what it prints,
+    # or "summ rounds to 465880" where a runtime's reals are too short to be exact (RML Algol)
+    "mm": re.compile(rb"(?i)summ?\s*(is\s*)?(:|=|exactly|rounds to)?\s*(465880\b|4\.65880*\s*E\+?0*5\b)"),
     "ttt": re.compile(rb"6493"),
 }
 
@@ -286,10 +310,12 @@ class Runner:
                 # CP/M wants uppercase names; uppercase lowercase benchmark files
                 for f in os.listdir(d):
                     base = f.split(".")[0]
-                    if base in ("sieve", "e", "tm", "ttt") and not os.path.exists(os.path.join(d, f.upper())):
+                    if base in ("sieve", "e", "tm", "mm", "ttt") and not os.path.exists(os.path.join(d, f.upper())):
                         os.rename(os.path.join(d, f), os.path.join(d, f.upper()))
             for b in row.benches:
                 result[b], _ = self.run_bench(row, b, d, log, result)
+            if "mm" in row.benches and row.folder in INT_MM:
+                result["notes"] = "; ".join(n for n in (result["notes"], "integer mm") if n)
         except OSError as e:
             log.append(("perfrun: %s\n" % e).encode())
             for b in row.benches:
@@ -409,7 +435,7 @@ def fmt(v):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Build and time the sieve/e/tm/ttt benchmarks for each compiler; "
+        description="Build and time the sieve/e/tm/mm/ttt benchmarks for each compiler; "
                     "writes perfrun_results.csv for images/table.xlsx.")
     ap.add_argument("filters", nargs="*",
                     help="only run rows whose spreadsheet name or folder contains one of these (case-insensitive)")
@@ -417,6 +443,8 @@ def main():
                     help="compilers to run in parallel (default: number of cpus)")
     ap.add_argument("-t", "--timeout", type=int, default=1800,
                     help="timeout in seconds for each build/run step (default 1800)")
+    ap.add_argument("-b", "--benches",
+                    help="comma-separated benchmarks to run (default: all in the table)")
     ap.add_argument("-k", "--keep-logs", action="store_true",
                     help="keep the build/run logs (the binaries are still deleted)")
     ap.add_argument("--ntvcm", help="path to ntvcm (default: search the PATH"
@@ -435,6 +463,12 @@ def main():
         if not rows:
             sys.exit("perfrun: no rows match: " + " ".join(args.filters))
 
+    if args.benches:
+        only = args.benches.lower().split(",")
+        for r in rows:
+            r.benches = [b for b in r.benches if b in only]
+        rows = [r for r in rows if r.benches]
+
     work = tempfile.mkdtemp(prefix="perfrun.")
     os.makedirs(os.path.join(work, "results"))
     runner = Runner(args, root, work, ntvcm)
@@ -446,9 +480,9 @@ def main():
     def do(row):
         res = runner.run_entry(row)
         results[row.index] = res
-        say("  %-45s sieve %-10s e %-8s tm %-8s ttt %-8s size %s" % (
+        say("  %-45s sieve %-10s e %-8s tm %-8s mm %-9s ttt %-8s size %s" % (
             row.name, fmt(res.get("sieve")), fmt(res.get("e")), fmt(res.get("tm")),
-            fmt(res.get("ttt")), fmt(res.get("size"))))
+            fmt(res.get("mm")), fmt(res.get("ttt")), fmt(res.get("size"))))
 
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs))
     try:
@@ -472,11 +506,11 @@ def main():
     out_csv = os.path.join(root, "perfrun_results.csv")
     with open(out_csv, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["compiler", "sieve ms", "e ms", "tm ms", "ttt ms", "ttt app file size", "notes"])
+        w.writerow(["compiler", "sieve ms", "e ms", "tm ms", "mm ms", "ttt ms", "ttt app file size", "notes"])
         for r in rows:
             res = results.get(r.index, {})
             w.writerow([r.name, res.get("sieve", ""), res.get("e", ""), res.get("tm", ""),
-                        res.get("ttt", ""), res.get("size", ""), res.get("notes", "")])
+                        res.get("mm", ""), res.get("ttt", ""), res.get("size", ""), res.get("notes", "")])
 
     failed = [r for r in rows if "FAIL" in results.get(r.index, {}).values()]
     if failed:

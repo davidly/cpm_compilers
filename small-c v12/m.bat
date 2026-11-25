@@ -18,11 +18,12 @@ exit /b 0
 ntvcm cc %str%
 ntvcm zmac %str%=%str%
 
-rem if you need floating point...
-rem NTVCM ZLINK %str%,%str%=%str%,IOLIB,FLOAT,PRINTF2
-
-rem if you don't
-NTVCM ZLINK %str%,%str%=%str%,IOLIB,PRINTF1
+rem floating point (MM) needs FLOAT and the printf that formats doubles
+if /i "%str%" == "MM" (
+    ntvcm ZLINK %str%,%str%=%str%,IOLIB,FLOAT,PRINTF2
+) else (
+    ntvcm ZLINK %str%,%str%=%str%,IOLIB,PRINTF1
+)
 echo:
 
 

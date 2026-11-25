@@ -1,79 +1,71 @@
 pragma optimize(time);
--- MatMul.pkg with the unused "With Util" removed so it builds in the Watcom-generated ntvcmdos.exe.
-
 procedure MM is
     -- Jerry Pournelle's Floating Point Benchmark
     -- October 1982 Byte, pages 254 - 270
-    -- Translated from Pascal into Janus/Ada, 3/13/83
+    -- A and B hold small whole numbers, so the sum is exactly 465880
 
-    M : Constant integer := 20;
-    N : Constant integer := 20;
+    A : array( 1..20, 1..20 ) of float;
+    B : array( 1..20, 1..20 ) of float;
+    C : array( 1..20, 1..20 ) of float;
 
-    Subtype Real Is Float; -- Also can use Long_Float for comparision
+    Summ : float;
 
-    A : array( 0..20, 0..20 ) of Real;
-    B : array( 0..20, 0..20 ) of Real;
-    C : array( 0..20, 0..20 ) of Real;
+    procedure Fill_A is
+    begin
+        for i in 1..20 loop
+            for j in 1..20 loop
+                A(i,j) := float( i + j );
+            end loop;
+        end loop;
+    end Fill_A;
 
-    Summ : Real;
+    procedure Fill_B is
+    begin
+        for i in 1..20 loop
+            for j in 1..20 loop
+                B(i,j) := float( ( i + j ) / j );
+            end loop;
+        end loop;
+    end Fill_B;
 
-    Procedure Fill_A Is
-    Begin
-        For i In 0..20 Loop
-            For j In 0..20 Loop
-                A(i,j) := Real( i + j + 2 );
-            End Loop;
-        End Loop;
-    End Fill_A;
-
-    Procedure Fill_B Is
-    Begin
-        For i In 0..20 Loop
-            For j In 0..20 Loop
-                B(i,j) := Real( ( i + j + 2 ) / ( j + 1 ) );
-            End Loop;
-        End Loop;
-    End Fill_B;
-
-    Procedure Fill_C Is
-    Begin
-        For i In 0..20 Loop
-            For j In 0..20 Loop
+    procedure Fill_C is
+    begin
+        for i in 1..20 loop
+            for j in 1..20 loop
                 C(i,j) := 0.0;
-            End Loop;
-        End Loop;
-    End Fill_C;
+            end loop;
+        end loop;
+    end Fill_C;
 
-    Procedure Matrix_Multiply Is
-    Begin
-        For i In 0..20 Loop
-            For j In 0..20 Loop
-                For k In 0..20 Loop
+    procedure Matrix_Multiply is
+    begin
+        for i in 1..20 loop
+            for j in 1..20 loop
+                for k in 1..20 loop
                     C(i,j) := C(i,j) + A(i,k) * B(k,j);
-                End Loop;
-            End Loop;
-        End Loop;
-    End Matrix_Multiply;
+                end loop;
+            end loop;
+        end loop;
+    end Matrix_Multiply;
 
-    Procedure Summit Is
-    Begin
-        For i In 0..20 Loop
-            For j In 0..20 Loop
+    procedure Summit is
+    begin
+        for i in 1..20 loop
+            for j in 1..20 loop
                 Summ := Summ + C(i,j);
-            End Loop;
-        End Loop;
-    End Summit;
+            end loop;
+        end loop;
+    end Summit;
 
-Begin
+begin
     Summ := 0.0;
     Fill_A;
-    Put(" A filled. "); New_line;
     Fill_B;
-    Put(" B filled. "); New_line;
     Fill_C;
-    Put(" C filled. "); New_line;
     Matrix_Multiply;
-    Put(" Multiplied."); New_line;
     Summit;
-    Put("Summ is : "); Put(Summ); New_Line;
-End MM;
+    put( "summ is : " ); put( Summ ); new_line;
+    if Summ = 465880.0 then
+        put( "summ is exactly 465880" ); new_line;
+    end if;
+end MM;

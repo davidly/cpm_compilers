@@ -1,0 +1,74 @@
+GET "LIBHDR"
+
+GLOBAL
+$(
+    filla:200
+    fillb:201
+    fillc:202
+    matmult:203
+$)
+
+// BYTE magazine October 1982. Jerry Pournelle. Matrix multiply.
+// integer version: BCPL has only integers. BCPL has no multi-dimensional
+// arrays, so the vectors are indexed by hand. Each element of C fits in
+// 16 bits; the sum is kept in base 10000. Expected result: 465880
+
+LET filla( a ) BE
+$(
+    FOR i = 0 TO 19 DO
+        FOR j = 0 TO 19 DO
+            a!( i * 20 + j ) := i + j + 2
+$)
+
+AND fillb( b ) BE
+$(
+    FOR i = 0 TO 19 DO
+        FOR j = 0 TO 19 DO
+            b!( i * 20 + j ) := ( i + j + 2 ) / ( j + 1 )
+$)
+
+AND fillc( c ) BE
+$(
+    FOR i = 0 TO 19 DO
+        FOR j = 0 TO 19 DO
+            c!( i * 20 + j ) := 0
+$)
+
+AND matmult( a, b, c ) BE
+$(
+    FOR i = 0 TO 19 DO
+        FOR j = 0 TO 19 DO
+            FOR k = 0 TO 19 DO
+                c!( i * 20 + j ) := c!( i * 20 + j ) + a!( i * 20 + k ) * b!( k * 20 + j )
+$)
+
+AND START() BE
+$(
+    LET a = vec 399
+    LET b = vec 399
+    LET c = vec 399
+    LET hi = 0
+    LET lo = 0
+
+    filla( a )
+    fillb( b )
+    fillc( c )
+    matmult( a, b, c )
+
+    FOR i = 0 TO 19 DO
+        FOR j = 0 TO 19 DO
+        $(
+            lo := lo + c!( i * 20 + j )
+            WHILE lo >= 10000 DO
+            $(
+                lo := lo - 10000
+                hi := hi + 1
+            $)
+        $)
+
+    WRITEF( "summ is : %N", hi )
+    IF lo < 1000 THEN WRITEF( "0" )
+    IF lo < 100 THEN WRITEF( "0" )
+    IF lo < 10 THEN WRITEF( "0" )
+    WRITEF( "%N*N", lo )
+$)

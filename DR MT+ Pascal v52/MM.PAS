@@ -1,8 +1,10 @@
 { BYTE magazine October 1982. Jerry Pournelle. }
 { various bugs not found because dimensions are square fixed by David Lee }
-{ expected result: 4.65880E+05 }
+{ A and B hold small whole numbers, so every real format gets exactly 465880 }
+{ this runtime prints the sum as 4.659E+05, so the program also checks it }
+{ expected result: 465880 }
 
-program matrix( output );
+program matrix;
 
 const
     l = 20; { rows in A and resulting matrix C }
@@ -71,6 +73,6 @@ begin { matrix }
     matmult;
     summit;
 
-    Writeln( 'summ is :', Summ );
+    writeln( 'summ is : ', Summ:10:1 );
+    if Summ = 465880.0 then writeln( 'summ is exactly 465880' );
 end. { matrix }
-

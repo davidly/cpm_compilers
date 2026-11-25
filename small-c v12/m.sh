@@ -8,11 +8,12 @@ rm $str.COM 2>/dev/null
 ntvcm CC $str
 ntvcm ZMAC $str=$str
 
-# if you need floating point...
-# ntvcm ZLINK $str,$str=$str,IOLIB,FLOAT,PRINTF2
-
-# if you don't
-ntvcm ZLINK $str,$str=$str,IOLIB,PRINTF1
+# floating point (MM) needs FLOAT and the printf that formats doubles
+if [ "$str" = "MM" ]; then
+    ntvcm ZLINK $str,$str=$str,IOLIB,FLOAT,PRINTF2
+else
+    ntvcm ZLINK $str,$str=$str,IOLIB,PRINTF1
+fi
 
 rm $str.MAP 2>/dev/null
 rm $str.OBJ 2>/dev/null

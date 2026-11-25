@@ -1,0 +1,70 @@
+/* BYTE magazine October 1982. Jerry Pournelle. Matrix multiply. */
+/* integer version: Draco has no floating point. Each element of C fits */
+/* in 16 bits; the sum is kept in base 10000. Expected result: 465880 */
+
+[20, 20] word a, b, c;
+
+proc nonrec filla() void:
+    word i, j;
+    for i from 0 upto 19 do
+        for j from 0 upto 19 do
+            a[ i, j ] := i + j + 2;
+        od;
+    od;
+corp;
+
+proc nonrec fillb() void:
+    word i, j;
+    for i from 0 upto 19 do
+        for j from 0 upto 19 do
+            b[ i, j ] := ( i + j + 2 ) / ( j + 1 );
+        od;
+    od;
+corp;
+
+proc nonrec fillc() void:
+    word i, j;
+    for i from 0 upto 19 do
+        for j from 0 upto 19 do
+            c[ i, j ] := 0;
+        od;
+    od;
+corp;
+
+proc nonrec matmult() void:
+    word i, j, k;
+    for i from 0 upto 19 do
+        for j from 0 upto 19 do
+            for k from 0 upto 19 do
+                c[ i, j ] := c[ i, j ] + a[ i, k ] * b[ k, j ];
+            od;
+        od;
+    od;
+corp;
+
+proc nonrec main() void:
+    word i, j, hi, lo;
+
+    filla();
+    fillb();
+    fillc();
+    matmult();
+
+    hi := 0;
+    lo := 0;
+    for i from 0 upto 19 do
+        for j from 0 upto 19 do
+            lo := lo + c[ i, j ];
+            while lo >= 10000 do
+                lo := lo - 10000;
+                hi := hi + 1;
+            od;
+        od;
+    od;
+
+    write( "summ is : ", hi );
+    if lo < 1000 then write( "0" ) fi;
+    if lo < 100 then write( "0" ) fi;
+    if lo < 10 then write( "0" ) fi;
+    writeln( lo );
+corp;

@@ -1,0 +1,278 @@
+; Z80 assembly version of the BYTE magazine October 1982 matrix multiply
+; (Jerry Pournelle), the same code as asm/MM.ASM in Z80 mnemonics.
+; Integer version: A, B, and C hold the same small whole numbers as the
+; floating point versions, and the sum is 465880.
+;
+; equivalent to:
+;     for i := 1 to 20 do for j := 1 to 20 do A[ i, j ] := i + j;
+;     for i := 1 to 20 do for j := 1 to 20 do B[ i, j ] := ( i + j ) div j;
+;     for i := 1 to 20 do for j := 1 to 20 do C[ i, j ] := 0;
+;     for i := 1 to 20 do for j := 1 to 20 do for k := 1 to 20 do
+;         C[ i, j ] := C[ i, j ] + A[ i, k ] * B[ k, j ];
+;     summ := sum of C[ i, j ]
+;
+; A and B fit in bytes (A <= 40, B <= 21) and C in words. The loops run
+; i, k, j so that A[ i, k ] is fixed in the inner loop; for each one a
+; table of A[ i, k ] * 0..21 is built with additions, and the inner loop
+; adds table[ B[ k, j ] ] to C[ i, j ]. The sum is 24 bits.
+
+BDOS  equ 5
+WCONF equ 2
+PRSTR equ 9
+
+N     equ 20
+BMAX  equ 21                    ; largest value in B
+
+aseg
+org     100h
+
+        ; A[ i, j ] := i + j (0-based: i + j + 2)
+
+        ld      hl, amat
+        ld      b, 0
+  fai:  ld      c, 0
+  faj:  ld      a, b
+        add     a, c
+        add     a, 2
+        ld      (hl), a
+        inc     hl
+        inc     c
+        ld      a, c
+        cp      N
+        jp      nz, faj
+        inc     b
+        ld      a, b
+        cp      N
+        jp      nz, fai
+
+        ; B[ i, j ] := ( i + j ) div j (0-based: ( i + j + 2 ) div ( j + 1 ))
+
+        ld      hl, bmat
+        ld      b, 0
+  fbi:  ld      c, 0
+  fbj:  ld      a, b
+        add     a, c
+        add     a, 2               ; dividend
+        ld      d, c
+        inc     d               ; divisor
+        ld      e, 0            ; quotient
+  fbd:  cp      d
+        jp      c, fbdone
+        sub     d
+        inc     e
+        jp      fbd
+  fbdone:
+        ld      (hl), e
+        inc     hl
+        inc     c
+        ld      a, c
+        cp      N
+        jp      nz, fbj
+        inc     b
+        ld      a, b
+        cp      N
+        jp      nz, fbi
+
+        ; C := 0
+
+        ld      hl, cmat
+        ld      bc, N * N * 2
+        xor     a
+  fc:   ld      (hl), a
+        inc     hl
+        dec     bc
+        ld      a, b
+        or      c
+        ld      a, 0
+        jp      nz, fc
+
+        ; multiply
+
+        ld      hl, amat
+        ld      (pa), hl              ; A[ i, k ]
+        ld      hl, cmat
+        ld      (pcrow), hl           ; C[ i, 0 ]
+        ld      a, N
+        ld      (icnt), a
+  mi:   ld      hl, bmat
+        ld      (pbrow), hl           ; B[ k, 0 ]
+        ld      a, N
+        ld      (kcnt), a
+  mk:   ld      hl, (pa)              ; a := A[ i, k ]
+        ld      a, (hl)
+        inc     hl
+        ld      (pa), hl
+
+        ; table of a * 0 .. a * BMAX; low bytes in tlo, high bytes in thi
+
+        ld      c, a
+        ld      b, 0
+        ld      hl, 0
+        ld      de, tlo
+  mt:   ld      a, l
+        ld      (de), a
+        inc     d
+        ld      a, h
+        ld      (de), a
+        dec     d
+        add     hl, bc
+        inc     e
+        ld      a, e
+        cp      BMAX + 1
+        jp      nz, mt
+
+        ; C[ i, j ] := C[ i, j ] + table[ B[ k, j ] ] for j := 1 to 20
+
+        ld      hl, (pbrow)
+        ld      b, h
+        ld      c, l            ; BC = B[ k, j ]
+        ld      hl, (pcrow)           ; HL = C[ i, j ]
+        ld      a, N
+        ld      (jcnt), a
+        ld      d, tlo shr 8
+  mj:   ld      a, (bc)
+        inc     bc
+        ld      e, a
+        ld      a, (de)               ; low byte of the product
+        add     a, (hl)
+        ld      (hl), a
+        inc     hl
+        inc     d
+        ld      a, (de)               ; high byte of the product
+        adc     a, (hl)
+        ld      (hl), a
+        inc     hl
+        dec     d
+        ld      a, (jcnt)
+        dec     a
+        ld      (jcnt), a
+        jp      nz, mj
+
+        ld      h, b
+        ld      l, c
+        ld      (pbrow), hl           ; B[ k + 1, 0 ]
+        ld      a, (kcnt)
+        dec     a
+        ld      (kcnt), a
+        jp      nz, mk
+
+        ld      hl, (pcrow)
+        ld      de, N * 2
+        add     hl, de
+        ld      (pcrow), hl           ; C[ i + 1, 0 ]
+        ld      a, (icnt)
+        dec     a
+        ld      (icnt), a
+        jp      nz, mi
+
+        ; summ := sum of C, 24 bits in B:D:E
+
+        ld      hl, cmat
+        ld      de, 0
+        ld      b, 0
+  sl:   ld      a, e
+        add     a, (hl)
+        ld      e, a
+        inc     hl
+        ld      a, d
+        adc     a, (hl)
+        ld      d, a
+        jp      nc, snc
+        inc     b
+  snc:  inc     hl
+        ld      a, l
+        cp      ( cmat + N * N * 2 ) and 0ffh
+        jp      nz, sl
+        ld      a, h
+        cp      ( cmat + N * N * 2 ) shr 8
+        jp      nz, sl
+
+        ld      a, b
+        ld      (summ + 2), a
+        ld      a, d
+        ld      (summ + 1), a
+        ld      a, e
+        ld      (summ), a
+
+        ; print it
+
+        ld      de, strsum
+        ld      c, PRSTR
+        call    BDOS
+
+        ld      hl, digend       ; digits are stored backwards from here
+  pd:   push    hl
+        xor     a               ; remainder
+        ld      hl, summ + 2
+        ld      c, (hl)
+        call    div10
+        ld      (hl), c
+        dec     hl
+        ld      c, (hl)
+        call    div10
+        ld      (hl), c
+        dec     hl
+        ld      c, (hl)
+        call    div10
+        ld      (hl), c
+        pop     hl
+        dec     hl
+        add     a, '0'
+        ld      (hl), a
+        ld      a, (summ)
+        ld      b, a
+        ld      a, (summ + 1)
+        or      b
+        ld      b, a
+        ld      a, (summ + 2)
+        or      b
+        jp      nz, pd
+
+        ex      de, hl
+        ld      c, PRSTR
+        call    BDOS
+        ret
+
+        ; ( A * 256 + C ) / 10, A < 10: quotient in C, remainder in A
+
+  div10:
+        push    hl
+        ld      l, 8
+  d10:  ld      h, a
+        ld      a, c
+        add     a, a
+        ld      c, a
+        ld      a, h
+        adc     a, a
+        cp      10
+        jp      c, d10n
+        sub     10
+        inc     c
+  d10n: dec     l
+        jp      nz, d10
+        pop     hl
+        ret
+
+strsum: db      'summ is : $'
+digbuf: ds      8
+digend: db      13, 10, '$'
+
+pa:     dw      0
+pbrow:  dw      0
+pcrow:  dw      0
+icnt:   db      0
+kcnt:   db      0
+jcnt:   db      0
+summ:   db      0, 0, 0
+
+amat:   ds      N * N
+bmat:   ds      N * N
+cmat:   ds      N * N * 2
+
+        ; product tables, page-aligned: tlo and the page after it (thi)
+
+        org     ( $ + 255 ) and 0ff00h
+tlo:    ds      256
+thi:    ds      256
+
+end

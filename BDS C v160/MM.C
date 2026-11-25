@@ -1,25 +1,19 @@
 /* BYTE magazine October 1982. Jerry Pournelle. */
 /* ported to C by David Lee */
-/* various bugs not found because dimensions are square fixed by David Lee */
-/* expected result: 4.65880E+05 */
-/* normal version runs in 13 seconds on the original PC and 8.9 seconds with the "f/fast" versions */
-
-#define LINT_ARGS
-
-#include <stdio.h>
+/* integer version for compilers without floating point or long: */
+/* each element of C fits in 16 bits; the sum is kept in base 10000 */
+/* expected result: 465880 */
 
 #define l 20 /* rows in A and resulting matrix C */
 #define m 20 /* columns in A and rows in B (must be identical) */
 #define n 20 /* columns in B and resulting matrix C */
 
-#define ftype float
+int SummHi, SummLo;
+int A[ l ][ m ];
+int B[ m ][ n ];
+int C[ l ][ n ];
 
-ftype Summ;
-ftype A[ l ] [ m ];
-ftype B[ m ] [ n ];
-ftype C[ l ] [ n ];
-
-void filla()
+filla()
 {
     int i, j;
     for ( i = 0; i < l; i++ )
@@ -27,15 +21,15 @@ void filla()
             A[ i ][ j ] = i + j + 2;
 }
 
-void fillb()
+fillb()
 {
     int i, j;
     for ( i = 0; i < m; i++ )
         for ( j = 0; j < n; j++ )
-            B[ i ][ j ] = (ftype) ( ( i + j + 2 ) / ( j + 1 ) );
+            B[ i ][ j ] = ( i + j + 2 ) / ( j + 1 );
 }
 
-void fillc()
+fillc()
 {
     int i, j;
     for ( i = 0; i < l; i++ )
@@ -43,16 +37,7 @@ void fillc()
             C[ i ][ j ] = 0;
 }
 
-void ffillc()
-{
-    ftype * p = (ftype *) C;
-    ftype * pend = ( (ftype *) C ) + ( l * n );
-
-    while ( p < pend )
-        *p++ = 0;
-}
-
-void matmult()
+matmult()
 {
     int i, j, k;
     for ( i = 0; i < l; i++ )
@@ -61,62 +46,39 @@ void matmult()
                 C[ i ][ j ] += A[ i ][ k ] * B[ k ][ j ];
 }
 
-void fmatmult()
-{
-    int i, j, k;
-    ftype * pC, * pA, * pAI, * pBJ, *pCI;
-
-    for ( i = 0; i < l; i++ )
-    {
-        pAI = (ftype *) & ( A[ i ][ 0 ] );
-        pCI = (ftype *) & ( C[ i ][ 0 ] );
-
-        for ( j = 0; j < n; j++ )
-        {
-            pC = (ftype *) & pCI[ j ];
-            pA = pAI;
-            pBJ = & ( B[ 0 ][ j ] );
-
-            for ( k = 0; k < m; k++ )
-            {
-                *pC += pA[ k ] * ( *pBJ );
-                pBJ += m;
-            }
-        }
-    }
-}
-
-void summit()
+summit()
 {
     int i, j;
     for ( i = 0; i < l; i++ )
         for ( j = 0; j < n; j++ )
-            Summ += C[ i ][ j ];
+        {
+            SummLo += C[ i ][ j ];
+            while ( SummLo >= 10000 )
+            {
+                SummLo -= 10000;
+                SummHi++;
+            }
+        }
 }
 
-void fsummit()
+main()
 {
-    ftype * p = (ftype *) C;
-    ftype * pend = ( (ftype *) C ) + ( l * n );
-
-    while ( p < pend )
-        Summ += *p++;
-}
-
-int main( argc, argv ) int argc; char * argv[];
-{
-    Summ = 0;
+    SummHi = 0;
+    SummLo = 0;
 
     filla();
     fillb();
-    ffillc();
+    fillc();
+    matmult();
+    summit();
 
-    fmatmult();
-    fsummit();
-
-    printf( "summ is : %f\n", Summ );
+    printf( "summ is : %d", SummHi );
+    if ( SummLo < 1000 )
+        printf( "0" );
+    if ( SummLo < 100 )
+        printf( "0" );
+    if ( SummLo < 10 )
+        printf( "0" );
+    printf( "%d\n", SummLo );
     return 0;
 }
-
-
-

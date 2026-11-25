@@ -1,0 +1,129 @@
+/*
+   BYTE magazine October 1982. Jerry Pournelle. Matrix multiply.
+   integer version: PL/M has no floating point or multi-dimensional arrays,
+   so the arrays are indexed by hand. They are MA, MB, MC because A, B, C
+   are register names. Each element of C fits in 16 bits; the sum is kept
+   in base 10000. Expected result: 465880
+*/
+
+MMAPP: DO;
+
+/* these utilities taken from simpleio.src and fixed / improved */
+
+BDOS1: PROCEDURE (FUNC,PARM) BYTE EXTERNAL; /* gets RegA */
+    DECLARE FUNC BYTE;                      /* goes to RegC */
+    DECLARE PARM ADDRESS;                   /* goes to RegDE */
+END BDOS1;
+
+WR$CON: PROCEDURE (CHAR);
+    DECLARE CHAR  BYTE;
+    CALL BDOS1( 2, CHAR );
+END WR$CON;
+
+PRT$DOLLAR: PROCEDURE (ADRS);
+    DECLARE ADRS ADDRESS;
+    CALL BDOS1( 9, ADRS );
+END PRT$DOLLAR;
+
+PRT$CRLF: PROCEDURE;
+    CALL WR$CON( 13 );
+    CALL WR$CON( 10 );
+END PRT$CRLF;
+
+/*
+   the version in simpleio.src has a bug junk left over
+   in S from a prior call is printed.
+*/
+PRT$NUM: PROCEDURE( N );
+    DECLARE N ADDRESS;
+    DECLARE S( 5 ) BYTE INITIAL( ' ', ' ', ' ', ' ', '0' );
+    DECLARE ( I,J ) BYTE;
+    I = 4;
+    DO WHILE N > 0;
+        J = N MOD 10 + '0';
+        N = N / 10;
+        S( I ) = J;
+        I = I - 1;
+    END;
+    DO I = 0 TO 4;
+        IF S( I ) <> ' ' THEN DO;
+            CALL WR$CON( S( I ) );
+            S( I ) = ' ';
+        END;
+    END;
+    S( 4 ) = '0'; /* restore the digit for the next call with N = 0 */
+END PRT$NUM;
+
+DECLARE MA( 400 ) ADDRESS;
+DECLARE MB( 400 ) ADDRESS;
+DECLARE MC( 400 ) ADDRESS;
+
+FILLA: PROCEDURE;
+    DECLARE ( I, J ) ADDRESS;
+    DO I = 0 TO 19;
+        DO J = 0 TO 19;
+            MA( I * 20 + J ) = I + J + 2;
+        END;
+    END;
+END FILLA;
+
+FILLB: PROCEDURE;
+    DECLARE ( I, J ) ADDRESS;
+    DO I = 0 TO 19;
+        DO J = 0 TO 19;
+            MB( I * 20 + J ) = ( I + J + 2 ) / ( J + 1 );
+        END;
+    END;
+END FILLB;
+
+FILLC: PROCEDURE;
+    DECLARE ( I, J ) ADDRESS;
+    DO I = 0 TO 19;
+        DO J = 0 TO 19;
+            MC( I * 20 + J ) = 0;
+        END;
+    END;
+END FILLC;
+
+MATMULT: PROCEDURE;
+    DECLARE ( I, J, K ) ADDRESS;
+    DO I = 0 TO 19;
+        DO J = 0 TO 19;
+            DO K = 0 TO 19;
+                MC( I * 20 + J ) = MC( I * 20 + J ) +
+                    MA( I * 20 + K ) * MB( K * 20 + J );
+            END;
+        END;
+    END;
+END MATMULT;
+
+SUMMIT: PROCEDURE;
+    DECLARE ( I, HI, LO ) ADDRESS;
+    HI = 0;
+    LO = 0;
+    DO I = 0 TO 399;
+        LO = LO + MC( I );
+        DO WHILE LO >= 10000;
+            LO = LO - 10000;
+            HI = HI + 1;
+        END;
+    END;
+
+    CALL PRT$DOLLAR( .( 'summ is : $' ) );
+    CALL PRT$NUM( HI );
+    IF LO < 1000 THEN CALL WR$CON( '0' );
+    IF LO < 100 THEN CALL WR$CON( '0' );
+    IF LO < 10 THEN CALL WR$CON( '0' );
+    CALL PRT$NUM( LO );
+    CALL PRT$CRLF;
+END SUMMIT;
+
+DO;
+    CALL FILLA;
+    CALL FILLB;
+    CALL FILLC;
+    CALL MATMULT;
+    CALL SUMMIT;
+END;
+
+END MMAPP;

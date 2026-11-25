@@ -1,0 +1,113 @@
+/* BYTE MAGAZINE OCTOBER 1982. JERRY POURNELLE. MATRIX MULTIPLY.
+   MM.SRC FROM ../SYSTEMS CONSULTANTS PLMX V23, PORTED LIKE E.PLM.
+   INTEGER VERSION: PL/M HAS NO FLOATING POINT OR MULTI-DIMENSIONAL
+   ARRAYS, SO THE ARRAYS ARE INDEXED BY HAND. EACH ELEMENT OF C FITS IN
+   16 BITS; THE SUM IS KEPT IN BASE 10000. EXPECTED RESULT: 465880 */
+100H:
+MON1: PROCEDURE(F,A);
+    DECLARE F BYTE, A ADDRESS;
+    GO TO 5;
+END MON1;
+
+WR$CON: PROCEDURE(CHAR);
+    DECLARE CHAR BYTE;
+    CALL MON1(2, CHAR);
+END WR$CON;
+
+PRT$DOLLAR: PROCEDURE(ADRS);
+    DECLARE ADRS ADDRESS;
+    CALL MON1(9, ADRS);
+END PRT$DOLLAR;
+
+PRT$NUM: PROCEDURE(N);
+    DECLARE N ADDRESS;
+    DECLARE S(5) BYTE INITIAL(' ', ' ', ' ', ' ', '0');
+    DECLARE (I,J) BYTE;
+    I = 4;
+    DO WHILE N > 0;
+        J = N MOD 10 + '0';
+        N = N / 10;
+        S(I) = J;
+        I = I - 1;
+    END;
+    DO I = 0 TO 4;
+        IF S(I) <> ' ' THEN DO;
+            CALL WR$CON(S(I));
+            S(I) = ' ';
+        END;
+    END;
+    S(4) = '0'; /* PLMX'S VERSION LEFT IT BLANK, SO 0 PRINTED NOTHING */
+END PRT$NUM;
+
+DECLARE MA(400) ADDRESS;
+DECLARE MB(400) ADDRESS;
+DECLARE MC(400) ADDRESS;
+DECLARE SUMMSG(11) BYTE INITIAL('SUMM IS : $');
+
+FILLA: PROCEDURE;
+    DECLARE (I, J) ADDRESS;
+    DO I = 0 TO 19;
+        DO J = 0 TO 19;
+            MA(I * 20 + J) = I + J + 2;
+        END;
+    END;
+END FILLA;
+
+FILLB: PROCEDURE;
+    DECLARE (I, J) ADDRESS;
+    DO I = 0 TO 19;
+        DO J = 0 TO 19;
+            MB(I * 20 + J) = (I + J + 2) / (J + 1);
+        END;
+    END;
+END FILLB;
+
+FILLC: PROCEDURE;
+    DECLARE (I, J) ADDRESS;
+    DO I = 0 TO 19;
+        DO J = 0 TO 19;
+            MC(I * 20 + J) = 0;
+        END;
+    END;
+END FILLC;
+
+MATMULT: PROCEDURE;
+    DECLARE (I, J, K) ADDRESS;
+    DO I = 0 TO 19;
+        DO J = 0 TO 19;
+            DO K = 0 TO 19;
+                MC(I * 20 + J) = MC(I * 20 + J) +
+                    MA(I * 20 + K) * MB(K * 20 + J);
+            END;
+        END;
+    END;
+END MATMULT;
+
+SUMMIT: PROCEDURE;
+    DECLARE (I, HI, LO) ADDRESS;
+    HI = 0;
+    LO = 0;
+    DO I = 0 TO 399;
+        LO = LO + MC(I);
+        DO WHILE LO >= 10000;
+            LO = LO - 10000;
+            HI = HI + 1;
+        END;
+    END;
+
+    CALL PRT$DOLLAR(.SUMMSG);
+    CALL PRT$NUM(HI);
+    IF LO < 1000 THEN CALL WR$CON('0');
+    IF LO < 100 THEN CALL WR$CON('0');
+    IF LO < 10 THEN CALL WR$CON('0');
+    CALL PRT$NUM(LO);
+    CALL WR$CON(13);
+    CALL WR$CON(10);
+END SUMMIT;
+
+CALL FILLA;
+CALL FILLB;
+CALL FILLC;
+CALL MATMULT;
+CALL SUMMIT;
+CALL MON1(0, 0);

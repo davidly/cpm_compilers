@@ -1,0 +1,89 @@
+# BYTE magazine October 1982. Jerry Pournelle. Matrix multiply.
+# integer version: Cowgol has no floating point or multi-dimensional arrays,
+# so the arrays (ma, mb, mc: c clashes with a runtime name) are indexed by hand. Each element of C fits in 16 bits;
+# the sum is kept in base 10000. Expected result: 465880
+
+var ma: uint16[400];
+var mb: uint16[400];
+var mc: uint16[400];
+
+sub filla()
+    var i: uint16 := 0;
+    while i < 20 loop
+        var j: uint16 := 0;
+        while j < 20 loop
+            ma[ i * 20 + j ] := i + j + 2;
+            j := j + 1;
+        end loop;
+        i := i + 1;
+    end loop;
+end sub;
+
+sub fillb()
+    var i: uint16 := 0;
+    while i < 20 loop
+        var j: uint16 := 0;
+        while j < 20 loop
+            mb[ i * 20 + j ] := ( i + j + 2 ) / ( j + 1 );
+            j := j + 1;
+        end loop;
+        i := i + 1;
+    end loop;
+end sub;
+
+sub fillc()
+    var i: uint16 := 0;
+    while i < 20 loop
+        var j: uint16 := 0;
+        while j < 20 loop
+            mc[ i * 20 + j ] := 0;
+            j := j + 1;
+        end loop;
+        i := i + 1;
+    end loop;
+end sub;
+
+sub matmult()
+    var i: uint16 := 0;
+    while i < 20 loop
+        var j: uint16 := 0;
+        while j < 20 loop
+            var k: uint16 := 0;
+            while k < 20 loop
+                mc[ i * 20 + j ] := mc[ i * 20 + j ] + ma[ i * 20 + k ] * mb[ k * 20 + j ];
+                k := k + 1;
+            end loop;
+            j := j + 1;
+        end loop;
+        i := i + 1;
+    end loop;
+end sub;
+
+sub mm()
+    filla();
+    fillb();
+    fillc();
+    matmult();
+
+    var hi: uint16 := 0;
+    var lo: uint16 := 0;
+    var i: uint16 := 0;
+    while i < 400 loop
+        lo := lo + mc[ i ];
+        while lo >= 10000 loop
+            lo := lo - 10000;
+            hi := hi + 1;
+        end loop;
+        i := i + 1;
+    end loop;
+
+    print( "summ is : " );
+    print_i16( hi );
+    if lo < 1000 then print( "0" ); end if;
+    if lo < 100 then print( "0" ); end if;
+    if lo <= 9 then print( "0" ); end if;
+    print_i16( lo );
+    print( "\n" );
+end sub;
+
+mm();
