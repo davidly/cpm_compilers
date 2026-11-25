@@ -1,4 +1,4 @@
-str=${1^^}
+str=$(printf %s "$1" | tr a-z A-Z)
 
 rm $str.REL 2>/dev/null
 rm $str.COM 2>/dev/null
