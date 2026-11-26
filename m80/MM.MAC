@@ -1,5 +1,8 @@
 ; Z80 assembly version of the BYTE magazine October 1982 matrix multiply
-; (Jerry Pournelle), the same code as asm/MM.ASM in Z80 mnemonics.
+; (Jerry Pournelle). It is asm/MM.ASM in Z80 mnemonics, except that the inner
+; loop keeps its counter in the alternate B register (exx) instead of memory:
+; BC, DE, and HL are all in use there, and exx / dec b / exx is 18 cycles
+; cheaper per iteration than loading, decrementing, and storing the count.
 ; Integer version: A, B, and C hold the same small whole numbers as the
 ; floating point versions, and the sum is 465880.
 ;
@@ -127,8 +130,9 @@ org     100h
         ld      b, h
         ld      c, l            ; BC = B[ k, j ]
         ld      hl, (pcrow)           ; HL = C[ i, j ]
-        ld      a, N
-        ld      (jcnt), a
+        exx
+        ld      b, N            ; j counter in the alternate B
+        exx
         ld      d, tlo shr 8
   mj:   ld      a, (bc)
         inc     bc
@@ -143,9 +147,9 @@ org     100h
         ld      (hl), a
         inc     hl
         dec     d
-        ld      a, (jcnt)
-        dec     a
-        ld      (jcnt), a
+        exx
+        dec     b
+        exx
         jp      nz, mj
 
         ld      h, b
@@ -262,7 +266,6 @@ pbrow:  dw      0
 pcrow:  dw      0
 icnt:   db      0
 kcnt:   db      0
-jcnt:   db      0
 summ:   db      0, 0, 0
 
 amat:   ds      N * N
