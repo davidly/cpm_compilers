@@ -6,7 +6,7 @@ Pragma RangeCheck(off); Pragma Debug(off); Pragma Arithcheck(off);
 -- integer version: Janus/Ada v1.4.5 has no reals ("No reals implemented yet").
 -- each element of C fits in 16 bits; the sum is kept in base 10000
 
-Package Body MM Is
+Package Body MMI Is
     M : Constant := 20;
     N : Constant := 20;
 
@@ -89,4 +89,4 @@ Begin
     If SummHi = 46 And SummLo = 5880 Then
         Put("summ is exactly 465880"); New_line;
     End If;
-End MM;
+End MMI;

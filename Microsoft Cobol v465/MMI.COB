@@ -1,5 +1,5 @@
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. MM.
+       PROGRAM-ID. MMI.
       * BYTE magazine October 1982. Jerry Pournelle. Matrix multiply.
       * COBOL has no floating point; this uses packed decimal, which
       * holds the small whole numbers in A, B, and C exactly.

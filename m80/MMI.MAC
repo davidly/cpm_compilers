@@ -1,5 +1,5 @@
 ; Z80 assembly version of the BYTE magazine October 1982 matrix multiply
-; (Jerry Pournelle). It is asm/MM.ASM in Z80 mnemonics, except that the inner
+; (Jerry Pournelle). It is asm/MMI.ASM in Z80 mnemonics, except that the inner
 ; loop keeps its counter in the alternate B register (exx) instead of memory:
 ; BC, DE, and HL are all in use there, and exx / dec b / exx is 18 cycles
 ; cheaper per iteration than loading, decrementing, and storing the count.

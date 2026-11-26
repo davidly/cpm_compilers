@@ -1,4 +1,4 @@
-procedure MM is
+procedure MMI is
     -- Jerry Pournelle's Floating Point Benchmark
     -- October 1982 Byte, pages 254 - 270
     -- integer version: this SuperSoft Ada has no conversion from integer to float.
@@ -73,4 +73,4 @@ begin
     if SummHi = 46 and SummLo = 5880 then
         put( "summ is exactly 465880" ); newline;
     end if;
-end MM;
+end MMI;

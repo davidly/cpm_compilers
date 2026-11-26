@@ -14,7 +14,7 @@ VARIABLE COL
 : A-CELL ( row col -- addr ) SWAP INNER * + 2 * MA + ;
 : B-CELL ( row col -- addr ) SWAP COLS * + 2 * MB + ;
 : C-CELL ( row col -- addr ) SWAP COLS * + 2 * MC + ;
-: MM
+: MMI
     ROWS 0 DO INNER 0 DO
         J I + 2 + J I A-CELL !
     LOOP LOOP
@@ -39,5 +39,5 @@ VARIABLE COL
     ." summ is: " SUMM 2@ <# #S #> TYPE CR
 ;
 
-MM
+MMI
 BYE

@@ -1,8 +1,8 @@
-procedure MM is
+pragma optimize(time);
+procedure MMI is
     -- Jerry Pournelle's Floating Point Benchmark
     -- October 1982 Byte, pages 254 - 270
-    -- integer version: this SuperSoft Ada has no conversion from integer to float.
-    -- each element of C fits in 16 bits; the sum is kept in base 10000
+    -- integer version: each element of C fits in 16 bits; the sum is kept in base 10000
 
     A : array( 1..20, 1..20 ) of integer;
     B : array( 1..20, 1..20 ) of integer;
@@ -69,8 +69,8 @@ begin
     Fill_C;
     Matrix_Multiply;
     Summit;
-    put( "summ / 10000 and rem 10000: " ); put( SummHi ); put( " " ); put( SummLo ); newline;
+    put( "summ / 10000 and rem 10000: " ); put( SummHi ); put( " " ); put( SummLo ); new_line;
     if SummHi = 46 and SummLo = 5880 then
-        put( "summ is exactly 465880" ); newline;
+        put( "summ is exactly 465880" ); new_line;
     end if;
-end MM;
+end MMI;
